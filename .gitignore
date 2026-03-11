@@ -1,0 +1,50 @@
+# ============================================
+# TenderShield — Git Ignore
+# ============================================
+
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Build output
+.next/
+dist/
+build/
+*.egg
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker volumes
+pgdata/
+redisdata/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+.pytest_cache/
+coverage/
+.coverage
+
+# Misc
+*.bak
+*.tmp

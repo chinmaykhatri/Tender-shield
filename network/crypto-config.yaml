@@ -1,0 +1,128 @@
+# ============================================================================
+# TenderShield — Hyperledger Fabric Crypto Configuration
+# ============================================================================
+# Design Decision: Using cryptogen tool for generating crypto material.
+# In production, Fabric CA would be used for dynamic enrollment.
+# Each org has 2 peers for high availability and 1 orderer for Raft consensus.
+# TLS is enabled on all nodes for security compliance (IT Act 2000).
+# ============================================================================
+
+OrdererOrgs:
+  # ---------------------------------------------------------------------------
+  # TenderShield Ordering Service — Raft Consensus (3 nodes)
+  # Design Decision: 3 orderers provide crash fault tolerance (can lose 1 node).
+  # Distributed across MinistryOrg, AuditorOrg, and NICOrg for decentralization.
+  # ---------------------------------------------------------------------------
+  - Name: OrdererOrg
+    Domain: orderer.tendershield.gov.in
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer0.orderer.tendershield.gov.in
+      - Hostname: orderer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer1.orderer.tendershield.gov.in
+      - Hostname: orderer2
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer2.orderer.tendershield.gov.in
+
+PeerOrgs:
+  # ---------------------------------------------------------------------------
+  # MinistryOrg — Government Departments (Tender Creators)
+  # Represents: MoRTH, MoE, MoH, MoF and all central ministries
+  # Role: Create tenders, evaluate bids, award contracts
+  # GFR 2017: Ministry officers must follow General Financial Rules
+  # ---------------------------------------------------------------------------
+  - Name: MinistryOrg
+    Domain: ministry.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # 2 peers for high availability
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 3  # Admin + 2 Ministry Officers
+    CA:
+      Hostname: ca
+      SANS:
+        - localhost
+        - 127.0.0.1
+        - ca.ministry.tendershield.gov.in
+
+  # ---------------------------------------------------------------------------
+  # BidderOrg — Companies and Contractors (Bid Submitters)
+  # Represents: All registered bidders, including MSMEs and startups (DPIIT)
+  # Role: Submit ZKP-encrypted bids, reveal bids, upload documents
+  # Verification: GSTIN, PAN, Aadhaar eKYC mandatory
+  # ---------------------------------------------------------------------------
+  - Name: BidderOrg
+    Domain: bidder.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # 2 peers for high availability
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 5  # Admin + 4 Bidder accounts for demo
+    CA:
+      Hostname: ca
+      SANS:
+        - localhost
+        - 127.0.0.1
+        - ca.bidder.tendershield.gov.in
+
+  # ---------------------------------------------------------------------------
+  # AuditorOrg — Comptroller and Auditor General of India (CAG)
+  # Role: Real-time monitoring, audit trail access, escalation authority
+  # Authority: Constitutional body under Article 148 of Indian Constitution
+  # Access: Full read access to TenderChannel + exclusive AuditChannel
+  # ---------------------------------------------------------------------------
+  - Name: AuditorOrg
+    Domain: auditor.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # 2 peers for redundancy
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 2  # Admin + 1 CAG Auditor
+    CA:
+      Hostname: ca
+      SANS:
+        - localhost
+        - 127.0.0.1
+        - ca.auditor.tendershield.gov.in
+
+  # ---------------------------------------------------------------------------
+  # NICOrg — National Informatics Centre (Infrastructure & Admin)
+  # Role: Network administration, AI service identity, infrastructure management
+  # Authority: Under Ministry of Electronics & IT (MeitY)
+  # Special: AI Monitoring Service runs under NICOrg identity
+  # Endorsement: Co-signs tender creation with MinistryOrg
+  # ---------------------------------------------------------------------------
+  - Name: NICOrg
+    Domain: nic.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 2  # 2 peers for high availability
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 2  # Admin + 1 NIC Admin / AI Service
+    CA:
+      Hostname: ca
+      SANS:
+        - localhost
+        - 127.0.0.1
+        - ca.nic.tendershield.gov.in

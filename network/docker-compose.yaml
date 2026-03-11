@@ -1,0 +1,668 @@
+# ============================================================================
+# TenderShield — Docker Compose for Local Development Network
+# ============================================================================
+# Design Decision: Full local development environment replicating production.
+# CouchDB is used as state database for rich query support (query by ministry,
+# status, risk score, etc.). Each peer gets its own CouchDB instance.
+# Prometheus + Grafana included for monitoring demonstration.
+# ============================================================================
+
+version: '3.8'
+
+networks:
+  tendershield_network:
+    name: tendershield_network
+    driver: bridge
+
+volumes:
+  orderer0.orderer.tendershield.gov.in:
+  orderer1.orderer.tendershield.gov.in:
+  orderer2.orderer.tendershield.gov.in:
+  peer0.ministry.tendershield.gov.in:
+  peer1.ministry.tendershield.gov.in:
+  peer0.bidder.tendershield.gov.in:
+  peer1.bidder.tendershield.gov.in:
+  peer0.auditor.tendershield.gov.in:
+  peer1.auditor.tendershield.gov.in:
+  peer0.nic.tendershield.gov.in:
+  peer1.nic.tendershield.gov.in:
+  prometheus_data:
+  grafana_data:
+
+services:
+
+  # ===========================================================================
+  # ORDERER NODES — Raft Consensus (3 Nodes for Fault Tolerance)
+  # ===========================================================================
+
+  orderer0.orderer.tendershield.gov.in:
+    container_name: orderer0.orderer.tendershield.gov.in
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer0.orderer.tendershield.gov.in:8443
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/tls:/var/hyperledger/orderer/tls
+      - orderer0.orderer.tendershield.gov.in:/var/hyperledger/production/orderer
+    ports:
+      - "7050:7050"
+      - "7053:7053"
+      - "8443:8443"
+    networks:
+      - tendershield_network
+
+  orderer1.orderer.tendershield.gov.in:
+    container_name: orderer1.orderer.tendershield.gov.in
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=8050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:8053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer1.orderer.tendershield.gov.in:8444
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer1.orderer.tendershield.gov.in/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer1.orderer.tendershield.gov.in/tls:/var/hyperledger/orderer/tls
+      - orderer1.orderer.tendershield.gov.in:/var/hyperledger/production/orderer
+    ports:
+      - "8050:8050"
+      - "8053:8053"
+      - "8444:8444"
+    networks:
+      - tendershield_network
+
+  orderer2.orderer.tendershield.gov.in:
+    container_name: orderer2.orderer.tendershield.gov.in
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=9050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:9053
+      - ORDERER_OPERATIONS_LISTENADDRESS=orderer2.orderer.tendershield.gov.in:8445
+      - ORDERER_METRICS_PROVIDER=prometheus
+    working_dir: /root
+    command: orderer
+    volumes:
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer2.orderer.tendershield.gov.in/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer2.orderer.tendershield.gov.in/tls:/var/hyperledger/orderer/tls
+      - orderer2.orderer.tendershield.gov.in:/var/hyperledger/production/orderer
+    ports:
+      - "9050:9050"
+      - "9053:9053"
+      - "8445:8445"
+    networks:
+      - tendershield_network
+
+  # ===========================================================================
+  # CERTIFICATE AUTHORITIES — One per Organization
+  # ===========================================================================
+
+  ca.ministry.tendershield.gov.in:
+    container_name: ca.ministry.tendershield.gov.in
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-ministry
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7054
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:17054
+    ports:
+      - "7054:7054"
+      - "17054:17054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
+    networks:
+      - tendershield_network
+
+  ca.bidder.tendershield.gov.in:
+    container_name: ca.bidder.tendershield.gov.in
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-bidder
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=8054
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:18054
+    ports:
+      - "8054:8054"
+      - "18054:18054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
+    networks:
+      - tendershield_network
+
+  ca.auditor.tendershield.gov.in:
+    container_name: ca.auditor.tendershield.gov.in
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-auditor
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=9054
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:19054
+    ports:
+      - "9054:9054"
+      - "19054:19054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
+    networks:
+      - tendershield_network
+
+  ca.nic.tendershield.gov.in:
+    container_name: ca.nic.tendershield.gov.in
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-nic
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=10054
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:20054
+    ports:
+      - "10054:10054"
+      - "20054:20054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
+    networks:
+      - tendershield_network
+
+  # ===========================================================================
+  # COUCHDB STATE DATABASES — Rich Query Support for Government Workloads
+  # Enables: Query by ministry_code, status, risk_score, bidder_did
+  # ===========================================================================
+
+  couchdb0.ministry:
+    container_name: couchdb0.ministry
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=tendershield_admin
+      - COUCHDB_PASSWORD=tendershield_couchdb_2025
+    ports:
+      - "5984:5984"
+    networks:
+      - tendershield_network
+
+  couchdb1.bidder:
+    container_name: couchdb1.bidder
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=tendershield_admin
+      - COUCHDB_PASSWORD=tendershield_couchdb_2025
+    ports:
+      - "6984:5984"
+    networks:
+      - tendershield_network
+
+  couchdb2.auditor:
+    container_name: couchdb2.auditor
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=tendershield_admin
+      - COUCHDB_PASSWORD=tendershield_couchdb_2025
+    ports:
+      - "7984:5984"
+    networks:
+      - tendershield_network
+
+  couchdb3.nic:
+    container_name: couchdb3.nic
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=tendershield_admin
+      - COUCHDB_PASSWORD=tendershield_couchdb_2025
+    ports:
+      - "8984:5984"
+    networks:
+      - tendershield_network
+
+  # ===========================================================================
+  # PEER NODES — One primary peer per Organization
+  # ===========================================================================
+
+  # --- MinistryOrg Peers ---
+  peer0.ministry.tendershield.gov.in:
+    container_name: peer0.ministry.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.ministry.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer0.ministry.tendershield.gov.in:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.ministry.tendershield.gov.in:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.ministry.tendershield.gov.in:7061
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.ministry.tendershield.gov.in:7051
+      - CORE_PEER_LOCALMSPID=MinistryOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.ministry:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.ministry.tendershield.gov.in:9444
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/peers/peer0.ministry.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/peers/peer0.ministry.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer0.ministry.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "7051:7051"
+      - "9444:9444"
+    depends_on:
+      - couchdb0.ministry
+    networks:
+      - tendershield_network
+
+  peer1.ministry.tendershield.gov.in:
+    container_name: peer1.ministry.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.ministry.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer1.ministry.tendershield.gov.in:7061
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7061
+      - CORE_PEER_CHAINCODEADDRESS=peer1.ministry.tendershield.gov.in:7062
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7062
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.ministry.tendershield.gov.in:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.ministry.tendershield.gov.in:7061
+      - CORE_PEER_LOCALMSPID=MinistryOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.ministry:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.ministry.tendershield.gov.in:9445
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/peers/peer1.ministry.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/peers/peer1.ministry.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer1.ministry.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "7061:7061"
+      - "9445:9445"
+    depends_on:
+      - couchdb0.ministry
+    networks:
+      - tendershield_network
+
+  # --- BidderOrg Peers ---
+  peer0.bidder.tendershield.gov.in:
+    container_name: peer0.bidder.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.bidder.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer0.bidder.tendershield.gov.in:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.bidder.tendershield.gov.in:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.bidder.tendershield.gov.in:8061
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.bidder.tendershield.gov.in:8051
+      - CORE_PEER_LOCALMSPID=BidderOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.bidder:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.bidder.tendershield.gov.in:9446
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/peers/peer0.bidder.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/peers/peer0.bidder.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer0.bidder.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "8051:8051"
+      - "9446:9446"
+    depends_on:
+      - couchdb1.bidder
+    networks:
+      - tendershield_network
+
+  peer1.bidder.tendershield.gov.in:
+    container_name: peer1.bidder.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.bidder.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer1.bidder.tendershield.gov.in:8061
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8061
+      - CORE_PEER_CHAINCODEADDRESS=peer1.bidder.tendershield.gov.in:8062
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8062
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.bidder.tendershield.gov.in:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.bidder.tendershield.gov.in:8061
+      - CORE_PEER_LOCALMSPID=BidderOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.bidder:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.bidder.tendershield.gov.in:9447
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/peers/peer1.bidder.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/peers/peer1.bidder.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer1.bidder.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "8061:8061"
+      - "9447:9447"
+    depends_on:
+      - couchdb1.bidder
+    networks:
+      - tendershield_network
+
+  # --- AuditorOrg Peers (CAG) ---
+  peer0.auditor.tendershield.gov.in:
+    container_name: peer0.auditor.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.auditor.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer0.auditor.tendershield.gov.in:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.auditor.tendershield.gov.in:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.auditor.tendershield.gov.in:9061
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.auditor.tendershield.gov.in:9051
+      - CORE_PEER_LOCALMSPID=AuditorOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb2.auditor:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.auditor.tendershield.gov.in:9448
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/peers/peer0.auditor.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/peers/peer0.auditor.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer0.auditor.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "9051:9051"
+      - "9448:9448"
+    depends_on:
+      - couchdb2.auditor
+    networks:
+      - tendershield_network
+
+  peer1.auditor.tendershield.gov.in:
+    container_name: peer1.auditor.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.auditor.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer1.auditor.tendershield.gov.in:9061
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9061
+      - CORE_PEER_CHAINCODEADDRESS=peer1.auditor.tendershield.gov.in:9062
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9062
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.auditor.tendershield.gov.in:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.auditor.tendershield.gov.in:9061
+      - CORE_PEER_LOCALMSPID=AuditorOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb2.auditor:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.auditor.tendershield.gov.in:9449
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/peers/peer1.auditor.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/peers/peer1.auditor.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer1.auditor.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "9061:9061"
+      - "9449:9449"
+    depends_on:
+      - couchdb2.auditor
+    networks:
+      - tendershield_network
+
+  # --- NICOrg Peers ---
+  peer0.nic.tendershield.gov.in:
+    container_name: peer0.nic.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.nic.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer0.nic.tendershield.gov.in:10051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.nic.tendershield.gov.in:10052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.nic.tendershield.gov.in:10061
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.nic.tendershield.gov.in:10051
+      - CORE_PEER_LOCALMSPID=NICOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb3.nic:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.nic.tendershield.gov.in:9450
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/peers/peer0.nic.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/peers/peer0.nic.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer0.nic.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "10051:10051"
+      - "9450:9450"
+    depends_on:
+      - couchdb3.nic
+    networks:
+      - tendershield_network
+
+  peer1.nic.tendershield.gov.in:
+    container_name: peer1.nic.tendershield.gov.in
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.nic.tendershield.gov.in
+      - CORE_PEER_ADDRESS=peer1.nic.tendershield.gov.in:10061
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:10061
+      - CORE_PEER_CHAINCODEADDRESS=peer1.nic.tendershield.gov.in:10062
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10062
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.nic.tendershield.gov.in:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.nic.tendershield.gov.in:10061
+      - CORE_PEER_LOCALMSPID=NICOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb3.nic:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.nic.tendershield.gov.in:9451
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/peers/peer1.nic.tendershield.gov.in/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/peers/peer1.nic.tendershield.gov.in/tls:/etc/hyperledger/fabric/tls
+      - peer1.nic.tendershield.gov.in:/var/hyperledger/production
+    ports:
+      - "10061:10061"
+      - "9451:9451"
+    depends_on:
+      - couchdb3.nic
+    networks:
+      - tendershield_network
+
+  # ===========================================================================
+  # CLI — Fabric Peer CLI for administration and chaincode operations
+  # ===========================================================================
+  cli:
+    container_name: cli.tendershield
+    image: hyperledger/fabric-tools:2.5
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.ministry.tendershield.gov.in:7051
+      - CORE_PEER_LOCALMSPID=MinistryOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ministry.tendershield.gov.in/peers/peer0.ministry.tendershield.gov.in/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ministry.tendershield.gov.in/peers/peer0.ministry.tendershield.gov.in/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ministry.tendershield.gov.in/peers/peer0.ministry.tendershield.gov.in/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/ministry.tendershield.gov.in/users/Admin@ministry.tendershield.gov.in/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ../chaincode/:/opt/gopath/src/github.com/chaincode
+      - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+      - ./scripts:/opt/gopath/src/github.com/hyperledger/fabric/peer/scripts/
+      - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+    depends_on:
+      - orderer0.orderer.tendershield.gov.in
+      - orderer1.orderer.tendershield.gov.in
+      - orderer2.orderer.tendershield.gov.in
+      - peer0.ministry.tendershield.gov.in
+      - peer0.bidder.tendershield.gov.in
+      - peer0.auditor.tendershield.gov.in
+      - peer0.nic.tendershield.gov.in
+    networks:
+      - tendershield_network
+
+  # ===========================================================================
+  # MONITORING — Prometheus + Grafana for operational visibility
+  # ===========================================================================
+
+  prometheus:
+    container_name: prometheus.tendershield
+    image: prom/prometheus:v2.47.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - tendershield_network
+
+  grafana:
+    container_name: grafana.tendershield
+    image: grafana/grafana:10.1.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=tendershield_grafana_2025
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - tendershield_network

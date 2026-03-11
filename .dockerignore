@@ -1,0 +1,20 @@
+# ============================================
+# TenderShield — Docker Ignore
+# ============================================
+node_modules
+.next
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+*.md
+docs/
+chaincode/
+network/
+.env
+.env.local
+*.egg-info
+dist/
+build/
+.pytest_cache

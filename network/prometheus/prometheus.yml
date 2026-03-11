@@ -1,0 +1,92 @@
+# ============================================================================
+# TenderShield — Prometheus Configuration
+# Scrapes metrics from all Hyperledger Fabric nodes and application services
+# ============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # Orderer metrics
+  - job_name: 'orderer0'
+    static_configs:
+      - targets: ['orderer0.orderer.tendershield.gov.in:8443']
+        labels:
+          node_type: 'orderer'
+          org: 'OrdererOrg'
+
+  - job_name: 'orderer1'
+    static_configs:
+      - targets: ['orderer1.orderer.tendershield.gov.in:8444']
+        labels:
+          node_type: 'orderer'
+          org: 'OrdererOrg'
+
+  - job_name: 'orderer2'
+    static_configs:
+      - targets: ['orderer2.orderer.tendershield.gov.in:8445']
+        labels:
+          node_type: 'orderer'
+          org: 'OrdererOrg'
+
+  # MinistryOrg peer metrics
+  - job_name: 'peer0-ministry'
+    static_configs:
+      - targets: ['peer0.ministry.tendershield.gov.in:9444']
+        labels:
+          node_type: 'peer'
+          org: 'MinistryOrg'
+
+  - job_name: 'peer1-ministry'
+    static_configs:
+      - targets: ['peer1.ministry.tendershield.gov.in:9445']
+        labels:
+          node_type: 'peer'
+          org: 'MinistryOrg'
+
+  # BidderOrg peer metrics
+  - job_name: 'peer0-bidder'
+    static_configs:
+      - targets: ['peer0.bidder.tendershield.gov.in:9446']
+        labels:
+          node_type: 'peer'
+          org: 'BidderOrg'
+
+  - job_name: 'peer1-bidder'
+    static_configs:
+      - targets: ['peer1.bidder.tendershield.gov.in:9447']
+        labels:
+          node_type: 'peer'
+          org: 'BidderOrg'
+
+  # AuditorOrg peer metrics
+  - job_name: 'peer0-auditor'
+    static_configs:
+      - targets: ['peer0.auditor.tendershield.gov.in:9448']
+        labels:
+          node_type: 'peer'
+          org: 'AuditorOrg'
+
+  - job_name: 'peer1-auditor'
+    static_configs:
+      - targets: ['peer1.auditor.tendershield.gov.in:9449']
+        labels:
+          node_type: 'peer'
+          org: 'AuditorOrg'
+
+  # NICOrg peer metrics
+  - job_name: 'peer0-nic'
+    static_configs:
+      - targets: ['peer0.nic.tendershield.gov.in:9450']
+        labels:
+          node_type: 'peer'
+          org: 'NICOrg'
+
+  - job_name: 'peer1-nic'
+    static_configs:
+      - targets: ['peer1.nic.tendershield.gov.in:9451']
+        labels:
+          node_type: 'peer'
+          org: 'NICOrg'

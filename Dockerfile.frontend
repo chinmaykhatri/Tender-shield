@@ -1,0 +1,41 @@
+# ============================================
+# TenderShield — Frontend Dockerfile (Multi-stage)
+# ============================================
+
+# Stage 1: Build
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+COPY package.json ./
+RUN npm install --legacy-peer-deps
+
+COPY next.config.js tailwind.config.js postcss.config.js tsconfig.json ./
+COPY app/ ./app/
+COPY lib/ ./lib/
+COPY public/ ./public/
+
+# Build-time env: API URLs for server-side rendering
+ENV NEXT_PUBLIC_API_URL=http://backend:8000
+ENV NEXT_PUBLIC_AI_URL=http://ai-engine:8001
+
+RUN npm run build
+
+# Stage 2: Production
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy built output
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget -q --spider http://localhost:3000 || exit 1
+
+CMD ["npm", "start"]

@@ -1,0 +1,110 @@
+# ============================================================
+# TenderShield — Production Docker Compose
+# ============================================================
+# Runs the FULL STACK with persistent storage:
+#   - Frontend  (Next.js)     → http://localhost:3000
+#   - Backend   (FastAPI)     → http://localhost:8000
+#   - AI Engine (FastAPI)     → http://localhost:8001
+#   - PostgreSQL              → port 5432
+#   - Redis                   → port 6379
+#
+# Usage:
+#   docker-compose -f docker-compose.production.yml up --build
+#
+# Stop:
+#   docker-compose -f docker-compose.production.yml down
+# ============================================================
+
+version: "3.8"
+
+services:
+  # ============ PostgreSQL Database ============
+  postgres:
+    image: postgres:15-alpine
+    container_name: tendershield-db
+    environment:
+      POSTGRES_DB: tendershield
+      POSTGRES_USER: tendershield
+      POSTGRES_PASSWORD: TenderDB@2025
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tendershield"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============ Redis Cache ============
+  redis:
+    image: redis:7-alpine
+    container_name: tendershield-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============ Backend API ============
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: tendershield-backend
+    environment:
+      - APP_NAME=TenderShield API
+      - ENVIRONMENT=production
+      - JWT_SECRET_KEY=TenderShield-Production-JWT-Secret-2025
+      - POSTGRES_URL=postgresql://tendershield:TenderDB@2025@postgres:5432/tendershield
+      - REDIS_URL=redis://redis:6379/0
+      - AI_ENGINE_URL=http://ai-engine:8001
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============ AI Engine ============
+  ai-engine:
+    build:
+      context: .
+      dockerfile: ai_engine/Dockerfile
+    container_name: tendershield-ai
+    environment:
+      - ENVIRONMENT=production
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+
+  # ============ Frontend ============
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: tendershield-frontend
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - ai-engine
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local

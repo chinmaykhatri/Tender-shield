@@ -1,0 +1,315 @@
+# ============================================================================
+# TenderShield — Hyperledger Fabric Channel Configuration (configtx.yaml)
+# ============================================================================
+# Design Decision: Dual-channel architecture for separation of concerns.
+# TenderChannel: All 4 orgs — handles all tender/bid lifecycle operations.
+# AuditChannel: MinistryOrg + AuditorOrg only — confidential CAG investigations.
+# Raft consensus with 3 orderers for crash fault tolerance.
+# Block parameters tuned for government workloads (moderate throughput, fast finality).
+# ============================================================================
+
+---
+Organizations:
+  # ---------------------------------------------------------------------------
+  # MinistryOrg — Government Departments (Tender Creators & Evaluators)
+  # ---------------------------------------------------------------------------
+  - &MinistryOrg
+    Name: MinistryOrgMSP
+    ID: MinistryOrgMSP
+    MSPDir: crypto-config/peerOrganizations/ministry.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin', 'MinistryOrgMSP.peer', 'MinistryOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin', 'MinistryOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.ministry.tendershield.gov.in
+        Port: 7051
+
+  # ---------------------------------------------------------------------------
+  # BidderOrg — Companies & Contractors (Bid Submitters)
+  # ---------------------------------------------------------------------------
+  - &BidderOrg
+    Name: BidderOrgMSP
+    ID: BidderOrgMSP
+    MSPDir: crypto-config/peerOrganizations/bidder.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin', 'BidderOrgMSP.peer', 'BidderOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin', 'BidderOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.bidder.tendershield.gov.in
+        Port: 8051
+
+  # ---------------------------------------------------------------------------
+  # AuditorOrg — CAG (Comptroller and Auditor General of India)
+  # Constitutional authority under Article 148, Indian Constitution
+  # ---------------------------------------------------------------------------
+  - &AuditorOrg
+    Name: AuditorOrgMSP
+    ID: AuditorOrgMSP
+    MSPDir: crypto-config/peerOrganizations/auditor.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin', 'AuditorOrgMSP.peer', 'AuditorOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin', 'AuditorOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.auditor.tendershield.gov.in
+        Port: 9051
+
+  # ---------------------------------------------------------------------------
+  # NICOrg — National Informatics Centre (Infrastructure & AI Service)
+  # Under MeitY; co-endorses tender creation for integrity
+  # ---------------------------------------------------------------------------
+  - &NICOrg
+    Name: NICOrgMSP
+    ID: NICOrgMSP
+    MSPDir: crypto-config/peerOrganizations/nic.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin', 'NICOrgMSP.peer', 'NICOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin', 'NICOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.nic.tendershield.gov.in
+        Port: 10051
+
+# =============================================================================
+# Capabilities — Fabric version feature gates
+# =============================================================================
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+# =============================================================================
+# Application defaults — inherited by all channels
+# =============================================================================
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+# =============================================================================
+# Orderer defaults — Raft consensus configuration
+# Design Decision: Raft chosen for crash fault tolerance (not BFT).
+# Suitable for permissioned government network where nodes are trusted.
+# 3 orderers: can tolerate 1 node failure and still reach consensus.
+# Block parameters tuned for government workloads:
+#   - 2 second batch timeout (balance between latency and throughput)
+#   - 10 MB max message size (supports large tender documents references)
+#   - 500 KB preferred block size (fast finality for audit trail)
+# =============================================================================
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer0.orderer.tendershield.gov.in:7050
+    - orderer1.orderer.tendershield.gov.in:8050
+    - orderer2.orderer.tendershield.gov.in:9050
+  EtcdRaft:
+    Consenters:
+      - Host: orderer0.orderer.tendershield.gov.in
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/tls/server.crt
+      - Host: orderer1.orderer.tendershield.gov.in
+        Port: 8050
+        ClientTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer1.orderer.tendershield.gov.in/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer1.orderer.tendershield.gov.in/tls/server.crt
+      - Host: orderer2.orderer.tendershield.gov.in
+        Port: 9050
+        ClientTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer2.orderer.tendershield.gov.in/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer2.orderer.tendershield.gov.in/tls/server.crt
+    Options:
+      TickInterval: 500ms
+      ElectionTick: 10
+      HeartbeatTick: 1
+      MaxInflightBlocks: 5
+      SnapshotIntervalSize: 16 MB
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 50
+    AbsoluteMaxBytes: 10 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+# =============================================================================
+# Channel defaults
+# =============================================================================
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+# =============================================================================
+# Profiles — Channel configurations
+# =============================================================================
+Profiles:
+
+  # ---------------------------------------------------------------------------
+  # TenderShieldOrdererGenesis — System channel genesis block
+  # Includes all 4 organizations in the consortium
+  # ---------------------------------------------------------------------------
+  TenderShieldOrdererGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *MinistryOrg
+        - *BidderOrg
+        - *AuditorOrg
+        - *NICOrg
+    Consortiums:
+      TenderShieldConsortium:
+        Organizations:
+          - *MinistryOrg
+          - *BidderOrg
+          - *AuditorOrg
+          - *NICOrg
+
+  # ---------------------------------------------------------------------------
+  # TenderChannel — Primary channel for all tender/bid operations
+  # All 4 organizations participate
+  # Endorsement Policy: MinistryOrg AND NICOrg must endorse tender creation
+  # This ensures no single ministry can create a tender without NIC verification
+  # ---------------------------------------------------------------------------
+  TenderChannel:
+    Consortium: TenderShieldConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *MinistryOrg
+        - *BidderOrg
+        - *AuditorOrg
+        - *NICOrg
+      Capabilities:
+        <<: *ApplicationCapabilities
+      Policies:
+        Readers:
+          Type: ImplicitMeta
+          Rule: "ANY Readers"
+        Writers:
+          Type: ImplicitMeta
+          Rule: "ANY Writers"
+        Admins:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Endorsement"
+        # CRITICAL: Tender creation requires both MinistryOrg AND NICOrg
+        # This prevents unilateral tender manipulation
+        Endorsement:
+          Type: Signature
+          Rule: "AND('MinistryOrgMSP.peer', 'NICOrgMSP.peer')"
+
+  # ---------------------------------------------------------------------------
+  # AuditChannel — Confidential channel for CAG investigations
+  # Only MinistryOrg + AuditorOrg — BidderOrg and NICOrg excluded
+  # Used for: CAG escalations, investigation records, evidence packages
+  # This channel ensures investigation data is not visible to bidders
+  # ---------------------------------------------------------------------------
+  AuditChannel:
+    Consortium: TenderShieldConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *MinistryOrg
+        - *AuditorOrg
+      Capabilities:
+        <<: *ApplicationCapabilities
+      Policies:
+        Readers:
+          Type: ImplicitMeta
+          Rule: "ANY Readers"
+        Writers:
+          Type: ImplicitMeta
+          Rule: "ANY Writers"
+        Admins:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Endorsement"
+        Endorsement:
+          Type: ImplicitMeta
+          Rule: "MAJORITY Endorsement"
