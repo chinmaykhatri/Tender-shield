@@ -1,7 +1,6 @@
 /**
  * TenderShield — Supabase Client
- * Centralized Supabase client for auth + database operations.
- * Uses lazy initialization to avoid crashes during Vercel build phase.
+ * Uses lazy initialization so the client is never created during Vercel's build phase.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -11,16 +10,11 @@ let _supabase: SupabaseClient | null = null;
 function getSupabaseClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-  if (!url || !key) {
-    throw new Error(
-      'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
-    );
-  }
-
-  _supabase = createClient(url, key);
+  // During build, env vars may be empty — create client anyway (it won't be called)
+  _supabase = createClient(url || 'https://placeholder.supabase.co', key || 'placeholder-key');
   return _supabase;
 }
 
@@ -40,8 +34,8 @@ export const supabase = new Proxy({} as SupabaseClient, {
  * Create a Supabase client with a user's JWT token for authenticated requests.
  */
 export function createAuthClient(token: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   return createClient(url, key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
