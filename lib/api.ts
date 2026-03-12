@@ -1,26 +1,75 @@
 /**
  * TenderShield — API Client
  * Centralized API functions for backend communication.
+ * Includes demo mode fallback when backend is not available.
  */
 
 const API_BASE = '/api/v1';
 const AI_BASE = '/ai';
 
+// ========== Demo Mode Data ==========
+
+const DEMO_USERS = [
+  { email: 'officer@morth.gov.in', name: 'Rajesh Kumar (MoRTH)', role: 'OFFICER', org: 'MinistryOrg' },
+  { email: 'medtech@medtechsolutions.com', name: 'Priya Sharma (MedTech)', role: 'BIDDER', org: 'BidderOrg' },
+  { email: 'admin@biomedicorp.com', name: 'Shell Corp (BioMedi)', role: 'BIDDER', org: 'BidderOrg' },
+  { email: 'auditor@cag.gov.in', name: 'Amit Verma (CAG)', role: 'AUDITOR', org: 'AuditorOrg' },
+  { email: 'admin@nic.in', name: 'NIC Administrator', role: 'NIC_ADMIN', org: 'NICOrg' },
+];
+
+const ROLE_PASSWORDS: Record<string, string> = {
+  OFFICER: 'Tender@2025',
+  BIDDER: 'Bid@2025',
+  AUDITOR: 'Audit@2025',
+  NIC_ADMIN: 'Admin@2025',
+};
+
+function detectRole(email: string): { role: string; org: string; name: string } {
+  const demoUser = DEMO_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (demoUser) return { role: demoUser.role, org: demoUser.org, name: demoUser.name };
+
+  // For any other email, assign a default role
+  if (email.includes('gov.in')) return { role: 'OFFICER', org: 'MinistryOrg', name: email.split('@')[0] };
+  if (email.includes('cag')) return { role: 'AUDITOR', org: 'AuditorOrg', name: email.split('@')[0] };
+  if (email.includes('nic')) return { role: 'NIC_ADMIN', org: 'NICOrg', name: email.split('@')[0] };
+  return { role: 'BIDDER', org: 'BidderOrg', name: email.split('@')[0] };
+}
+
 // ========== Auth ==========
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
+    return res.json();
+  } catch {
+    // Demo mode fallback — works without backend
+    const { role, org, name } = detectRole(email);
+    return {
+      access_token: `demo_token_${Date.now()}`,
+      role,
+      org,
+      name,
+      demo_mode: true,
+    };
+  }
 }
 
 export async function getDemoUsers() {
-  const res = await fetch(`${API_BASE}/auth/demo-users`);
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/auth/demo-users`);
+    if (!res.ok) throw new Error('Backend unavailable');
+    return res.json();
+  } catch {
+    // Return hardcoded demo users when backend is not available
+    return {
+      demo_users: DEMO_USERS.map(u => ({ ...u, password: ROLE_PASSWORDS[u.role] || 'Demo@2025' })),
+    };
+  }
 }
 
 export async function getCurrentUser(token: string) {

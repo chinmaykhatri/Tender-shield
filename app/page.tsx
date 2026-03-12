@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await login(email, password);
-      storeLogin(res.access_token, res.role, res.org);
+      storeLogin(res.access_token, res.role, res.org, res.name);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed');
