@@ -23,6 +23,12 @@ from backend.config import settings
 from backend.routers.tender_router import router as tender_router
 from backend.routers.bid_router import router as bid_router
 from backend.routers.dashboard_router import auth_router, dashboard_router
+from backend.middleware.security import (
+    SecurityHeadersMiddleware,
+    RateLimitMiddleware,
+    InputSanitizationMiddleware,
+    CorrelationIdMiddleware,
+)
 
 # ============================================================================
 # Logging Configuration
@@ -101,9 +107,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Correlation-ID"],
 )
+
+# Production security middleware stack (order matters — outermost first)
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(InputSanitizationMiddleware)
 
 
 # ============================================================================

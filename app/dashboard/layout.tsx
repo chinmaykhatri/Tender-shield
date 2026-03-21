@@ -1,21 +1,41 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import SessionWarning from '@/components/SessionWarning';
 
 const navItems = [
   { href: '/dashboard', icon: '📊', label: 'Dashboard' },
   { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
+  { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender' },
   { href: '/dashboard/bids', icon: '🔒', label: 'ZKP Bids' },
-  { href: '/dashboard/ai-alerts', icon: '🤖', label: 'AI Alerts' },
+  { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain' },
+  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor' },
+  { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts' },
+  { href: '/dashboard/auditor', icon: '🔍', label: 'CAG Auditor' },
   { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail' },
+  { href: '/heatmap', icon: '🗺️', label: 'Fraud Heatmap' },
+  { href: '/auditor/query', icon: '💬', label: 'AI Query' },
+  { href: '/ministry-scores', icon: '🏛️', label: 'Ministry Scores' },
+  { href: '/verify', icon: '🔐', label: 'ZKP Verify' },
+  { href: '/rti', icon: '🇮🇳', label: 'RTI Portal' },
+  { href: '/settings', icon: '⚙️', label: 'Settings' },
+  { href: '/dashboard/admin', icon: '🛡️', label: 'Admin Panel' },
+  { href: '/auditor/security', icon: '🔒', label: 'Security SOC' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  useSessionTimeout(); // Auto-logout after 30 min inactivity
+
+  // Prevent hydration mismatch — user data comes from localStorage (client-only)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const handleLogout = () => {
     logout();
@@ -31,10 +51,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const role = roleBadge[user?.role || ''] || { color: '#6366f1', label: '👤 User' };
 
+  // Use stable defaults during SSR, real values after mount
+  const displayName = mounted ? (user?.name || 'User') : 'User';
+  const displayInitial = mounted ? (user?.name || 'U')[0] : 'U';
+  const displayRole = mounted ? role.label : '👤 User';
+  const displayRoleColor = mounted ? role.color : '#6366f1';
+
   return (
-    <div className="flex min-h-screen" style={{ paddingTop: '4px' }}>
+    <div className="flex min-h-screen" style={{ paddingTop: '28px' }}>
       {/* Sidebar */}
-      <aside className="w-64 fixed left-0 top-1 bottom-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex flex-col z-40">
+      <aside className="w-64 fixed left-0 top-7 bottom-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex flex-col z-30 overflow-y-auto">
         {/* Logo */}
         <div className="p-5 border-b border-[var(--border-subtle)]">
           <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -76,12 +102,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-4 border-t border-[var(--border-subtle)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ background: `${role.color}22`, color: role.color }}>
-              {(user?.name || 'U')[0]}
+              style={{ background: `${displayRoleColor}22`, color: displayRoleColor }}>
+              {displayInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-[var(--text-secondary)]">{role.label}</p>
+              <p className="text-sm font-medium truncate">{displayName}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{displayRole}</p>
             </div>
           </div>
           <button onClick={handleLogout}
@@ -95,6 +121,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 ml-64 p-6">
         {children}
       </main>
+
+      {/* Session Timeout Warning */}
+      <SessionWarning />
     </div>
   );
 }

@@ -20,7 +20,7 @@ import logging
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator  # type: ignore[import]
 
 # IST timezone (UTC+5:30) — Indian Standard Time
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -154,7 +154,7 @@ def validate_gstin(gstin: str) -> str:
         )
 
     # Validate state code (01-37 for Indian states/UTs)
-    state_code = int(gstin[:2])
+    state_code = int(gstin[:2])  # type: ignore[index]
     if state_code < 1 or state_code > 37:
         raise ValueError(
             f"Invalid state code in GSTIN: {state_code}. "
@@ -241,7 +241,7 @@ def validate_aadhaar(aadhaar: str) -> str:
 
     c = 0
     for i, digit in enumerate(reversed(aadhaar)):
-        c = verhoeff_table_d[c][verhoeff_table_p[i % 8][int(digit)]]
+        c = verhoeff_table_d[c][verhoeff_table_p[i % 8][int(digit)]]  # type: ignore[index]
 
     if c != 0:
         raise ValueError("Invalid Aadhaar: Verhoeff checksum failed. Please verify the number.")

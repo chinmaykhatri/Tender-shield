@@ -1,0 +1,262 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store';
+import { createTender } from '@/lib/dataLayer';
+
+const STEPS = ['Basic Info', 'Financial Details', 'Compliance', 'Documents', 'Review & Submit'];
+
+const MINISTRIES = [
+  { code: 'MoRTH', name: 'Ministry of Road Transport & Highways' },
+  { code: 'MoH', name: 'Ministry of Health & Family Welfare' },
+  { code: 'MoE', name: 'Ministry of Education' },
+  { code: 'MoD', name: 'Ministry of Defence' },
+  { code: 'MoF', name: 'Ministry of Finance' },
+  { code: 'MoHUA', name: 'Ministry of Housing & Urban Affairs' },
+  { code: 'MoRD', name: 'Ministry of Rural Development' },
+  { code: 'MoCI', name: 'Ministry of Commerce & Industry' },
+];
+
+const GFR_RULES = ['GFR Rule 144', 'GFR Rule 149', 'GFR Rule 153', 'GFR Rule 153(a)', 'GFR Rule 154', 'GFR Rule 155', 'GFR Rule 166'];
+
+export default function CreateTenderPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const [form, setForm] = useState({
+    ministry_code: '', ministry: '', department: '', title: '', description: '',
+    estimated_value_crore: '', bid_security_crore: '', category: 'WORKS',
+    procurement_method: 'OPEN_TENDER', gfr_reference: 'GFR Rule 149',
+    gem_category: '', gem_id: '', deadline: '',
+  });
+
+  const update = (field: string, value: string) => {
+    const updated = { ...form, [field]: value };
+    if (field === 'ministry_code') {
+      updated.ministry = MINISTRIES.find(m => m.code === value)?.name || '';
+    }
+    if (field === 'estimated_value_crore') {
+      const val = parseFloat(value) || 0;
+      updated.bid_security_crore = (val * 0.02).toFixed(1);
+    }
+    setForm(updated);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const res = await createTender({
+        ...form,
+        estimated_value_crore: parseFloat(form.estimated_value_crore) || 0,
+        deadline: form.deadline || new Date(Date.now() + 30 * 86400000).toISOString(),
+      });
+      setResult(res.data);
+      setSubmitted(true);
+    } catch (e) {
+      console.error(e);
+    }
+    setSubmitting(false);
+  };
+
+  if (!isAuthenticated) { router.push('/'); return null; }
+
+  if (submitted && result) {
+    return (
+      <div className="max-w-lg mx-auto py-16 text-center animate-fade-in">
+        <div className="card-glass p-10">
+          <div className="text-6xl mb-6">✅</div>
+          <h2 className="text-2xl font-display font-bold mb-2">Tender Published!</h2>
+          <p className="text-[var(--text-secondary)] mb-8">Submitted to Hyperledger Fabric blockchain</p>
+          <div className="space-y-3 text-left bg-[var(--bg-secondary)] rounded-xl p-5 text-sm">
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Tender ID</span><span className="font-mono">{result.id}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">⛓️ TX Hash</span><span className="font-mono text-xs truncate max-w-[200px]">{result.blockchain_tx}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">📦 Block</span><span>#{result.block_number}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">🕐 Confirmed</span><span>{new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Status</span><span className="text-green-400">{result.status}</span></div>
+          </div>
+          <div className="flex gap-3 mt-8">
+            <button onClick={() => router.push(`/dashboard/tenders/${result.id}`)} className="btn-primary flex-1">View Tender</button>
+            <button onClick={() => { setSubmitted(false); setStep(0); setForm({ ...form, title: '', description: '' }); }} className="btn-primary flex-1" style={{ background: 'var(--bg-secondary)' }}>Create Another</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-display font-bold">Create Tender</h1>
+        <p className="text-sm text-[var(--text-secondary)]">Multi-step GFR-compliant tender creation</p>
+      </div>
+
+      {/* Progress */}
+      <div className="flex gap-1">
+        {STEPS.map((s, i) => (
+          <div key={s} className="flex-1">
+            <div className={`h-1.5 rounded-full transition-all ${i <= step ? 'bg-[var(--accent)]' : 'bg-[var(--bg-secondary)]'}`} />
+            <p className={`text-[10px] mt-1 ${i <= step ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`}>{s}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="card-glass p-8">
+        {/* Step 1 */}
+        {step === 0 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">📋 Basic Information</h3>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Ministry</label>
+              <select className="input-field" value={form.ministry_code} onChange={e => update('ministry_code', e.target.value)}>
+                <option value="">Select Ministry</option>
+                {MINISTRIES.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Department</label>
+              <input className="input-field" value={form.department} onChange={e => update('department', e.target.value)} placeholder="e.g. National Highways Authority" />
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Tender Title</label>
+              <input className="input-field" value={form.title} onChange={e => update('title', e.target.value)} placeholder="e.g. NH-44 Highway Expansion Phase 3" />
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Description</label>
+              <textarea className="input-field" rows={4} value={form.description} onChange={e => update('description', e.target.value)} placeholder="Detailed description of the procurement..." />
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">💰 Financial Details</h3>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Estimated Value (₹ Crore)</label>
+              <input type="number" className="input-field" value={form.estimated_value_crore} onChange={e => update('estimated_value_crore', e.target.value)} placeholder="e.g. 450" />
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Bid Security (₹ Crore) — Auto: 2% of value</label>
+              <input className="input-field" value={form.bid_security_crore} readOnly style={{ opacity: 0.7 }} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Category</label>
+                <select className="input-field" value={form.category} onChange={e => update('category', e.target.value)}>
+                  <option value="WORKS">WORKS</option><option value="GOODS">GOODS</option>
+                  <option value="SERVICES">SERVICES</option><option value="CONSULTANCY">CONSULTANCY</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Procurement Method</label>
+                <select className="input-field" value={form.procurement_method} onChange={e => update('procurement_method', e.target.value)}>
+                  <option value="OPEN_TENDER">OPEN TENDER</option><option value="LIMITED_TENDER">LIMITED TENDER</option>
+                  <option value="SINGLE_SOURCE">SINGLE SOURCE</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Deadline</label>
+              <input type="datetime-local" className="input-field" value={form.deadline} onChange={e => update('deadline', e.target.value)} />
+            </div>
+            {parseFloat(form.estimated_value_crore) > 0 && form.procurement_method !== 'OPEN_TENDER' && parseFloat(form.estimated_value_crore) * 100 > 25 && (
+              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
+                ⚠️ GFR Warning: Estimated value exceeds ₹25 Lakh — OPEN TENDER is required per GFR Rule 149.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 3 */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">📜 Compliance</h3>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">GFR Rule Reference</label>
+              <select className="input-field" value={form.gfr_reference} onChange={e => update('gfr_reference', e.target.value)}>
+                {GFR_RULES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">GeM Category</label>
+              <input className="input-field" value={form.gem_category} onChange={e => update('gem_category', e.target.value)} placeholder="e.g. Civil Construction Works" />
+            </div>
+            <div>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">GeM ID (optional)</label>
+              <input className="input-field" value={form.gem_id} onChange={e => update('gem_id', e.target.value)} placeholder="e.g. GEM/2025/B/4521" />
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--bg-secondary)]">
+              <h4 className="text-sm font-semibold mb-3">GFR Compliance Checklist</h4>
+              {['Rule 144: Administrative approval obtained', 'Rule 149: Open tender for ≥₹25L', 'Rule 153: Bid security clause included', 'Rule 153(a): Performance security defined'].map(rule => (
+                <div key={rule} className="flex items-center gap-2 py-1.5 text-sm">
+                  <span className="text-green-400">✅</span>
+                  <span className="text-[var(--text-secondary)]">{rule}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">📎 Documents</h3>
+            <div className="border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-10 text-center">
+              <p className="text-4xl mb-3">📄</p>
+              <p className="text-sm text-[var(--text-secondary)]">Drag & drop tender notice PDF here</p>
+              <p className="text-xs text-[var(--text-secondary)] mt-2">Documents will be stored on IPFS for immutability</p>
+              <p className="text-xs font-mono text-[var(--text-secondary)] mt-4">IPFS Hash: QmX9vK2mN8pL3qR7sT4uW6yZ1aB5cD0eF (mock)</p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5 */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg mb-4">✅ Review & Submit</h3>
+            <div className="space-y-3 text-sm">
+              {[
+                ['Ministry', form.ministry || form.ministry_code],
+                ['Department', form.department],
+                ['Title', form.title],
+                ['Category', form.category],
+                ['Estimated Value', `₹${form.estimated_value_crore} Crore`],
+                ['Bid Security', `₹${form.bid_security_crore} Crore`],
+                ['GFR Reference', form.gfr_reference],
+                ['GeM Category', form.gem_category],
+                ['Method', form.procurement_method],
+              ].map(([label, value]) => (
+                <div key={label as string} className="flex justify-between p-3 bg-[var(--bg-secondary)] rounded-lg">
+                  <span className="text-[var(--text-secondary)]">{label}</span>
+                  <span className="font-medium">{value || 'N/A'}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+              <h4 className="text-sm font-semibold mb-2">⛓️ Blockchain Preview</h4>
+              <p className="text-xs text-[var(--text-secondary)]">Transaction will be recorded on Hyperledger Fabric &apos;TenderChannel&apos;</p>
+              <p className="text-xs text-[var(--text-secondary)]">Endorsed by: MinistryOrg, AuditorOrg, NICOrg</p>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex justify-between mt-8">
+          <button onClick={() => setStep(Math.max(0, step - 1))} className="btn-primary" style={{ background: step === 0 ? 'var(--bg-secondary)' : undefined, opacity: step === 0 ? 0.5 : 1 }} disabled={step === 0}>← Back</button>
+          {step < 4 ? (
+            <button onClick={() => setStep(step + 1)} className="btn-primary">Next →</button>
+          ) : (
+            <button onClick={handleSubmit} className="btn-primary" disabled={submitting}>
+              {submitting ? '⏳ Publishing...' : '🚀 Submit to Blockchain'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

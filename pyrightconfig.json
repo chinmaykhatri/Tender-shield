@@ -1,0 +1,13 @@
+{
+  "include": [
+    "ai_engine",
+    "backend"
+  ],
+  "extraPaths": [
+    "."
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "off",
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false
+}

@@ -1,0 +1,102 @@
+# TenderShield — Prometheus Alerting Rules
+# Alerts for production monitoring.
+
+groups:
+  - name: tendershield_api
+    interval: 30s
+    rules:
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "API error rate > 5%"
+          description: "{{ $labels.instance }} has error rate {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "API p95 latency > 2s"
+          description: "{{ $labels.instance }} p95 response time is {{ $value }}s"
+
+  - name: tendershield_ai
+    interval: 60s
+    rules:
+      - alert: AIEngineDown
+        expr: up{job="ai-engine"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ai
+        annotations:
+          summary: "AI Engine is down"
+          description: "TenderShield AI Fraud Detection Engine has been unreachable for > 2 minutes."
+
+      - alert: HighFalsePositiveRate
+        expr: rate(ai_false_positives_total[1h]) / rate(ai_analyses_total[1h]) > 0.3
+        for: 30m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "AI false positive rate > 30%"
+          description: "AI engine is generating too many false positives, model may need retraining."
+
+  - name: tendershield_blockchain
+    interval: 60s
+    rules:
+      - alert: BlockchainSyncDelay
+        expr: fabric_block_height - fabric_committed_height > 10
+        for: 5m
+        labels:
+          severity: critical
+          team: infra
+        annotations:
+          summary: "Blockchain sync delay > 10 blocks"
+
+      - alert: PeerDisconnected
+        expr: fabric_peers_connected < 6
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "Fabric peers disconnected"
+          description: "Only {{ $value }} peers connected, expected 8."
+
+  - name: tendershield_infrastructure
+    interval: 30s
+    rules:
+      - alert: HighDiskUsage
+        expr: node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.2
+        for: 10m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "Disk usage > 80% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "Memory usage > 85% on {{ $labels.instance }}"
+
+      - alert: KafkaConsumerLag
+        expr: kafka_consumergroup_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Kafka consumer lag > 1000 messages"
+          description: "Consumer group {{ $labels.consumergroup }} is falling behind on topic {{ $labels.topic }}"

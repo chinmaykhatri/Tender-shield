@@ -46,7 +46,7 @@ class ShellCompanyDetector:
         Returns:
             Risk assessment for this bidder
         """
-        result = {
+        result: Dict[str, Any] = {
             "detector": self.name,
             "bidder_did": bidder_profile.get("bidder_did", ""),
             "risk_score": 0,

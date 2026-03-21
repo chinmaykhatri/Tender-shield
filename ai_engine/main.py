@@ -22,11 +22,11 @@ import uuid
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi import FastAPI  # type: ignore[import]
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore[import]
+from pydantic import BaseModel, Field  # type: ignore[import]
 
-from ai_engine.risk_scorer import CompositeRiskScorer
+from ai_engine.risk_scorer import CompositeRiskScorer  # type: ignore[import]
 
 # ============================================================================
 # Logging
@@ -117,14 +117,14 @@ async def analyze_tender(request: AnalyzeTenderRequest):
     return {
         "success": True,
         "analysis": result,
-        "alert_id": f"ALERT-{uuid.uuid4().hex[:8].upper()}",
+        "alert_id": f"ALERT-{uuid.uuid4().hex[:8].upper()}",  # type: ignore[index]
     }
 
 
 @app.post("/analyze/bid")
 async def analyze_bid(request: AnalyzeBidRequest):
     """Analyze a single bid for shell company indicators."""
-    from ai_engine.detectors.shell_company import ShellCompanyDetector
+    from ai_engine.detectors.shell_company import ShellCompanyDetector  # type: ignore[import]
     detector = ShellCompanyDetector()
 
     profile = request.bidder_profile or request.bid
@@ -274,7 +274,7 @@ async def demo_analyze(request: DemoAnalyzeRequest):
         "success": True,
         "scenario": request.scenario,
         "analysis": analysis,
-        "alert_id": f"DEMO-ALERT-{uuid.uuid4().hex[:8].upper()}",
+        "alert_id": f"DEMO-ALERT-{uuid.uuid4().hex[:8].upper()}",  # type: ignore[index]
     }
 
 

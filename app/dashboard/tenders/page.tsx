@@ -1,80 +1,114 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
-import { getTenders, formatPaise, getStatusBadge } from '@/lib/api';
+import { getTenders } from '@/lib/dataLayer';
+import { useTendersRealtime } from '@/hooks/useRealtimeData';
+import { getStatusBadge } from '@/lib/api';
+import DataSourceBadge from '@/components/DataSourceBadge';
+import Link from 'next/link';
 
 export default function TendersPage() {
-  const { token } = useAuthStore();
-  const [tenders, setTenders] = useState<any[]>([]);
-  const [filter, setFilter] = useState('');
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
+  const [rawTenders, setRawTenders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [usingRealData, setUsingRealData] = useState(false);
+  const tenders = useTendersRealtime(rawTenders);
 
   useEffect(() => {
-    if (!token) return;
-    getTenders(token, filter || undefined)
-      .then(res => setTenders(res.tenders || []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [token, filter]);
+    if (!isAuthenticated) { router.push('/'); return; }
+    loadTenders();
+  }, [isAuthenticated, router, statusFilter]);
 
-  const filters = ['', 'BIDDING_OPEN', 'DRAFT', 'FROZEN_BY_AI', 'AWARDED'];
+  const loadTenders = async () => {
+    setLoading(true);
+    const res = await getTenders(statusFilter ? { status: statusFilter } : undefined);
+    setRawTenders(res.data || []);
+    setUsingRealData(res.using_real_data);
+    setLoading(false);
+  };
+
+  const statusFilters = ['', 'BIDDING_OPEN', 'UNDER_EVALUATION', 'AWARDED', 'FROZEN_BY_AI'];
+
+  const riskColor = (level: string) => {
+    const map: Record<string, string> = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#f97316', CRITICAL: '#ef4444' };
+    return map[level] || '#6366f1';
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold">Tenders</h1>
-          <p className="text-sm text-[var(--text-secondary)]">Blockchain-anchored procurement tenders</p>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl font-display font-bold">Tenders</h1>
+            <DataSourceBadge usingRealData={usingRealData} recordCount={tenders.length} />
+          </div>
+          <p className="text-sm text-[var(--text-secondary)]">{tenders.length} tenders found</p>
         </div>
-        <div className="flex gap-2">
-          {filters.map(f => (
-            <button key={f} onClick={() => { setFilter(f); setLoading(true); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                filter === f ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}>
-              {f || 'All'}
-            </button>
-          ))}
-        </div>
+        <Link href="/dashboard/tenders/create" className="btn-primary">➕ Create Tender</Link>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap">
+        {statusFilters.map(f => (
+          <button key={f || 'all'} onClick={() => setStatusFilter(f)}
+            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${statusFilter === f ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-card)]'}`}>
+            {f || 'All'}
+          </button>
+        ))}
       </div>
 
       {loading ? (
-        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 shimmer rounded-2xl" />)}</div>
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-24 shimmer rounded-2xl" />)}
+        </div>
       ) : tenders.length === 0 ? (
-        <div className="card-glass p-12 text-center">
+        <div className="text-center py-16 card-glass">
           <p className="text-4xl mb-3">📋</p>
-          <p className="text-lg font-medium">No tenders found</p>
-          <p className="text-sm text-[var(--text-secondary)]">Create a new tender or change filters</p>
+          <p className="text-[var(--text-secondary)]">No tenders found</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {tenders.map((tender, i) => {
+          {tenders.map((tender: any) => {
             const badge = getStatusBadge(tender.status);
             return (
-              <div key={i} className="card-glass p-5 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
-                  style={{ background: tender.status === 'FROZEN_BY_AI' ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.1)' }}>
-                  {tender.status === 'FROZEN_BY_AI' ? '🚨' : tender.category === 'WORKS' ? '🏗️' : tender.category === 'GOODS' ? '📦' : '🔧'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-semibold truncate">{tender.title}</h3>
-                    <span className={`badge ${badge.class}`}>{badge.label}</span>
+              <Link key={tender.id} href={`/dashboard/tenders/${tender.id}`}
+                className="block card-glass p-5 hover:border-[var(--border-glow)] transition-all">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className={`badge ${badge.class}`}>{badge.label}</span>
+                      <span className="text-xs font-mono text-[var(--text-secondary)]">{tender.id}</span>
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1 truncate">{tender.title}</h3>
+                    <p className="text-sm text-[var(--text-secondary)] line-clamp-1">{tender.description}</p>
+                    <div className="flex items-center gap-4 mt-3 text-xs text-[var(--text-secondary)]">
+                      <span>🏛️ {tender.ministry_code || tender.ministry}</span>
+                      <span>📦 {tender.category}</span>
+                      <span>📝 {tender.bids_count || 0} bids</span>
+                      <span>📅 {tender.deadline_display || new Date(tender.deadline || tender.created_at).toLocaleDateString('en-IN')}</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)] mb-2 line-clamp-2">{tender.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
-                    <span>🏛️ {tender.ministry_code}</span>
-                    <span>💰 {formatPaise(tender.estimated_value_paise)}</span>
-                    <span>📂 {tender.category}</span>
-                    <span className="font-mono text-[10px]">{tender.tender_id}</span>
+                  <div className="text-right shrink-0">
+                    <p className="text-xl font-display font-bold text-[var(--accent)]">
+                      {tender.estimated_value_display || `₹${tender.estimated_value_crore} Cr`}
+                    </p>
+                    {tender.risk_score !== undefined && (
+                      <div className="mt-2">
+                        <span className="text-xs" style={{ color: riskColor(tender.risk_level) }}>
+                          Risk: {tender.risk_score}
+                        </span>
+                        <div className="risk-meter mt-1 w-20">
+                          <div className="risk-meter-fill" style={{ width: `${tender.risk_score}%`, background: riskColor(tender.risk_level) }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-lg font-display font-bold text-[var(--accent)]">{formatPaise(tender.estimated_value_paise)}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">{tender.procurement_method}</p>
-                </div>
-              </div>
+              </Link>
             );
           })}
         </div>

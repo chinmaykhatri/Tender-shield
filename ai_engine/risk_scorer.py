@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """
 ============================================================================
 TenderShield — Composite Risk Scorer
@@ -30,7 +31,7 @@ ACTION THRESHOLDS:
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone, timedelta
 
 from ai_engine.detectors.bid_rigging import BidRiggingDetector
@@ -50,7 +51,7 @@ class CompositeRiskScorer:
     """
 
     def __init__(self):
-        self.detectors = {
+        self.detectors: Dict[str, Dict[str, Any]] = {
             "BID_RIGGING": {"instance": BidRiggingDetector(), "weight": 0.30},
             "COLLUSION": {"instance": CollusionGraphDetector(), "weight": 0.25},
             "SHELL_COMPANY": {"instance": ShellCompanyDetector(), "weight": 0.20},
@@ -70,8 +71,8 @@ class CompositeRiskScorer:
         self,
         tender: Dict[str, Any],
         bids: List[Dict[str, Any]],
-        historical_tenders: List[Dict[str, Any]] = None,
-        bidder_profiles: List[Dict[str, Any]] = None,
+        historical_tenders: Optional[List[Dict[str, Any]]] = None,
+        bidder_profiles: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Run all 5 detectors and produce a composite risk assessment.
@@ -87,7 +88,7 @@ class CompositeRiskScorer:
         """
         now = datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30")
 
-        result = {
+        result: Dict[str, Any] = {
             "tender_id": tender.get("tender_id", ""),
             "composite_risk_score": 0,
             "recommended_action": "MONITOR",

@@ -1,3 +1,4 @@
+# pyre-ignore-all-errors
 """
 ============================================================================
 TenderShield — Cartel Rotation Detector
@@ -22,6 +23,7 @@ INDIA CONTEXT:
 ============================================================================
 """
 
+import math
 import logging
 from typing import List, Dict, Any
 from collections import defaultdict, Counter
@@ -48,7 +50,7 @@ class CartelRotationDetector:
         Returns:
             Risk assessment for cartel rotation
         """
-        result = {
+        result: Dict[str, Any] = {
             "detector": self.name,
             "risk_score": 0,
             "confidence": 0.0,
@@ -113,27 +115,27 @@ class CartelRotationDetector:
 
         return result
 
-    def _detect_rotation(self, winners: List[str]) -> Dict:
+    def _detect_rotation(self, winners: List[str]) -> Dict[str, Any]:
         """Detect repeating winner sequences."""
         if len(winners) < 4:
             return {"detected": False}
 
         # Check for period-2, period-3, period-4 rotations
         for period in range(2, min(len(winners) // 2 + 1, 6)):
-            matches = 0
-            total_checks = 0
+            matches: int = 0
+            total_checks: int = 0
             for i in range(len(winners) - period):
-                total_checks += 1
+                total_checks = total_checks + 1
                 if winners[i] == winners[i + period]:
-                    matches += 1
+                    matches = matches + 1
 
             if total_checks > 0:
-                match_rate = matches / total_checks
+                match_rate: float = float(matches) / float(total_checks)
                 if match_rate >= self.rotation_score_threshold:
                     return {
                         "detected": True,
                         "period": period,
-                        "match_rate": round(match_rate, 3),
+                        "match_rate": round(float(match_rate), 3),
                         "sequence": winners[:period * 2],
                     }
 
@@ -158,7 +160,7 @@ class CartelRotationDetector:
                     suspicious_depts.append({
                         "department": dept,
                         "dominant_bidder": top_winner,
-                        "win_rate": round(top_count / len(winners), 2),
+                        "win_rate": round(float(top_count) / float(len(winners)), 2),
                     })
 
         return {
@@ -167,9 +169,9 @@ class CartelRotationDetector:
             "description": f"{len(suspicious_depts)} department(s) show dominant bidder pattern" if suspicious_depts else "No lock-in detected",
         }
 
-    def _analyze_price_patterns(self, tenders: List[Dict]) -> Dict:
+    def _analyze_price_patterns(self, tenders: List[Dict]) -> Dict[str, Any]:
         """Analyze if losing bids show consistent markup over winner."""
-        markups = []
+        markups: List[float] = []
 
         for tender in tenders:
             bids = tender.get("bids", [])
@@ -177,22 +179,20 @@ class CartelRotationDetector:
             if len(revealed) < 2:
                 continue
 
-            amounts = sorted([b["revealed_amount_paise"] for b in revealed])
-            winning_amount = amounts[0]
+            amounts: List[Any] = sorted([b["revealed_amount_paise"] for b in revealed])
+            winning_amount: Any = amounts[0]
 
             for amount in amounts[1:]:
-                markup = (amount - winning_amount) / winning_amount
+                markup: float = float(amount - winning_amount) / float(winning_amount)
                 markups.append(round(markup, 4))
 
         if len(markups) < 5:
             return {"suspicious": False}
 
         # Check if markups are suspiciously uniform
-        mean_markup = sum(markups) / len(markups)
-        variance = sum((m - mean_markup) ** 2 for m in markups) / len(markups)
-
-        import math
-        cv = math.sqrt(variance) / mean_markup if mean_markup > 0 else 0
+        mean_markup: float = sum(markups) / len(markups)
+        variance: float = sum((m - mean_markup) ** 2 for m in markups) / len(markups)
+        cv: float = math.sqrt(variance) / mean_markup if mean_markup > 0 else 0.0
 
         return {
             "suspicious": cv < 0.15 and len(markups) >= 5,  # Very consistent markup

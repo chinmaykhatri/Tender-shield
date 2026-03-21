@@ -1,4 +1,4 @@
-# 🏛️ TenderShield
+# 🛡️ TenderShield
 
 > **India's First AI-Secured, Blockchain-Based Government Procurement Monitoring System**
 
@@ -6,6 +6,8 @@
 [![Hyperledger Fabric 2.5](https://img.shields.io/badge/Hyperledger%20Fabric-2.5-green)]()
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)]()
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)]()
+[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3ECF8E)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)]()
 
 ---
@@ -20,237 +22,304 @@ TenderShield changes that.
 
 TenderShield creates an **immutable, AI-monitored, cryptographically secure** tender management system that:
 
-- **Records every action on blockchain** — tender creation, bid submission, evaluation, award — all permanent, tamper-proof
-- **Encrypts bids using Zero-Knowledge Proofs** (Pedersen Commitments) — no one can see bid amounts until the deadline
-- **Detects fraud in real-time** using 5 AI algorithms running in parallel, catching bid rigging, shell companies, and cartels
-- **Integrates with Indian government infrastructure** — GeM, Aadhaar, PFMS, NIC
+- 🔗 **Records every action on blockchain** — tender creation, bid submission, evaluation, award — all permanent, tamper-proof
+- 🔐 **Encrypts bids using Zero-Knowledge Proofs** (Pedersen Commitments) — no one can see bid amounts until the deadline
+- 🤖 **Detects fraud in real-time** using 5 AI algorithms running in parallel, catching bid rigging, shell companies, and cartels
+- 🇮🇳 **Integrates with Indian government infrastructure** — GeM, Aadhaar eKYC, GSTIN, PAN, PFMS, NIC
+- 🛡️ **AI Safety & Constitution** — Claude-powered AI with built-in constitutional safety, security logging, and misuse prevention
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture
 
 ```
-┌─────────── User Layer (Officers / Bidders / CAG Auditors / NIC) ───────────┐
-│                                                                             │
-├─────────── Identity Layer (Aadhaar eKYC + Fabric CA + DSC) ────────────────┤
-│                                                                             │
-├─────────── API Gateway (FastAPI + JWT + Rate Limiting) ─────────────────────┤
-│                                                                             │
-├─────────── App Services (Tender / Bid / ZKP / Alert) ───────────────────────┤
-│                                                                             │
-├─────────── AI Engine (Bid Rigging / Collusion / Cartel / Timing) ──────────┤
-│                                                                             │
-├─────────── Blockchain (Hyperledger Fabric — 4 Orgs, Raft) ──────────────────┤
-│                                                                             │
-├─────────── Event Streaming (Apache Kafka) ──────────────────────────────────┤
-│                                                                             │
-├─────────── Storage (IPFS + PostgreSQL + Redis) ─────────────────────────────┤
-│                                                                             │
-└─────────── Monitoring (Prometheus + Grafana) ───────────────────────────────┘
+┌─────────── User Layer (Officers / Bidders / CAG Auditors / NIC Admin) ──────┐
+│                                                                              │
+├─────────── Identity & Verification Layer ────────────────────────────────────┤
+│  Aadhaar eKYC (Surepass) · GSTIN (API Setu) · PAN · Employee ID · DSC      │
+│  3-Gate Registration: Account → Verification → Admin Approval                │
+│                                                                              │
+├─────────── Frontend (Next.js 14 + TypeScript + TailwindCSS) ────────────────┤
+│  Dashboard · Tender CRUD · Bid Submission · AI Monitor · Admin Panel         │
+│  Real-time Notifications · Session Management · RBAC                         │
+│                                                                              │
+├─────────── API Layer (Next.js API Routes + FastAPI) ─────────────────────────┤
+│  Auth · Verification · Tenders · Bids · AI Analysis · Blockchain Bridge     │
+│  Rate Limiting · JWT · CSRF Protection · Security Headers                    │
+│                                                                              │
+├─────────── AI Engine (Python FastAPI — Port 8001) ───────────────────────────┤
+│  5 Fraud Detectors · Composite Risk Scorer · Claude AI Assistant             │
+│  Constitutional Safety · Security Logging · Explainability                   │
+│                                                                              │
+├─────────── Blockchain (Hyperledger Fabric 2.5 — 4 Orgs, Raft) ──────────────┤
+│  Smart Contracts (Go) · ZKP Bid Encryption · Immutable Audit Trail          │
+│  MinistryOrg · BidderOrg · AuditorOrg · NICOrg                              │
+│                                                                              │
+├─────────── Storage Layer ────────────────────────────────────────────────────┤
+│  Supabase (PostgreSQL + Auth + Realtime) · Redis Cache · IPFS Documents     │
+│                                                                              │
+└─────────── Infrastructure ───────────────────────────────────────────────────┘
+   Docker · CI/CD (GitHub Actions) · Vercel Deploy · Prometheus + Grafana
 ```
-
-## 🔧 Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Blockchain | Hyperledger Fabric 2.5 | Immutable ledger, permissioned network |
-| Consensus | Raft (3 orderers) | Crash fault tolerance |
-| Smart Contracts | Go (Fabric Contract API) | Business logic on-chain |
-| Backend | FastAPI (Python 3.11) | REST API + WebSocket |
-| Frontend | Next.js 14 + Tailwind CSS | Government dashboard |
-| AI/ML | scikit-learn + NetworkX + PyTorch | Fraud detection |
-| ZKP | Pedersen Commitments | Bid confidentiality |
-| Identity | Fabric CA + Aadhaar eKYC | Verified participants |
-| Storage | IPFS + PostgreSQL + Redis | Documents + metadata + cache |
-| Events | Apache Kafka | Real-time event streaming |
-| Monitoring | Prometheus + Grafana | Observability |
-
-## 🏛️ Four Organizations on Blockchain
-
-| Organization | Role | Represents |
-|---|---|---|
-| **MinistryOrg** | Creates tenders, evaluates bids, awards contracts | All central government ministries |
-| **BidderOrg** | Submits ZKP-encrypted bids | Companies, MSMEs, startups |
-| **AuditorOrg** | Monitors, audits, escalates fraud | CAG (Comptroller & Auditor General) |
-| **NICOrg** | Infrastructure admin, AI service identity | National Informatics Centre |
 
 ---
 
-## 🚀 Quick Start
+## ✨ Key Features
 
-### Prerequisites
+### 🔐 3-Gate Registration System
+| Gate | What Happens |
+|------|-------------|
+| **Gate 1** | Supabase account created (email + password) |
+| **Gate 2** | Role-specific identity verification (Aadhaar, GSTIN, PAN, Employee ID) |
+| **Gate 3** | Admin approval (Officers + Bidders wait, CAG Auditors auto-approved) |
 
-- **Docker** 20.10+ & **Docker Compose** 2.0+
-- **Go** 1.21+ (for chaincode compilation)
-- **Python** 3.11+ (for backend & AI engine)
-- **Node.js** 18+ & **npm** (for frontend)
-- **Hyperledger Fabric binaries** 2.5 (`cryptogen`, `configtxgen`, `peer`)
+### 🤖 5 AI Fraud Detectors
+| Detector | What It Catches |
+|----------|----------------|
+| **Bid Rigging** | Abnormally close bid amounts, round-number clustering |
+| **Collusion Graph** | Companies that always bid together, shared directors |
+| **Shell Company** | Newly registered companies (< 6 months), suspicious patterns |
+| **Cartel Rotation** | Winners rotating in a predictable pattern across tenders |
+| **Timing Anomaly** | Bids submitted suspiciously close together (within seconds) |
 
-### Step 1: Clone & Configure
+### 🇮🇳 India-Specific Integrations
+- **Aadhaar eKYC** — OTP-based identity verification via Surepass API
+- **GSTIN Verification** — Company validation + shell company detection via API Setu
+- **PAN Verification** — Duplicate director detection across bidder companies
+- **GFR Compliance** — GFR Rules 144, 149, 153, 154, 155 enforcement
+- **GeM Integration** — Government e-Marketplace seller verification
 
-```bash
-git clone https://github.com/tendershield/tendershield.git
-cd tendershield
-cp .env.example .env
-# Edit .env with your API keys (optional for demo mode)
-```
+### 🔗 Blockchain Features
+- **Hyperledger Fabric 2.5** — 4-org permissioned network with Raft consensus
+- **Zero-Knowledge Proofs** — Pedersen Commitments for bid encryption
+- **Smart Contracts (Go)** — Tender lifecycle, bid management, ZKP verification
+- **Immutable Audit Trail** — Every action timestamped and cryptographically signed
 
-### Step 2: Start Blockchain Network
+### 🛡️ AI Safety (Claude Constitution)
+- **Constitutional AI** — Every AI response checked against safety rules
+- **Security Logging** — Misuse attempts permanently recorded to audit trail
+- **Prompt Injection Protection** — Input sanitization and output validation
+- **Rate Limiting** — Per-user API call limits to prevent abuse
 
-```bash
-cd network/scripts
-chmod +x setup-network.sh
-./setup-network.sh up
-```
-
-This will:
-- ✅ Generate crypto material for all 4 organizations
-- ✅ Create TenderChannel (all orgs) and AuditChannel (Ministry + CAG)
-- ✅ Start 3 orderers (Raft), 8 peers, 4 CAs, 4 CouchDB instances
-- ✅ Install & commit TenderShield chaincode
-- ✅ Seed 3 demo tenders (MoRTH ₹450Cr, MoE ₹85Cr, MoH ₹120Cr)
-- ✅ Run smoke test
-
-### Step 3: Start Backend Services
-
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Start FastAPI backend (port 8000)
-cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-# In another terminal — Start AI engine (port 8001)
-cd ai_engine
-uvicorn main:app --host 0.0.0.0 --port 8001 --reload
-```
-
-### Step 4: Start Frontend Dashboard
-
-```bash
-# Install Node dependencies
-npm install
-
-# Start Next.js dashboard (port 3000)
-npm run dev
-```
-
-### Step 5: Open Dashboard
-
-Navigate to **http://localhost:3000** — login with demo credentials.
-
-### Demo Credentials
-
-| Role | Username | Password |
-|---|---|---|
-| Ministry Officer | officer@morth.gov.in | Tender@2025 |
-| Bidder (Legitimate) | medtech@medtechsolutions.com | Bid@2025 |
-| Shell Company Bidder | admin@biomedicorp.com | Bid@2025 |
-| CAG Auditor | auditor@cag.gov.in | Audit@2025 |
-| NIC Admin | admin@nic.in | Admin@2025 |
-
----
-
-## 🇮🇳 India-Specific Compliance
-
-| Regulation | Implementation |
-|---|---|
-| **GFR 2017 Rule 149** | Open tender threshold (>₹25 lakh) enforced in chaincode |
-| **GFR 2017 Rule 153** | Bid security (2-5%) auto-calculated |
-| **GFR 2017 Rule 153A** | MSME preference scoring in evaluation |
-| **CVC Guidelines** | Full audit trail + AI monitoring for corruption |
-| **IT Act 2000** | DSC verification, Aadhaar eKYC, digital records validity |
-| **GST Act** | GSTIN (15-char) validation for all bidders |
-| **Aadhaar Act 2016** | eKYC identity verification via UIDAI |
-
----
-
-## 🔐 Security Considerations
-
-### 1. Man-in-the-Middle Attack Mitigation
-- TLS 1.3 on all connections
-- Mutual TLS (mTLS) between Fabric peers
-- JWT tokens with RS256 signing and 15-minute expiry
-
-### 2. Insider Threat Protection
-- Dual endorsement: MinistryOrg AND NICOrg required for tender creation
-- Full blockchain audit trail visible to CAG
-- AI monitors officer-bidder correlation patterns
-- Aadhaar eKYC ties every action to a real identity
-
-### 3. ZKP Implementation Security
-- Standard Pedersen commitment parameters (NIST curves)
-- Commitment binding: computationally infeasible to change bid after commitment
-- Commitment hiding: zero information leaked about bid amount
-- Range proofs ensure valid bid amounts without revealing values
+### 👥 Role-Based Access Control (4 Roles)
+| Role | Access |
+|------|--------|
+| **Ministry Officer** | Create tenders, manage procurement, view dashboard |
+| **Senior Officer** | Approve large tenders (> ₹100 Cr), oversight |
+| **Bidder / Company** | Browse tenders, submit encrypted bids, track status |
+| **CAG Auditor** | Full audit access, AI fraud monitoring, security logs |
 
 ---
 
 ## 📂 Project Structure
 
 ```
-tendershield/
-├── docs/                          # Architecture & technical documentation
-│   └── ARCHITECTURE.md            # 9-layer architecture diagram
-├── network/                       # Hyperledger Fabric network
-│   ├── crypto-config.yaml         # Crypto material generation config
-│   ├── configtx.yaml              # Channel & consensus configuration
-│   ├── docker-compose.yaml        # Full Docker network (20+ containers)
-│   ├── prometheus/                # Monitoring configuration
-│   └── scripts/
-│       └── setup-network.sh       # One-command network setup
-├── chaincode/
-│   └── tendershield/
-│       ├── models.go              # Go data models (CouchDB + composite keys)
-│       ├── tender_contract.go     # Main chaincode (13 functions)
-│       ├── zkp_utils.go           # Pedersen Commitment ZKP
-│       ├── compliance.go          # GFR 2017 compliance engine
-│       ├── identity.go            # Identity verification
-│       └── tender_contract_test.go
-├── backend/
-│   ├── main.py                    # FastAPI application
-│   ├── models/
-│   │   └── data_models.py         # Pydantic schemas with Indian validators
-│   ├── auth/                      # JWT + Aadhaar eKYC
-│   ├── routers/                   # API endpoints (tenders, bids, audit)
-│   ├── services/                  # IPFS, Kafka, GeM integration
-│   └── database/                  # PostgreSQL models & migrations
-├── ai_engine/
-│   ├── main.py                    # AI microservice (port 8001)
-│   ├── detectors/                 # 5 fraud detection algorithms
-│   ├── risk_scorer.py             # Composite risk scoring
-│   └── models/                    # ML model training & registry
-├── frontend/
-│   ├── app/                       # Next.js 14 App Router pages
-│   ├── components/                # Reusable React components
-│   ├── hooks/                     # Custom hooks (blockchain feed)
-│   └── lib/                       # API client & utilities
-├── demo/                          # Competition demo scripts
-├── .env.example                   # Environment variables template
-├── requirements.txt               # Python dependencies
-├── package.json                   # Node.js dependencies
-└── README.md                      # This file
+TenderShield/
+├── app/                          # Next.js 14 App Router
+│   ├── page.tsx                  # Login page (cinematic split layout)
+│   ├── register/                 # Multi-step registration
+│   │   ├── page.tsx              # Role selection
+│   │   ├── bidder/page.tsx       # Bidder verification (GSTIN + PAN + Aadhaar)
+│   │   ├── ministry-officer/     # Officer verification
+│   │   ├── senior-officer/       # Senior officer verification
+│   │   └── auditor/page.tsx      # CAG auditor verification
+│   ├── dashboard/                # Protected dashboard
+│   │   ├── page.tsx              # Main dashboard with stats
+│   │   ├── layout.tsx            # Dashboard layout with sidebar
+│   │   ├── tenders/              # Tender management
+│   │   └── bids/                 # Bid management
+│   ├── admin/                    # NIC Admin panel
+│   ├── auditor/                  # CAG Auditor panel
+│   ├── ai-monitor/               # AI fraud monitoring
+│   ├── verify-pending/           # Verification pending status
+│   ├── awaiting-approval/        # Admin approval status
+│   ├── registration-rejected/    # Rejected registration
+│   ├── api/                      # API Routes
+│   │   ├── v1/auth/              # Authentication
+│   │   ├── v1/tenders/           # Tender CRUD
+│   │   ├── v1/bids/              # Bid operations
+│   │   ├── verify/               # Identity verification
+│   │   │   ├── aadhaar/          # Aadhaar OTP send/verify
+│   │   │   ├── gstin/            # GSTIN verification
+│   │   │   ├── pan/              # PAN verification
+│   │   │   ├── employee-id/      # Employee ID save
+│   │   │   ├── access-code/      # Auditor access codes
+│   │   │   └── email-domain/     # Email domain validation
+│   │   ├── ai/                   # AI analysis endpoints
+│   │   ├── blockchain/           # Blockchain bridge
+│   │   └── admin/                # Admin operations
+│   └── components/               # Shared UI components
+├── ai_engine/                    # Python AI Engine (FastAPI)
+│   ├── main.py                   # FastAPI app entry
+│   ├── risk_scorer.py            # Composite risk scoring
+│   └── detectors/                # 5 fraud detection algorithms
+│       ├── bid_rigging.py
+│       ├── collusion_graph.py
+│       ├── shell_company.py
+│       ├── cartel_rotation.py
+│       └── timing_anomaly.py
+├── backend/                      # Python Backend (FastAPI)
+│   ├── main.py                   # Backend entry
+│   └── models/data_models.py     # Pydantic data models
+├── chaincode/tendershield/       # Hyperledger Fabric Smart Contracts (Go)
+│   ├── tender_contract.go
+│   ├── zkp_utils.go
+│   └── tender_contract_test.go
+├── lib/                          # Shared TypeScript libraries
+│   ├── supabase.ts               # Supabase client
+│   ├── store.ts                  # Zustand auth store
+│   ├── api.ts                    # API client
+│   ├── dataLayer.ts              # Data abstraction layer
+│   ├── ai/                       # AI utilities
+│   │   ├── protectedClaudeCall.ts
+│   │   ├── securityLogger.ts
+│   │   └── safeParser.ts
+│   ├── auth/                     # Auth utilities
+│   │   ├── rateLimiter.ts
+│   │   └── requireAuth.ts
+│   └── verification/             # Verification utilities
+│       ├── aadhaar.ts
+│       ├── gstin.ts
+│       ├── pan.ts
+│       └── types.ts
+├── supabase/                     # Database migrations
+│   ├── complete-migration.sql
+│   ├── seed-demo-data.sql
+│   └── add-verification-columns.sql
+├── middleware.ts                  # Auth + Verification Gate + Security Headers
+├── .github/workflows/ci.yml      # CI/CD pipeline
+├── docker-compose.yml            # Docker orchestration
+└── pyrightconfig.json            # Python type checker config
 ```
 
 ---
 
-## 🏆 Competition Differentiators
+## 🚀 Quick Start
 
-| Feature | Details |
-|---|---|
-| 🔐 **ZKP Innovation** | First known application of Pedersen Commitments to Indian government procurement |
-| 🇮🇳 **India Integration** | Aadhaar eKYC, GeM, GFR 2017, GSTIN/PAN validation, IST timestamps |
-| 🤖 **5 AI Fraud Detectors** | Bid rigging, collusion graph, cartel rotation, timing anomaly, shell company |
-| ⛓️ **Enterprise Blockchain** | Hyperledger Fabric (not Ethereum), 4-org network, dual channels, Raft consensus |
-| 📊 **Production Ready** | Docker Compose, Prometheus+Grafana monitoring, Kafka streaming, comprehensive tests |
+### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- Supabase account
+
+### 1. Clone & Install
+```bash
+git clone https://github.com/chinmaykhatri/Tender-shield-final.git
+cd Tender-shield-final
+npm install
+```
+
+### 2. Environment Setup
+```bash
+cp .env.example .env.local
+# Fill in your Supabase URL, keys, and API tokens
+```
+
+### 3. Database Setup
+Run the SQL migrations in Supabase SQL Editor:
+1. `supabase/complete-migration.sql` — Creates all tables
+2. `supabase/seed-demo-data.sql` — Seeds demo users and data
+3. `supabase/add-verification-columns.sql` — Adds verification columns
+
+### 4. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000)
+
+### 5. Run AI Engine (Optional)
+```bash
+cd ai_engine
+pip install -r requirements.txt
+uvicorn main:app --port 8001
+```
 
 ---
 
-## 📜 License
+## 🎮 Demo Mode
 
-MIT License — Built for Blockchain India Competition 2025
+TenderShield runs in **demo mode** by default — all identity verifications work without external API keys.
+
+### Demo Accounts
+| Role | Email | Password |
+|------|-------|----------|
+| Ministry Officer | `officer@morth.gov.in` | `Tender@2025` |
+| Company Bidder | `medtech@medtechsolutions.com` | `Bid@2025` |
+| CAG Auditor | `auditor@cag.gov.in` | `Audit@2025` |
+
+### Demo Verification Credentials
+| Verification | Demo Input |
+|-------------|-----------|
+| Aadhaar OTP | Any 12 digits → OTP: `123456` |
+| GSTIN (Clean) | `07AABCM1234A1ZK` → MedTech Solutions |
+| GSTIN (Shell) | `07AABCB5678B1ZP` → BioMed Corp (flagged) |
+| PAN | `MEDTK1234M` → Valid |
+| PAN (Duplicate) | `ABCDE1234F` → Shared director detected |
+| Access Code | `TS-AUD-DEMO01` → Auditor auto-approved |
 
 ---
 
-**Built with ❤️ for a corruption-free India 🇮🇳**
+## 🔒 Security Features
+
+- **Middleware-level verification gate** — Unverified users cannot access dashboard
+- **Security headers** — X-Frame-Options, CSP, HSTS, XSS Protection
+- **Rate limiting** — Per-user API call limits
+- **RBAC** — Role-based access at middleware, API, and component levels
+- **JWT authentication** — Supabase Auth with session management
+- **Input sanitization** — All user inputs validated server-side
+- **AI safety logging** — Misuse attempts permanently recorded
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Next.js 14, TypeScript, TailwindCSS, Zustand |
+| **Backend** | FastAPI (Python 3.11), Pydantic |
+| **AI Engine** | Python, Claude AI, 5 Custom Detectors |
+| **Database** | Supabase (PostgreSQL), Redis |
+| **Blockchain** | Hyperledger Fabric 2.5, Go Smart Contracts |
+| **Auth** | Supabase Auth, JWT, Aadhaar eKYC |
+| **Identity** | Surepass (Aadhaar), API Setu (GSTIN/PAN) |
+| **Deployment** | Vercel, Docker, GitHub Actions CI/CD |
+| **Monitoring** | Prometheus, Grafana |
+
+---
+
+## 📜 GFR Compliance
+
+TenderShield enforces **General Financial Rules (GFR)** of the Government of India:
+
+| Rule | Enforcement |
+|------|------------|
+| **GFR 144** | Administrative approval required before tender creation |
+| **GFR 149** | Open tender mandatory for procurement ≥ ₹25 Lakh |
+| **GFR 153** | Bid security (EMD) auto-calculated at 2% of estimated value |
+| **GFR 153(a)** | Performance security clause in all tender contracts |
+| **GFR 154** | Evaluation criteria defined at tender creation |
+| **GFR 155** | Award to lowest qualified bidder (L1) enforced |
+| **GFR 166** | Record retention on blockchain for 10 years |
+
+---
+
+## 🏆 Competition Submission
+
+**Blockchain India Competition 2025**
+
+- **Team**: TenderShield
+- **Category**: Government & Public Sector
+- **Problem**: Procurement fraud in Indian government tenders
+- **Solution**: AI + Blockchain + ZKP for transparent, tamper-proof procurement
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <b>🛡️ TenderShield — Securing India's ₹45 Lakh Crore Procurement</b><br>
+  <sub>Built with ❤️ for Blockchain India 2025</sub>
+</p>

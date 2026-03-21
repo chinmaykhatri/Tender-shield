@@ -1,12 +1,17 @@
+// FILE: app/api/v1/tenders/route.ts
+// SECURITY LAYER: Input sanitization on tender creation
+// BREAKS IF REMOVED: YES — tenders cannot be listed or created
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { sanitizeTenderInput, sanitizeText } from '@/lib/security/sanitize';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const statusFilter = url.searchParams.get('status_filter');
+    const statusFilter = sanitizeText(url.searchParams.get('status_filter') || '', 50);
 
     let query = supabase.from('tenders').select('*').order('created_at', { ascending: false });
 
@@ -28,22 +33,38 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const raw = await req.json();
+
+    // ─── Sanitize ALL input fields ──────────
+    const sanitized = sanitizeTenderInput(raw);
+
+    if (!sanitized.valid) {
+      // Log injection attempt if detected
+      if (sanitized.injectionDetected) {
+        console.error('[TenderShield] 🚨 INJECTION ATTEMPT on /api/v1/tenders:', sanitized.errors);
+      }
+      return NextResponse.json(
+        { detail: 'Invalid input', errors: sanitized.errors },
+        { status: 400 }
+      );
+    }
+
+    const data = sanitized.data!;
 
     const tender = {
-      tender_id: `TDR-${body.ministry_code}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
-      title: body.title,
-      description: body.description || '',
-      ministry_code: body.ministry_code,
-      category: body.category || 'WORKS',
-      estimated_value_paise: body.estimated_value_paise || 0,
-      procurement_method: body.procurement_method || 'OPEN_TENDER',
+      tender_id: `TDR-${data.ministry_code}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`,
+      title: data.title,
+      description: data.description,
+      ministry_code: data.ministry_code,
+      category: data.category,
+      estimated_value_paise: data.estimated_value_paise,
+      procurement_method: sanitizeText(raw.procurement_method, 50) || 'OPEN_TENDER',
       status: 'DRAFT',
-      bid_start_date: body.bid_start_date,
-      bid_end_date: body.bid_end_date,
+      bid_start_date: raw.bid_start_date,
+      bid_end_date: raw.bid_end_date,
     };
 
-    const { data, error } = await supabase.from('tenders').insert(tender).select().single();
+    const { data: created, error } = await supabase.from('tenders').insert(tender).select().single();
 
     if (error) {
       return NextResponse.json({ detail: error.message }, { status: 500 });
@@ -55,10 +76,10 @@ export async function POST(req: NextRequest) {
       event_type: 'TENDER_CREATED',
       topic: 'tender-events',
       timestamp_ist: new Date().toISOString(),
-      data: { tender_id: data.tender_id, ministry: data.ministry_code },
+      data: { tender_id: created.tender_id, ministry: created.ministry_code },
     });
 
-    return NextResponse.json({ tender: data, message: 'Tender created successfully' });
+    return NextResponse.json({ tender: created, message: 'Tender created successfully' });
   } catch (err: any) {
     return NextResponse.json({ detail: err.message }, { status: 500 });
   }

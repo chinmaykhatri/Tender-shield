@@ -1,0 +1,14 @@
+# TenderShield — Grafana Dashboard Configuration
+# Import this JSON into Grafana to get a pre-built monitoring dashboard.
+
+apiVersion: 1
+
+providers:
+  - name: tendershield
+    folder: TenderShield
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: true
