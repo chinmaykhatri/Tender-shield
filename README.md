@@ -1,325 +1,294 @@
-# 🛡️ TenderShield
+# 🛡️ TenderShield — AI-Powered Blockchain Procurement Integrity Platform
 
-> **India's First AI-Secured, Blockchain-Based Government Procurement Monitoring System**
+> **India's first AI + Blockchain system that detects, prevents, and prosecutes government procurement fraud in real-time.**
 
-[![Blockchain India Competition 2025](https://img.shields.io/badge/Blockchain%20India-Competition%202025-blue)]()
-[![Hyperledger Fabric 2.5](https://img.shields.io/badge/Hyperledger%20Fabric-2.5-green)]()
-[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)]()
-[![Next.js 14](https://img.shields.io/badge/Next.js-14-black)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6)]()
-[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20DB-3ECF8E)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)]()
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://typescriptlang.org/)
+[![Hyperledger Fabric](https://img.shields.io/badge/Hyperledger-Fabric%202.5-2F3134?logo=hyperledger)](https://hyperledger.org/use/fabric)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
+[![Claude AI](https://img.shields.io/badge/Claude-Constitutional%20AI-D97757?logo=anthropic)](https://anthropic.com/)
 
 ---
 
-## 🎯 Problem Statement
+## 🇮🇳 The Problem
 
-India spends **₹45 lakh crore annually** on government procurement. Estimates suggest **10-15% is lost to corruption** — that's ₹4-6 lakh crore every year. The 2G scam, the Coal scam, the Defence procurement scandals — they all had one thing in common: **no transparent, tamper-proof audit trail that caught fraud in real-time.**
+India loses an estimated **₹5,00,000 Crore annually** to procurement fraud — bid rigging, shell companies, timing collusion, and front-running. Traditional audit catches fraud **months or years later**. By then, public money is gone.
 
-TenderShield changes that.
+## 💡 The Solution
 
-## 💡 Solution
-
-TenderShield creates an **immutable, AI-monitored, cryptographically secure** tender management system that:
-
-- 🔗 **Records every action on blockchain** — tender creation, bid submission, evaluation, award — all permanent, tamper-proof
-- 🔐 **Encrypts bids using Zero-Knowledge Proofs** (Pedersen Commitments) — no one can see bid amounts until the deadline
-- 🤖 **Detects fraud in real-time** using 5 AI algorithms running in parallel, catching bid rigging, shell companies, and cartels
-- 🇮🇳 **Integrates with Indian government infrastructure** — GeM, Aadhaar eKYC, GSTIN, PAN, PFMS, NIC
-- 🛡️ **AI Safety & Constitution** — Claude-powered AI with built-in constitutional safety, security logging, and misuse prevention
+TenderShield uses **5 parallel AI fraud detectors** running on a **Hyperledger Fabric blockchain** to catch procurement fraud **in real-time** — before a single rupee is spent. When risk exceeds 75/100, tenders are **automatically frozen** and auditors are notified within seconds.
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────── User Layer (Officers / Bidders / CAG Auditors / NIC Admin) ──────┐
-│                                                                              │
-├─────────── Identity & Verification Layer ────────────────────────────────────┤
-│  Aadhaar eKYC (Surepass) · GSTIN (API Setu) · PAN · Employee ID · DSC      │
-│  3-Gate Registration: Account → Verification → Admin Approval                │
-│                                                                              │
-├─────────── Frontend (Next.js 14 + TypeScript + TailwindCSS) ────────────────┤
-│  Dashboard · Tender CRUD · Bid Submission · AI Monitor · Admin Panel         │
-│  Real-time Notifications · Session Management · RBAC                         │
-│                                                                              │
-├─────────── API Layer (Next.js API Routes + FastAPI) ─────────────────────────┤
-│  Auth · Verification · Tenders · Bids · AI Analysis · Blockchain Bridge     │
-│  Rate Limiting · JWT · CSRF Protection · Security Headers                    │
-│                                                                              │
-├─────────── AI Engine (Python FastAPI — Port 8001) ───────────────────────────┤
-│  5 Fraud Detectors · Composite Risk Scorer · Claude AI Assistant             │
-│  Constitutional Safety · Security Logging · Explainability                   │
-│                                                                              │
-├─────────── Blockchain (Hyperledger Fabric 2.5 — 4 Orgs, Raft) ──────────────┤
-│  Smart Contracts (Go) · ZKP Bid Encryption · Immutable Audit Trail          │
-│  MinistryOrg · BidderOrg · AuditorOrg · NICOrg                              │
-│                                                                              │
-├─────────── Storage Layer ────────────────────────────────────────────────────┤
-│  Supabase (PostgreSQL + Auth + Realtime) · Redis Cache · IPFS Documents     │
-│                                                                              │
-└─────────── Infrastructure ───────────────────────────────────────────────────┘
-   Docker · CI/CD (GitHub Actions) · Vercel Deploy · Prometheus + Grafana
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Next.js 14)                    │
+│  Dashboard │ Fraud Demo │ Blockchain Explorer │ Heatmap │ RTI   │
+│  Cartel Graph │ ZKP Verifier │ Impact Dashboard │ CAG Cases     │
+├─────────────────────────────────────────────────────────────────┤
+│                     API LAYER (Next.js API Routes)              │
+│  /api/demo/analyze │ /api/cartel-graph │ /api/rti/generate      │
+│  /api/verify/gem │ /api/evidence/certificate │ /api/cag/parse   │
+│  /api/impact/stats │ /api/heatmap/data │ /api/audit/timeline    │
+│  /api/blockchain/blocks │ /api/reports/generate                 │
+├─────────────────────────────────────────────────────────────────┤
+│              AI ENGINE (Claude Constitutional AI)               │
+│  Bid Rigging │ Shell Company │ Timing │ Front-Running │ GeM     │
+│  Claude Constitution: cannot help circumvent fraud detection    │
+├─────────────────────────────────────────────────────────────────┤
+│             BLOCKCHAIN (Hyperledger Fabric 2.5)                 │
+│  4-org Raft consensus │ Immutable audit trail │ ZKP commitments │
+├─────────────────────────────────────────────────────────────────┤
+│              DATABASE (Supabase + PostgreSQL)                   │
+│  Tenders │ Bids │ AI Alerts │ User Verification │ Audit Logs    │
+│  RTI Applications │ CAG Cases │ Trust Scores │ Officer Ledger   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ✨ Key Features
+## ✨ Features (28 Total)
 
-### 🔐 3-Gate Registration System
-| Gate | What Happens |
-|------|-------------|
-| **Gate 1** | Supabase account created (email + password) |
-| **Gate 2** | Role-specific identity verification (Aadhaar, GSTIN, PAN, Employee ID) |
-| **Gate 3** | Admin approval (Officers + Bidders wait, CAG Auditors auto-approved) |
+### 🔍 Core AI Detection (5 Detectors)
 
-### 🤖 5 AI Fraud Detectors
-| Detector | What It Catches |
-|----------|----------------|
-| **Bid Rigging** | Abnormally close bid amounts, round-number clustering |
-| **Collusion Graph** | Companies that always bid together, shared directors |
-| **Shell Company** | Newly registered companies (< 6 months), suspicious patterns |
-| **Cartel Rotation** | Winners rotating in a predictable pattern across tenders |
-| **Timing Anomaly** | Bids submitted suspiciously close together (within seconds) |
+| Detector | What It Catches | Method |
+|----------|----------------|--------|
+| **Bid Rigging** | Coordinated bid amounts | Coefficient of Variation analysis — CV < 3% = suspicious |
+| **Shell Company** | Fake companies created for fraud | GSTIN age, director overlap, MCA verification |
+| **Timing Collusion** | Coordinated bid submission | Submission timestamp clustering analysis |
+| **Front-Running** | Insider knowledge of budget | Bid-to-estimate accuracy > 95% = suspicious |
+| **GeM Price Anomaly** | Overpriced items | Comparison against Government e-Marketplace catalog |
 
-### 🇮🇳 India-Specific Integrations
-- **Aadhaar eKYC** — OTP-based identity verification via Surepass API
-- **GSTIN Verification** — Company validation + shell company detection via API Setu
-- **PAN Verification** — Duplicate director detection across bidder companies
-- **GFR Compliance** — GFR Rules 144, 149, 153, 154, 155 enforcement
-- **GeM Integration** — Government e-Marketplace seller verification
+### 📊 Visual Features (10)
 
-### 🔗 Blockchain Features
-- **Hyperledger Fabric 2.5** — 4-org permissioned network with Raft consensus
-- **Zero-Knowledge Proofs** — Pedersen Commitments for bid encryption
-- **Smart Contracts (Go)** — Tender lifecycle, bid management, ZKP verification
-- **Immutable Audit Trail** — Every action timestamped and cryptographically signed
+| # | Feature | URL | Highlights |
+|---|---------|-----|-----------|
+| 1 | **Live Impact Dashboard** | `/impact` | Animated ₹238.5 Cr counter, live feed, scam comparison |
+| 2 | **Interactive Fraud Demo** | `/demo` | 4 preset scenarios, terminal streaming, risk gauge |
+| 3 | **Visual Blockchain Explorer** | `/blockchain` | Block chain visualization, TX details, hash verifier |
+| 4 | **India Corruption Heatmap** | `/heatmap` | TreeMap by state, ministry breakdown, risk filters |
+| 5 | **WhatsApp Alert Simulator** | Component | Phone mockup, typing animation, notification sound |
+| 6 | **ZKP Live Proof** | `/verify/zkp` | 4-step visual + live Web Crypto commitment demo |
+| 7 | **Audit Trail Timeline** | Component | Vertical timeline, risk chart, blockchain TX links |
+| 8 | **AI Explainability Panel** | Component | SVG visuals, plain English, statistical evidence |
+| 9 | **Auto Compliance Report** | `/api/reports/generate/[id]` | Full HTML → PDF report for CAG auditors |
+| 10 | **Hindi/English Toggle** | Global | 70+ translation keys in both languages |
 
-### 🛡️ AI Safety (Claude Constitution)
-- **Constitutional AI** — Every AI response checked against safety rules
-- **Security Logging** — Misuse attempts permanently recorded to audit trail
-- **Prompt Injection Protection** — Input sanitization and output validation
-- **Rate Limiting** — Per-user API call limits to prevent abuse
+### 🚀 Advanced Deployment Features (5)
 
-### 👥 Role-Based Access Control (4 Roles)
-| Role | Access |
-|------|--------|
-| **Ministry Officer** | Create tenders, manage procurement, view dashboard |
-| **Senior Officer** | Approve large tenders (> ₹100 Cr), oversight |
-| **Bidder / Company** | Browse tenders, submit encrypted bids, track status |
-| **CAG Auditor** | Full audit access, AI fraud monitoring, security logs |
+| # | Feature | URL | Why It's Unique |
+|---|---------|-----|------------------|
+| 1 | **RTI Auto-Filing Portal** | `/rti` | One-click legally-correct RTI letter under RTI Act 2005 |
+| 2 | **Multi-Tender Cartel Graph** | `/ai-monitor/cartel-graph` | Force-directed network detecting cross-ministry cartels |
+| 3 | **Court-Admissible Evidence** | `/api/evidence/certificate/[id]` | Section 65B (Indian Evidence Act) certificate |
+| 4 | **GeM Integration** | Component | Seller verification + price comparison vs gem.gov.in |
+| 5 | **CAG Report Parser** | `/auditor/cag-cases` | 10 real CAG fraud cases + AI pattern matching |
 
----
+### 🔒 Enforcement Features (8)
 
-## 📂 Project Structure
-
-```
-TenderShield/
-├── app/                          # Next.js 14 App Router
-│   ├── page.tsx                  # Login page (cinematic split layout)
-│   ├── register/                 # Multi-step registration
-│   │   ├── page.tsx              # Role selection
-│   │   ├── bidder/page.tsx       # Bidder verification (GSTIN + PAN + Aadhaar)
-│   │   ├── ministry-officer/     # Officer verification
-│   │   ├── senior-officer/       # Senior officer verification
-│   │   └── auditor/page.tsx      # CAG auditor verification
-│   ├── dashboard/                # Protected dashboard
-│   │   ├── page.tsx              # Main dashboard with stats
-│   │   ├── layout.tsx            # Dashboard layout with sidebar
-│   │   ├── tenders/              # Tender management
-│   │   └── bids/                 # Bid management
-│   ├── admin/                    # NIC Admin panel
-│   ├── auditor/                  # CAG Auditor panel
-│   ├── ai-monitor/               # AI fraud monitoring
-│   ├── verify-pending/           # Verification pending status
-│   ├── awaiting-approval/        # Admin approval status
-│   ├── registration-rejected/    # Rejected registration
-│   ├── api/                      # API Routes
-│   │   ├── v1/auth/              # Authentication
-│   │   ├── v1/tenders/           # Tender CRUD
-│   │   ├── v1/bids/              # Bid operations
-│   │   ├── verify/               # Identity verification
-│   │   │   ├── aadhaar/          # Aadhaar OTP send/verify
-│   │   │   ├── gstin/            # GSTIN verification
-│   │   │   ├── pan/              # PAN verification
-│   │   │   ├── employee-id/      # Employee ID save
-│   │   │   ├── access-code/      # Auditor access codes
-│   │   │   └── email-domain/     # Email domain validation
-│   │   ├── ai/                   # AI analysis endpoints
-│   │   ├── blockchain/           # Blockchain bridge
-│   │   └── admin/                # Admin operations
-│   └── components/               # Shared UI components
-├── ai_engine/                    # Python AI Engine (FastAPI)
-│   ├── main.py                   # FastAPI app entry
-│   ├── risk_scorer.py            # Composite risk scoring
-│   └── detectors/                # 5 fraud detection algorithms
-│       ├── bid_rigging.py
-│       ├── collusion_graph.py
-│       ├── shell_company.py
-│       ├── cartel_rotation.py
-│       └── timing_anomaly.py
-├── backend/                      # Python Backend (FastAPI)
-│   ├── main.py                   # Backend entry
-│   └── models/data_models.py     # Pydantic data models
-├── chaincode/tendershield/       # Hyperledger Fabric Smart Contracts (Go)
-│   ├── tender_contract.go
-│   ├── zkp_utils.go
-│   └── tender_contract_test.go
-├── lib/                          # Shared TypeScript libraries
-│   ├── supabase.ts               # Supabase client
-│   ├── store.ts                  # Zustand auth store
-│   ├── api.ts                    # API client
-│   ├── dataLayer.ts              # Data abstraction layer
-│   ├── ai/                       # AI utilities
-│   │   ├── protectedClaudeCall.ts
-│   │   ├── securityLogger.ts
-│   │   └── safeParser.ts
-│   ├── auth/                     # Auth utilities
-│   │   ├── rateLimiter.ts
-│   │   └── requireAuth.ts
-│   └── verification/             # Verification utilities
-│       ├── aadhaar.ts
-│       ├── gstin.ts
-│       ├── pan.ts
-│       └── types.ts
-├── supabase/                     # Database migrations
-│   ├── complete-migration.sql
-│   ├── seed-demo-data.sql
-│   └── add-verification-columns.sql
-├── middleware.ts                  # Auth + Verification Gate + Security Headers
-├── .github/workflows/ci.yml      # CI/CD pipeline
-├── docker-compose.yml            # Docker orchestration
-└── pyrightconfig.json            # Python type checker config
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- Python 3.11+
-- Supabase account
-
-### 1. Clone & Install
-```bash
-git clone https://github.com/chinmaykhatri/Tender-shield-final.git
-cd Tender-shield-final
-npm install
-```
-
-### 2. Environment Setup
-```bash
-cp .env.example .env.local
-# Fill in your Supabase URL, keys, and API tokens
-```
-
-### 3. Database Setup
-Run the SQL migrations in Supabase SQL Editor:
-1. `supabase/complete-migration.sql` — Creates all tables
-2. `supabase/seed-demo-data.sql` — Seeds demo users and data
-3. `supabase/add-verification-columns.sql` — Adds verification columns
-
-### 4. Run Development Server
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000)
-
-### 5. Run AI Engine (Optional)
-```bash
-cd ai_engine
-pip install -r requirements.txt
-uvicorn main:app --port 8001
-```
-
----
-
-## 🎮 Demo Mode
-
-TenderShield runs in **demo mode** by default — all identity verifications work without external API keys.
-
-### Demo Accounts
-| Role | Email | Password |
-|------|-------|----------|
-| Ministry Officer | `officer@morth.gov.in` | `Tender@2025` |
-| Company Bidder | `medtech@medtechsolutions.com` | `Bid@2025` |
-| CAG Auditor | `auditor@cag.gov.in` | `Audit@2025` |
-
-### Demo Verification Credentials
-| Verification | Demo Input |
-|-------------|-----------|
-| Aadhaar OTP | Any 12 digits → OTP: `123456` |
-| GSTIN (Clean) | `07AABCM1234A1ZK` → MedTech Solutions |
-| GSTIN (Shell) | `07AABCB5678B1ZP` → BioMed Corp (flagged) |
-| PAN | `MEDTK1234M` → Valid |
-| PAN (Duplicate) | `ABCDE1234F` → Shared director detected |
-| Access Code | `TS-AUD-DEMO01` → Auditor auto-approved |
-
----
-
-## 🔒 Security Features
-
-- **Middleware-level verification gate** — Unverified users cannot access dashboard
-- **Security headers** — X-Frame-Options, CSP, HSTS, XSS Protection
-- **Rate limiting** — Per-user API call limits
-- **RBAC** — Role-based access at middleware, API, and component levels
-- **JWT authentication** — Supabase Auth with session management
-- **Input sanitization** — All user inputs validated server-side
-- **AI safety logging** — Misuse attempts permanently recorded
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Auto-Lock Enforcement** | Tenders auto-frozen when risk > 75/100 |
+| 2 | **Officer Risk Ledger** | Track officer involvement across flagged tenders |
+| 3 | **Public Transparency Portal** | Citizens can view tender status and risk scores |
+| 4 | **Trust Score Economy** | Companies earn trust through clean bidding history |
+| 5 | **Whistleblower Engine** | Anonymous encrypted reporting with blockchain proof |
+| 6 | **Adaptive AI Thresholds** | Self-adjusting risk thresholds based on sector data |
+| 7 | **Policy Embedding** | GFR rules encoded into smart contract logic |
+| 8 | **Financial Trail Integration** | Follow-the-money analysis of payment chains |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14, TypeScript, TailwindCSS, Zustand |
-| **Backend** | FastAPI (Python 3.11), Pydantic |
-| **AI Engine** | Python, Claude AI, 5 Custom Detectors |
-| **Database** | Supabase (PostgreSQL), Redis |
-| **Blockchain** | Hyperledger Fabric 2.5, Go Smart Contracts |
-| **Auth** | Supabase Auth, JWT, Aadhaar eKYC |
-| **Identity** | Surepass (Aadhaar), API Setu (GSTIN/PAN) |
-| **Deployment** | Vercel, Docker, GitHub Actions CI/CD |
-| **Monitoring** | Prometheus, Grafana |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | Next.js 14, TypeScript, Tailwind CSS | Server-rendered React with API routes |
+| **AI Engine** | Claude Constitutional AI (Anthropic) | Fraud detection with ethical safety constraints |
+| **Blockchain** | Hyperledger Fabric 2.5 | Immutable audit trail with 4-org Raft consensus |
+| **Database** | Supabase (PostgreSQL) + Row Level Security | Multi-role data access with real-time subscriptions |
+| **Auth** | Supabase Auth + Aadhaar + Access Codes | Government-grade identity verification |
+| **Deployment** | Vercel (Frontend) + Docker (Backend) | Production-ready with CI/CD |
+| **Security** | Constitutional AI + Rate Limiting + CSRF | Cannot be manipulated to assist fraud |
 
 ---
 
-## 📜 GFR Compliance
+## 🔐 Security Architecture
 
-TenderShield enforces **General Financial Rules (GFR)** of the Government of India:
-
-| Rule | Enforcement |
-|------|------------|
-| **GFR 144** | Administrative approval required before tender creation |
-| **GFR 149** | Open tender mandatory for procurement ≥ ₹25 Lakh |
-| **GFR 153** | Bid security (EMD) auto-calculated at 2% of estimated value |
-| **GFR 153(a)** | Performance security clause in all tender contracts |
-| **GFR 154** | Evaluation criteria defined at tender creation |
-| **GFR 155** | Award to lowest qualified bidder (L1) enforced |
-| **GFR 166** | Record retention on blockchain for 10 years |
+- **Constitutional AI**: Claude is bound by a constitution — it cannot help users circumvent fraud detection
+- **Misuse Logging**: All attempts to manipulate the AI are logged to blockchain
+- **Row Level Security**: Supabase RLS ensures role-based data isolation
+- **ZKP Bid Commitments**: SHA-256 cryptographic commitments hide bid amounts until deadline
+- **Rate Limiting**: API-level protection against abuse
+- **Aadhaar Verification**: Government-grade identity verification for officers
 
 ---
 
-## 🏆 Competition Submission
+## 🇮🇳 India-Specific Legal Compliance
 
-**Blockchain India Competition 2025**
-
-- **Team**: TenderShield
-- **Category**: Government & Public Sector
-- **Problem**: Procurement fraud in Indian government tenders
-- **Solution**: AI + Blockchain + ZKP for transparent, tamper-proof procurement
+| Law | How TenderShield Complies |
+|-----|--------------------------|
+| **RTI Act 2005** | Auto-generates RTI applications for citizens |
+| **Indian Evidence Act, Section 65B** | Court-admissible digital evidence certificates |
+| **GFR 149, 166, 173, 175** | Auto-checks against General Financial Rules |
+| **Prevention of Corruption Act** | Evidence packages prepared for prosecution |
+| **IT Act 2000** | Electronic records meet Section 65B requirements |
+| **CVC Guidelines** | Alerts routed to Central Vigilance Commission |
 
 ---
 
-## 📄 License
+## 📁 Project Structure
 
-MIT License — see [LICENSE](LICENSE) for details.
+```
+TenderShield/
+├── app/
+│   ├── api/
+│   │   ├── demo/analyze/          # Interactive fraud demo
+│   │   ├── impact/stats/          # Impact dashboard data
+│   │   ├── blockchain/blocks/     # Blockchain explorer data
+│   │   ├── heatmap/data/          # India heatmap data
+│   │   ├── audit/timeline/[id]/   # Audit trail events
+│   │   ├── reports/generate/[id]/ # PDF compliance reports
+│   │   ├── rti/generate/          # RTI letter generator
+│   │   ├── cartel-graph/          # Cartel network data
+│   │   ├── evidence/certificate/  # Section 65B certificates
+│   │   ├── verify/gem/            # GeM seller verification
+│   │   ├── gem/price-check/       # GeM price comparison
+│   │   ├── cag/parse-report/      # CAG report parser
+│   │   └── ...                    # Auth, tenders, bids, etc.
+│   ├── dashboard/                 # Main dashboard
+│   ├── demo/                      # Interactive fraud demo
+│   ├── impact/                    # Impact dashboard
+│   ├── blockchain/                # Blockchain explorer
+│   ├── heatmap/                   # India risk heatmap
+│   ├── verify/zkp/                # ZKP live proof
+│   ├── rti/                       # RTI auto-filing portal
+│   ├── ai-monitor/cartel-graph/   # Cartel detection graph
+│   ├── auditor/cag-cases/         # CAG cases database
+│   └── globals.css                # Design system
+├── components/
+│   ├── WhatsAppSimulator.tsx      # WhatsApp alert mockup
+│   ├── AuditTimeline.tsx          # Vertical audit timeline
+│   ├── AIExplainabilityPanel.tsx   # AI explanation cards
+│   ├── ReportDownload.tsx         # PDF report downloader
+│   ├── CourtEvidencePackage.tsx   # Section 65B package
+│   ├── GemVerification.tsx        # GeM verification UI
+│   └── LanguageToggle.tsx         # Hindi/English switch
+├── lib/
+│   ├── cag/historicalCases.ts     # 10 real CAG fraud cases
+│   ├── i18n/translations.ts      # Bilingual translations
+│   └── supabase/                  # Database client
+├── backend/                       # FastAPI backend
+├── ai_engine/                     # AI analysis engine
+└── supabase/                      # Database migrations
+```
+
+---
+
+## 🚀 Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Add: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optional: ANTHROPIC_API_KEY (enhances AI analysis)
+
+# Run development server
+npm run dev
+
+# Visit: http://localhost:3000
+```
+
+### Demo Mode
+
+Set `NEXT_PUBLIC_DEMO_MODE=true` in `.env.local` — all features work with realistic mock data, zero API keys required.
+
+---
+
+## 🎯 Key URLs
+
+| Page | URL | Access |
+|------|-----|--------|
+| Dashboard | `/dashboard` | Login required |
+| Impact Dashboard | `/impact` | Public |
+| Fraud Demo | `/demo` | Public |
+| Blockchain Explorer | `/blockchain` | Public |
+| India Heatmap | `/heatmap` | Public |
+| ZKP Verification | `/verify/zkp` | Public |
+| RTI Portal | `/rti` | Public (any citizen) |
+| Cartel Graph | `/ai-monitor/cartel-graph` | Auditor / Admin |
+| CAG Cases | `/auditor/cag-cases` | Auditor / Admin |
+
+---
+
+## 📊 12 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/impact/stats` | GET | Impact dashboard statistics |
+| `/api/demo/analyze` | POST | Interactive fraud analysis |
+| `/api/blockchain/blocks` | GET | Blockchain explorer data |
+| `/api/heatmap/data` | GET | State-wise risk data |
+| `/api/audit/timeline/[id]` | GET | Audit trail events |
+| `/api/reports/generate/[id]` | GET | HTML compliance report |
+| `/api/rti/generate` | POST | RTI letter generator |
+| `/api/cartel-graph` | GET | Cartel network graph data |
+| `/api/evidence/certificate/[id]` | GET | Section 65B certificate |
+| `/api/verify/gem` | POST | GeM seller verification |
+| `/api/gem/price-check` | POST | GeM price comparison |
+| `/api/cag/parse-report` | GET/POST | CAG cases + pattern matching |
+
+---
+
+## 🏆 Competition Pitch Flow
+
+```
+"India's CAG has documented procurement fraud since 1858."
+→ Show CAG Cases Database (10 verified patterns)
+
+"TenderShield learned from those patterns."
+→ Show AI Analysis with real-time detection
+
+"We don't just detect — we trace networks."
+→ Show Multi-Tender Cartel Graph
+
+"We generate court-admissible evidence."
+→ Show Section 65B Certificate
+
+"We validate against government market prices."
+→ Show GeM Price Comparison
+
+"And we give every citizen the power to demand answers."
+→ Show RTI Auto-Filing Portal
+
+"From 166 years of CAG audits to real-time AI —
+ TenderShield is India's procurement future."
+```
+
+---
+
+## 👥 Roles
+
+| Role | Access Level |
+|------|-------------|
+| `BIDDER` | Submit bids, view own tenders |
+| `MINISTRY_OFFICER` | Create tenders, view bids |
+| `CAG_AUDITOR` | Full read access, evidence packages, RTI |
+| `NIC_ADMIN` | Full system access, AI configuration |
+
+---
+
+## 📝 License
+
+Built for the **Blockchain India Competition 2025**.
 
 ---
 
 <p align="center">
-  <b>🛡️ TenderShield — Securing India's ₹45 Lakh Crore Procurement</b><br>
-  <sub>Built with ❤️ for Blockchain India 2025</sub>
+  🛡️ <strong>TenderShield</strong> — Because public money deserves public protection.
 </p>
