@@ -2,14 +2,10 @@
 // PURPOSE: GSTIN verification with shell company detection
 // DEMO MODE: Uses demo GSTIN database
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: Request) {
   try {
@@ -86,7 +82,7 @@ export async function POST(req: Request) {
 
     // SAVE TO SUPABASE
     if (user_id) {
-      await supabaseAdmin.from('user_verifications').upsert({
+      await getSupabaseAdmin().from('user_verifications').upsert({
         user_id, gstin: cleaned,
         gstin_legal_name: companyData.legal_name as string,
         gstin_trade_name: companyData.trade_name as string,

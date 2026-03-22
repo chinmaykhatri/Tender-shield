@@ -2,14 +2,10 @@
 // PURPOSE: Verify CAG auditor access code — auto-approves auditors
 // DEMO MODE: Accepts code "TS-AUD-DEMO01"
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +24,7 @@ export async function POST(req: Request) {
 
     // DEMO MODE — accept demo code
     if (isDemoMode && cleaned === 'TS-AUD-DEMO01') {
-      await supabaseAdmin.from('user_verifications').upsert({
+      await getSupabaseAdmin().from('user_verifications').upsert({
         user_id,
         access_code_verified: true,
         overall_status: 'VERIFIED',
@@ -45,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     // REAL MODE — check auditor_access_codes table
-    const { data: accessCode, error: fetchError } = await supabaseAdmin
+    const { data: accessCode, error: fetchError } = await getSupabaseAdmin()
       .from('auditor_access_codes')
       .select('*')
       .eq('code', cleaned)
@@ -73,12 +69,12 @@ export async function POST(req: Request) {
     }
 
     // Mark code as used
-    await supabaseAdmin.from('auditor_access_codes')
+    await getSupabaseAdmin().from('auditor_access_codes')
       .update({ is_used: true, used_by: user_id, used_at: new Date().toISOString() })
       .eq('id', accessCode.id);
 
     // Auto-approve auditor
-    await supabaseAdmin.from('user_verifications').upsert({
+    await getSupabaseAdmin().from('user_verifications').upsert({
       user_id,
       access_code_verified: true,
       overall_status: 'VERIFIED',

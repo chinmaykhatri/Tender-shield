@@ -2,14 +2,10 @@
 // PURPOSE: Save employee details and mark verification complete
 // DEMO MODE: Accepts any employee ID
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: Request) {
   try {
@@ -31,7 +27,7 @@ export async function POST(req: Request) {
     }
 
     // Save to user_verifications
-    const { error } = await supabaseAdmin.from('user_verifications').upsert({
+    const { error } = await getSupabaseAdmin().from('user_verifications').upsert({
       user_id,
       employee_id: employee_id.trim(),
       ministry_code,
@@ -51,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     // Add to pending_registrations for admin review
-    await supabaseAdmin.from('pending_registrations').upsert({
+    await getSupabaseAdmin().from('pending_registrations').upsert({
       user_id,
       role: 'MINISTRY_OFFICER',
       ministry_code,

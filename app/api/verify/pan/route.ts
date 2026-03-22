@@ -2,14 +2,10 @@
 // PURPOSE: PAN verification with duplicate detection
 // DEMO MODE: Uses demo PAN database
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +31,7 @@ export async function POST(req: Request) {
     let duplicateCompany: string | null = null;
 
     if (user_id) {
-      const { data: existingPAN } = await supabaseAdmin
+      const { data: existingPAN } = await getSupabaseAdmin()
         .from('user_verifications')
         .select('user_id, gstin_legal_name')
         .eq('pan', cleaned)
@@ -74,7 +70,7 @@ export async function POST(req: Request) {
 
     // SAVE TO SUPABASE
     if (user_id) {
-      await supabaseAdmin.from('user_verifications').upsert({
+      await getSupabaseAdmin().from('user_verifications').upsert({
         user_id, pan: cleaned,
         pan_name: panData.name as string,
         pan_verified: true,
