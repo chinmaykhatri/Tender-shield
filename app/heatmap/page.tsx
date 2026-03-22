@@ -1,118 +1,140 @@
 // ─────────────────────────────────────────────────
 // FILE: app/heatmap/page.tsx
 // TYPE: CLIENT COMPONENT
-// SECRET KEYS USED: none — uses NEXT_PUBLIC_MAPBOX_TOKEN
-// WHAT THIS FILE DOES: Full-screen India fraud heatmap with state risk colors, tender bubbles
+// SECRET KEYS USED: none
+// WHAT THIS FILE DOES: India procurement risk heatmap with TreeMap, state table, and ministry breakdown
 // ─────────────────────────────────────────────────
 'use client';
 
 import { useState, useEffect } from 'react';
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-
-interface TenderMarker {
-  id: string; title: string; ministry: string; ministry_code: string;
-  value_crore: number; risk_score: number; risk_level: string;
-  lat: number; lng: number; status: string;
-}
-
-const DEMO_MARKERS: TenderMarker[] = [
-  { id: 'TDR-MoRTH-2025-000001', title: 'NH-44 Highway Expansion Phase 3', ministry: 'Ministry of Road Transport', ministry_code: 'MoRTH', value_crore: 450, risk_score: 23, risk_level: 'LOW', lat: 28.614, lng: 77.209, status: 'BIDDING_OPEN' },
-  { id: 'TDR-MoE-2025-000002', title: 'PM SHRI Schools Digital Infrastructure', ministry: 'Ministry of Education', ministry_code: 'MoE', value_crore: 85, risk_score: 31, risk_level: 'LOW', lat: 28.635, lng: 77.225, status: 'AWARDED' },
-  { id: 'TDR-MoH-2025-000003', title: 'AIIMS Delhi Medical Equipment', ministry: 'Ministry of Health', ministry_code: 'MoH', value_crore: 120, risk_score: 94, risk_level: 'CRITICAL', lat: 28.567, lng: 77.210, status: 'FROZEN_BY_AI' },
-  { id: 'TDR-MoD-2025-000004', title: 'Smart City Surveillance System', ministry: 'Ministry of Defence', ministry_code: 'MoD', value_crore: 200, risk_score: 57, risk_level: 'HIGH', lat: 28.597, lng: 77.199, status: 'UNDER_EVALUATION' },
-  { id: 'TDR-MoF-2025-000005', title: 'Digital Tax Infrastructure', ministry: 'Ministry of Finance', ministry_code: 'MoF', value_crore: 340, risk_score: 12, risk_level: 'LOW', lat: 28.610, lng: 77.240, status: 'BIDDING_OPEN' },
-  { id: 'TDR-MoRTH-2025-000006', title: 'Mumbai Metro Phase 4', ministry: 'Ministry of Urban', ministry_code: 'MoUD', value_crore: 780, risk_score: 45, risk_level: 'MEDIUM', lat: 19.076, lng: 72.877, status: 'BIDDING_OPEN' },
-  { id: 'TDR-MoH-2025-000007', title: 'Bengaluru Hospital Network', ministry: 'Ministry of Health', ministry_code: 'MoH', value_crore: 95, risk_score: 68, risk_level: 'HIGH', lat: 12.972, lng: 77.594, status: 'UNDER_EVALUATION' },
-  { id: 'TDR-MoE-2025-000008', title: 'Tamil Nadu Edu-Tech Hub', ministry: 'Ministry of Education', ministry_code: 'MoE', value_crore: 62, risk_score: 18, risk_level: 'LOW', lat: 13.083, lng: 80.270, status: 'AWARDED' },
-];
-
 function getRiskColor(score: number): string {
-  if (score >= 76) return '#dc2626';
-  if (score >= 51) return '#f97316';
-  if (score >= 26) return '#f59e0b';
+  if (score >= 70) return '#ef4444';
+  if (score >= 50) return '#f97316';
+  if (score >= 30) return '#f59e0b';
   return '#22c55e';
 }
 
-function getRiskBg(score: number): string {
-  if (score >= 76) return 'rgba(220,38,38,0.15)';
-  if (score >= 51) return 'rgba(249,115,22,0.15)';
-  if (score >= 26) return 'rgba(245,158,11,0.15)';
-  return 'rgba(34,197,94,0.15)';
+function TreeMapBlock({ state, maxFraud, onSelect, selected }: {
+  state: any; maxFraud: number; onSelect: (s: any) => void; selected: boolean;
+}) {
+  const size = Math.max(60, (state.fraud_cases / Math.max(maxFraud, 1)) * 140);
+  return (
+    <button onClick={() => onSelect(state)}
+      className={`transition-all hover:scale-105 rounded-xl text-center flex flex-col items-center justify-center ${selected ? 'ring-2 ring-white' : ''}`}
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        background: `${getRiskColor(state.risk_score)}15`,
+        border: `2px solid ${getRiskColor(state.risk_score)}40`,
+        boxShadow: selected ? `0 0 20px ${getRiskColor(state.risk_score)}40` : 'none',
+      }}>
+      <span className="text-xs font-bold" style={{ color: getRiskColor(state.risk_score) }}>{state.code}</span>
+      <span className="text-[10px] text-[var(--text-secondary)]">{state.fraud_cases}</span>
+    </button>
+  );
 }
 
 export default function HeatmapPage() {
-  const [selectedTender, setSelectedTender] = useState<TenderMarker | null>(null);
-  const [filter, setFilter] = useState({ ministry: '', category: '', minValue: 0 });
-  const [markers] = useState<TenderMarker[]>(DEMO_MARKERS);
+  const [data, setData] = useState<any>(null);
+  const [selectedState, setSelectedState] = useState<any>(null);
+  const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
-  const stats = {
-    total: markers.length,
-    totalValue: markers.reduce((a, m) => a + m.value_crore, 0),
-    critical: markers.filter(m => m.risk_level === 'CRITICAL').length,
-    high: markers.filter(m => m.risk_level === 'HIGH').length,
-  };
+  useEffect(() => {
+    fetch('/api/heatmap/data')
+      .then(r => r.json())
+      .then(d => { setData(d.data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
-  const topRisky = [...markers].sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
+  if (loading || !data) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const filteredStates = filter === 'all' ? data.states
+    : filter === 'critical' ? data.states.filter((s: any) => s.risk_score >= 70)
+    : filter === 'high' ? data.states.filter((s: any) => s.risk_score >= 50 && s.risk_score < 70)
+    : data.states.filter((s: any) => s.risk_score < 50);
+
+  const maxFraud = Math.max(...data.states.map((s: any) => s.fraud_cases));
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Tricolor */}
       <div className="tricolor-bar fixed top-0 left-0 right-0 z-50" />
-      <div className="flex h-screen pt-1">
-        {/* Map area */}
-        <div className="flex-1 relative bg-[#0a1628]">
-          {/* Static India Map Visual */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative" style={{ width: '600px', height: '650px' }}>
-              {/* India SVG outline */}
-              <svg viewBox="0 0 600 650" className="w-full h-full opacity-20">
-                <path d="M280,50 Q350,30 380,60 Q420,40 440,80 Q480,70 500,110 Q520,130 510,170 Q530,190 520,230 Q540,260 520,290 Q510,320 490,340 Q500,370 480,400 Q470,430 450,450 Q440,480 420,500 Q400,520 380,530 Q360,550 340,560 Q320,570 300,580 Q280,590 260,580 Q240,570 220,550 Q200,530 190,500 Q180,470 170,440 Q160,410 150,380 Q140,350 130,320 Q120,290 130,260 Q140,230 150,200 Q160,170 180,150 Q200,130 220,110 Q240,90 260,70 Z" fill="none" stroke="#818cf8" strokeWidth="2" />
-              </svg>
 
-              {/* Tender markers */}
-              {markers.map((m) => {
-                const x = ((m.lng - 68) / 30) * 600;
-                const y = ((35 - m.lat) / 25) * 650;
-                const size = Math.max(20, Math.min(50, m.value_crore / 15));
-                return (
-                  <button key={m.id} onClick={() => setSelectedTender(m)}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center text-[10px] font-bold transition-all hover:scale-125 cursor-pointer"
-                    style={{
-                      left: `${Math.max(5, Math.min(95, (x / 600) * 100))}%`,
-                      top: `${Math.max(5, Math.min(95, (y / 650) * 100))}%`,
-                      width: `${size}px`, height: `${size}px`,
-                      background: getRiskColor(m.risk_score),
-                      boxShadow: `0 0 ${size}px ${getRiskColor(m.risk_score)}60`,
-                      border: selectedTender?.id === m.id ? '3px solid white' : 'none',
-                    }}>
-                    {m.risk_score}
-                  </button>
-                );
-              })}
-            </div>
+      <div className="max-w-7xl mx-auto px-4 py-8 pt-6">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">🗺️ India Procurement Risk Map</h1>
+            <p className="text-[var(--text-secondary)]">State-wise fraud hotspots — {data.total_fraud_cases} cases across ₹{data.total_value_crore.toLocaleString()} Cr</p>
           </div>
-
-          {/* Stats overlay */}
-          <div className="absolute top-4 left-4 flex gap-3">
+          <div className="flex gap-2">
             {[
-              { label: 'Active', value: stats.total, color: '#6366f1' },
-              { label: 'Total Value', value: `₹${stats.totalValue}Cr`, color: '#22c55e' },
-              { label: 'Critical', value: stats.critical, color: '#dc2626' },
-              { label: 'High Risk', value: stats.high, color: '#f97316' },
-            ].map(s => (
-              <div key={s.label} className="px-3 py-2 rounded-lg bg-black/60 backdrop-blur-md border border-[var(--border-subtle)]">
-                <p className="text-[10px] text-[var(--text-secondary)]">{s.label}</p>
-                <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
-              </div>
+              { key: 'all', label: 'All', color: '#6366f1' },
+              { key: 'critical', label: '🔴 Critical', color: '#ef4444' },
+              { key: 'high', label: '🟠 High', color: '#f97316' },
+              { key: 'low', label: '🟢 Low', color: '#22c55e' },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFilter(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${filter === f.key ? 'opacity-100' : 'opacity-50'}`}
+                style={{ borderColor: `${f.color}40`, color: f.color, background: filter === f.key ? `${f.color}15` : 'transparent' }}>
+                {f.label}
+              </button>
             ))}
           </div>
+        </div>
 
-          {/* Legend */}
-          <div className="absolute bottom-4 left-4 px-4 py-3 rounded-lg bg-black/60 backdrop-blur-md border border-[var(--border-subtle)]">
-            <p className="text-[10px] text-[var(--text-secondary)] mb-2">Risk Level</p>
-            <div className="flex gap-4 text-xs">
-              {[{ color: '#dc2626', label: 'Critical' }, { color: '#f97316', label: 'High' }, { color: '#f59e0b', label: 'Medium' }, { color: '#22c55e', label: 'Low' }].map(l => (
+        {/* Stats bar */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[
+            { icon: '🗺️', label: 'States Monitored', value: data.states.length, color: '#6366f1' },
+            { icon: '🚨', label: 'Fraud Cases', value: data.total_fraud_cases, color: '#ef4444' },
+            { icon: '💰', label: 'Total Value', value: `₹${data.total_value_crore.toLocaleString()} Cr`, color: '#22c55e' },
+            { icon: '📋', label: 'Tenders Tracked', value: data.total_tenders, color: '#f59e0b' },
+          ].map((s, i) => (
+            <div key={i} className="stat-card">
+              <div className="flex items-center gap-2 mb-2">
+                <span>{s.icon}</span>
+                <span className="text-xs text-[var(--text-secondary)] uppercase">{s.label}</span>
+              </div>
+              <p className="text-2xl font-bold font-mono" style={{ color: s.color }}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* TreeMap */}
+          <div className="lg:col-span-3 card-glass p-6">
+            <h2 className="font-semibold mb-4">📊 Risk TreeMap — Size = Fraud Cases, Color = Risk Level</h2>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {filteredStates
+                .sort((a: any, b: any) => b.fraud_cases - a.fraud_cases)
+                .map((state: any) => (
+                  <TreeMapBlock
+                    key={state.code}
+                    state={state}
+                    maxFraud={maxFraud}
+                    onSelect={setSelectedState}
+                    selected={selectedState?.code === state.code}
+                  />
+                ))}
+            </div>
+
+            {/* Legend */}
+            <div className="flex justify-center gap-6 mt-6 text-xs">
+              {[
+                { color: '#ef4444', label: 'Critical (70+)' },
+                { color: '#f97316', label: 'High (50-69)' },
+                { color: '#f59e0b', label: 'Medium (30-49)' },
+                { color: '#22c55e', label: 'Low (<30)' },
+              ].map(l => (
                 <div key={l.label} className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full" style={{ background: l.color }} />
                   <span className="text-[var(--text-secondary)]">{l.label}</span>
@@ -121,63 +143,96 @@ export default function HeatmapPage() {
             </div>
           </div>
 
-          {/* Tender popup */}
-          {selectedTender && (
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-80 card-glass rounded-xl p-4 animate-fade-in">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-sm">{selectedTender.title}</h3>
-                <button onClick={() => setSelectedTender(null)} className="text-[var(--text-secondary)]">✕</button>
+          {/* Right panel */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Selected state details */}
+            {selectedState && (
+              <div className="card-glass p-5 animate-fade-in">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg">{selectedState.state}</h3>
+                  <button onClick={() => setSelectedState(null)} className="text-[var(--text-secondary)] hover:text-white">✕</button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-lg bg-[var(--bg-secondary)]">
+                    <p className="text-xs text-[var(--text-secondary)]">Risk Score</p>
+                    <p className="text-xl font-bold" style={{ color: getRiskColor(selectedState.risk_score) }}>{selectedState.risk_score}/100</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[var(--bg-secondary)]">
+                    <p className="text-xs text-[var(--text-secondary)]">Fraud Cases</p>
+                    <p className="text-xl font-bold text-red-400">{selectedState.fraud_cases}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[var(--bg-secondary)]">
+                    <p className="text-xs text-[var(--text-secondary)]">Total Value</p>
+                    <p className="text-xl font-bold text-[var(--accent)]">₹{selectedState.value_crore} Cr</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[var(--bg-secondary)]">
+                    <p className="text-xs text-[var(--text-secondary)]">Tenders</p>
+                    <p className="text-xl font-bold">{selectedState.tenders}</p>
+                  </div>
+                </div>
+                {/* Risk bar */}
+                <div className="mt-3">
+                  <div className="risk-meter">
+                    <div className="risk-meter-fill" style={{
+                      width: `${selectedState.risk_score}%`,
+                      background: getRiskColor(selectedState.risk_score),
+                    }} />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div><span className="text-[var(--text-secondary)]">Ministry: </span>{selectedTender.ministry_code}</div>
-                <div><span className="text-[var(--text-secondary)]">Value: </span><span className="text-[var(--accent)]">₹{selectedTender.value_crore} Cr</span></div>
-                <div><span className="text-[var(--text-secondary)]">Risk: </span><span style={{ color: getRiskColor(selectedTender.risk_score) }}>{selectedTender.risk_score}/100</span></div>
-                <div><span className="text-[var(--text-secondary)]">Status: </span>{selectedTender.status.replace(/_/g, ' ')}</div>
+            )}
+
+            {/* Ministry breakdown */}
+            <div className="card-glass p-5">
+              <h3 className="font-semibold mb-3">🏛️ Ministry Breakdown</h3>
+              <div className="space-y-2">
+                {data.ministry_breakdown.sort((a: any, b: any) => b.fraud_cases - a.fraud_cases).map((m: any) => (
+                  <div key={m.ministry} className="flex items-center justify-between p-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-all">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">{m.ministry}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+                          <div className="h-full rounded-full" style={{
+                            width: `${m.risk_score}%`,
+                            background: getRiskColor(m.risk_score),
+                          }} />
+                        </div>
+                        <span className="text-xs font-mono" style={{ color: getRiskColor(m.risk_score) }}>{m.risk_score}</span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-red-400 font-semibold ml-3">{m.fraud_cases} cases</span>
+                  </div>
+                ))}
               </div>
-              <a href={`/dashboard/tenders/${selectedTender.id}`} className="btn-primary text-xs py-1.5 w-full text-center block">View Details →</a>
             </div>
-          )}
+
+            {/* Top risk states table */}
+            <div className="card-glass p-5">
+              <h3 className="font-semibold mb-3">🔴 Top Risk States</h3>
+              <div className="space-y-2">
+                {data.states
+                  .sort((a: any, b: any) => b.risk_score - a.risk_score)
+                  .slice(0, 5)
+                  .map((s: any, i: number) => (
+                    <button key={s.code} onClick={() => setSelectedState(s)}
+                      className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-all flex items-center gap-3"
+                      style={{ background: `${getRiskColor(s.risk_score)}08` }}>
+                      <span className="text-lg font-bold text-[var(--text-secondary)] w-6">{i + 1}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{s.state}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">{s.fraud_cases} fraud cases · ₹{s.value_crore} Cr</p>
+                      </div>
+                      <span className="text-sm font-bold font-mono" style={{ color: getRiskColor(s.risk_score) }}>{s.risk_score}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="w-80 bg-[var(--bg-card)] border-l border-[var(--border-subtle)] overflow-y-auto">
-          <div className="p-5">
-            <h2 className="text-lg font-display font-bold mb-1">🗺️ India Procurement Risk Map</h2>
-            <p className="text-xs text-[var(--text-secondary)] mb-4">{stats.total} Active | ₹{stats.totalValue}Cr Total | {stats.critical} CRITICAL</p>
-
-            {/* Top Risky */}
-            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Top Risk Tenders</h3>
-            <div className="space-y-2 mb-6">
-              {topRisky.map(t => (
-                <button key={t.id} onClick={() => setSelectedTender(t)} className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-all" style={{ background: getRiskBg(t.risk_score) }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium truncate flex-1 mr-2">{t.title}</span>
-                    <span className="text-xs font-bold" style={{ color: getRiskColor(t.risk_score) }}>{t.risk_score}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-[var(--text-secondary)]">{t.ministry_code}</span>
-                    <span className="text-[10px] text-[var(--text-secondary)]">₹{t.value_crore}Cr</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Filters */}
-            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Filters</h3>
-            <div className="space-y-3">
-              <select className="input-field text-sm w-full" value={filter.ministry} onChange={e => setFilter(f => ({ ...f, ministry: e.target.value }))}>
-                <option value="">All Ministries</option>
-                {['MoRTH', 'MoH', 'MoE', 'MoD', 'MoF', 'MoUD'].map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <select className="input-field text-sm w-full" value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}>
-                <option value="">All Categories</option>
-                {['WORKS', 'GOODS', 'SERVICES', 'CONSULTANCY'].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            {/* Back button */}
-            <a href="/dashboard" className="block mt-6 text-center text-sm text-[var(--accent)] hover:underline">← Back to Dashboard</a>
-          </div>
+        {/* Footer */}
+        <div className="text-center mt-8">
+          <a href="/dashboard" className="text-[var(--accent)] text-sm hover:underline">← Back to Dashboard</a>
         </div>
       </div>
     </div>
