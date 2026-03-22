@@ -122,12 +122,11 @@ class CartelRotationDetector:
 
         # Check for period-2, period-3, period-4 rotations
         for period in range(2, min(len(winners) // 2 + 1, 6)):
-            matches: int = 0
-            total_checks: int = 0
-            for i in range(len(winners) - period):
-                total_checks = total_checks + 1
-                if winners[i] == winners[i + period]:
-                    matches = matches + 1
+            total_checks = len(winners) - period
+            matches = sum(
+                1 for i in range(total_checks)
+                if winners[i] == winners[i + period]
+            )
 
             if total_checks > 0:
                 match_rate: float = float(matches) / float(total_checks)
