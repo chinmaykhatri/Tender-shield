@@ -10,10 +10,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements from project root (build context is ./backend but needs root)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt || \
-    pip install --no-cache-dir fastapi uvicorn pydantic pydantic-settings python-dotenv loguru httpx requests
+# Install core Python dependencies directly (avoid heavy root requirements.txt)
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    "uvicorn[standard]==0.24.0" \
+    pydantic==2.5.3 \
+    pydantic-settings==2.1.0 \
+    python-multipart==0.0.6 \
+    "python-jose[cryptography]==3.3.0" \
+    "passlib[bcrypt]==1.7.4" \
+    sqlalchemy==2.0.23 \
+    psycopg2-binary==2.9.9 \
+    requests==2.31.0 \
+    httpx==0.26.0 \
+    python-dotenv==1.0.0 \
+    loguru==0.7.2 \
+    orjson==3.9.10
 
 # Copy application code
 COPY . .

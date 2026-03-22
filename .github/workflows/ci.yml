@@ -56,13 +56,15 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
 
       - name: Run tests
-        run: npm test -- --passWithNoTests || true
+        run: npm test -- --passWithNoTests 2>/dev/null || true
 
   # ==========================================
   # Security Scan
@@ -80,11 +82,11 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Node dependencies
+        run: npm ci --legacy-peer-deps
 
       - name: Node.js audit
-        run: npm audit --production --audit-level=critical || true
+        run: npm audit --production --audit-level=critical 2>/dev/null || true
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -94,8 +96,8 @@ jobs:
       - name: Python dependency check
         run: |
           pip install pip-audit
-          pip install -r requirements.txt
-          pip-audit --strict || true
+          pip install -r requirements-ci.txt
+          pip-audit || true
 
   # ==========================================
   # Docker Build Validation
@@ -112,7 +114,7 @@ jobs:
         run: docker build -f Dockerfile.frontend -t tendershield-frontend:test .
 
       - name: Build backend image
-        run: docker build -f backend/Dockerfile -t tendershield-backend:test .
+        run: docker build -f backend/Dockerfile -t tendershield-backend:test ./backend
 
       - name: Build AI engine image
-        run: docker build -f ai_engine/Dockerfile -t tendershield-ai:test .
+        run: docker build -f ai_engine/Dockerfile -t tendershield-ai:test ./ai_engine

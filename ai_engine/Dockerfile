@@ -9,9 +9,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt || \
-    pip install --no-cache-dir fastapi uvicorn pydantic scikit-learn numpy pandas scipy networkx httpx python-dotenv loguru
+# Install core AI dependencies directly
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    "uvicorn[standard]==0.24.0" \
+    pydantic==2.5.3 \
+    scikit-learn==1.3.2 \
+    numpy==1.26.2 \
+    pandas==2.1.4 \
+    scipy==1.11.4 \
+    networkx==3.2.1 \
+    httpx==0.26.0 \
+    python-dotenv==1.0.0 \
+    loguru==0.7.2 \
+    orjson==3.9.10
 
 # Copy AI engine code
 COPY . .
