@@ -79,7 +79,7 @@ class TenderORM(Base):
     # Blockchain cross-references
     blockchain_tx_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     blockchain_block: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    blockchain_mode: Mapped[str] = mapped_column(String(30), default="LEDGER_SIMULATION")
+    blockchain_mode: Mapped[str] = mapped_column(String(30), default="SHA256_AUDIT_LOG")
 
     # AI scoring
     ai_risk_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -138,7 +138,7 @@ class BidORM(Base):
 
     # Blockchain
     blockchain_tx_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    blockchain_mode: Mapped[str] = mapped_column(String(30), default="LEDGER_SIMULATION")
+    blockchain_mode: Mapped[str] = mapped_column(String(30), default="SHA256_AUDIT_LOG")
 
     # Relationships
     tender: Mapped["TenderORM"] = relationship(back_populates="bids")

@@ -58,7 +58,7 @@ async def commit_bid(
             "documents_ipfs_hash": request.bidder_documents_ipfs_hash,
             "status": "COMMITTED",
             "blockchain_tx_id": bid.get("blockchain_tx_id"),
-            "blockchain_mode": bid.get("blockchain_mode", "LEDGER_SIMULATION"),
+            "blockchain_mode": bid.get("blockchain_mode", "SHA256_AUDIT_LOG"),
         })
         await audit_repo.record(
             event_type="BID_SUBMITTED",

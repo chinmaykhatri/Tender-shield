@@ -1,10 +1,20 @@
 """
 ============================================================================
-TenderShield — Synthetic Training Data Generator
+TenderShield — Supplementary Synthetic Data Generator
 ============================================================================
-Generates realistic Indian government procurement data for ML training.
+Generates synthetic tender+bid data for ML training augmentation.
 
-DATA SOURCES (approximated from):
+PRIMARY DATA SOURCE (used for actual training):
+  ai_engine/data/fetch_gem_data.py
+    → 847 records calibrated to real GeM Annual Report 2024 statistics
+    → 5 real CAG audit cases as ground truth anchors
+    → See ai_engine/data/labeled_dataset.csv
+
+THIS MODULE generates additional synthetic data with bid-level detail
+for the pure-Python fraud detectors (bid_rigging, shell_company, etc.)
+that need full bid arrays, not summary statistics.
+
+DATA SOURCES (this module, approximated from):
   - CVC Annual Reports (2020-2024): fraud patterns in Indian procurement
   - GeM Portal statistics: bid count distributions, value ranges
   - CAG Audit Reports: common fraud typologies
@@ -22,6 +32,7 @@ FRAUD TYPES GENERATED:
   5. TIMING_ANOMALY — Burst submissions, last-minute clustering
 ============================================================================
 """
+
 
 import math
 import random

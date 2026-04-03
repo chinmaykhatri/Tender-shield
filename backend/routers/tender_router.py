@@ -171,7 +171,7 @@ async def create_tender(
             "status": tender.get("status", "DRAFT"),
             "created_by_did": current_user.sub,
             "blockchain_tx_id": tender.get("blockchain_tx_id"),
-            "blockchain_mode": tender.get("blockchain_mode", "LEDGER_SIMULATION"),
+            "blockchain_mode": tender.get("blockchain_mode", "SHA256_AUDIT_LOG"),
         })
         # Record audit event
         await audit_repo.record(

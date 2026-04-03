@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column('updated_at_ist', sa.DateTime(timezone=True)),
         sa.Column('blockchain_tx_id', sa.String(128), nullable=True),
         sa.Column('blockchain_block', sa.Integer, nullable=True),
-        sa.Column('blockchain_mode', sa.String(30), server_default='LEDGER_SIMULATION'),
+        sa.Column('blockchain_mode', sa.String(30), server_default='SHA256_AUDIT_LOG'),
         sa.Column('ai_risk_score', sa.Integer, nullable=True),
         sa.Column('ai_scoring_mode', sa.String(20), nullable=True),
         sa.Column('ai_recommended_action', sa.String(20), nullable=True),
@@ -68,7 +68,7 @@ def upgrade() -> None:
         sa.Column('status', sa.String(20), server_default='COMMITTED', index=True),
         sa.Column('ai_risk_score', sa.Float, nullable=True),
         sa.Column('blockchain_tx_id', sa.String(128), nullable=True),
-        sa.Column('blockchain_mode', sa.String(30), server_default='LEDGER_SIMULATION'),
+        sa.Column('blockchain_mode', sa.String(30), server_default='SHA256_AUDIT_LOG'),
     )
     op.create_index('ix_bids_tender_status', 'bids', ['tender_id', 'status'])
 

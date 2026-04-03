@@ -8,23 +8,26 @@ import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import SessionWarning from '@/components/SessionWarning';
 import { ToastProvider } from '@/components/ToastSystem';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { FEATURES } from '@/lib/features';
 
 const navItems = [
-  { href: '/dashboard', icon: '📊', label: 'Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/tenders', icon: '📋', label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'] },
-  { href: '/dashboard/procurement', icon: '📦', label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/bids', icon: '🔒', label: 'ZKP Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'] },
-  { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'NIC_ADMIN'] },
-  { href: '/dashboard/ml-model', icon: '🧠', label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/architecture', icon: '🏗️', label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-  { href: '/demo', icon: '🎬', label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'] },
-];
+  // ── CORE PAGES (always visible) ──
+  { href: '/dashboard', icon: '📊', label: 'Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DASHBOARD },
+  { href: '/dashboard/tenders', icon: '📋', label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TENDERS },
+  { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.CREATE_TENDER },
+  { href: '/dashboard/procurement', icon: '📦', label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PROCUREMENT },
+  { href: '/dashboard/bids', icon: '🔒', label: 'ZKP Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS },
+  { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.BLOCKCHAIN },
+  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR },
+  { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
+  { href: '/architecture', icon: '🏗️', label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ARCHITECTURE },
+  { href: '/demo', icon: '🎬', label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DEMO },
+  // ── GATED PAGES (hidden when NEXT_PUBLIC_HIDE_INCOMPLETE=true) ──
+  { href: '/dashboard/ml-model', icon: '🧠', label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ML_MODEL },
+  { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_ALERTS },
+  { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
+  { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR },
+].filter(item => item.visible);
 
 // Mobile bottom nav shows 5 most important tabs based on role
 const mobileNavConfig: Record<string, { href: string; icon: string; label: string }[]> = {

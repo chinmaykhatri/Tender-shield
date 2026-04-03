@@ -150,10 +150,10 @@ export default function BlockchainExplorer() {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-mono font-bold tracking-wider">
                     🟢 FABRIC LIVE
                   </span>
-                ) : blockchainMode === 'LEDGER_SIMULATION' ? (
+                ) : blockchainMode === 'SHA256_AUDIT_LOG' ? (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-bold tracking-wider"
-                    title="Backend is running with SQLite-backed persistent ledger. Set FABRIC_LIVE=true in .env when Fabric network is running.">
-                    ⚡ PERSISTENT LEDGER
+                    title="SHA-256 chained audit log — cryptographically verifiable locally. Set FABRIC_LIVE=true when Fabric network is running.">
+                    ⚡ SHA-256 AUDIT LOG
                   </span>
                 ) : (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 font-mono font-bold tracking-wider">
@@ -174,11 +174,11 @@ export default function BlockchainExplorer() {
                     CouchDB ✓ | TLS ✓ | Raft ✓
                   </span>
                 </>
-              ) : blockchainMode === 'LEDGER_SIMULATION' ? (
-                // Simulation mode badges
+              ) : blockchainMode === 'SHA256_AUDIT_LOG' ? (
+                // SHA-256 audit log mode badges
                 <>
                   <span className="text-xs px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
-                    📦 SQLite Ledger
+                    🔐 SHA-256 Hashing ✓
                   </span>
                   <span className="text-xs px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
                     🔗 Block Chaining ✓
@@ -200,7 +200,7 @@ export default function BlockchainExplorer() {
               <div>
                 <span className="text-[var(--text-secondary)]">Blocks: </span>
                 <span className="font-mono font-bold text-[var(--accent)]">
-                  {isLive || blockchainMode === 'LEDGER_SIMULATION'
+                  {isLive || blockchainMode === 'SHA256_AUDIT_LOG'
                     ? blockHeight.toLocaleString()
                     : data.current_block.toLocaleString()
                   }
@@ -215,7 +215,7 @@ export default function BlockchainExplorer() {
               <div>
                 <span className="text-[var(--text-secondary)]">Peers: </span>
                 <span className="font-mono font-bold">
-                  {isLive ? peersOnline : blockchainMode === 'LEDGER_SIMULATION' ? '0 (sim)' : data.peers?.length * 2}
+                  {isLive ? peersOnline : blockchainMode === 'SHA256_AUDIT_LOG' ? '0 (local)' : data.peers?.length * 2}
                 </span>
               </div>
             </div>
@@ -233,10 +233,10 @@ export default function BlockchainExplorer() {
           )}
 
           {/* Simulation Mode — Upgrade Hint */}
-          {blockchainMode === 'LEDGER_SIMULATION' && (
+          {blockchainMode === 'SHA256_AUDIT_LOG' && (
             <div className="mt-3 pt-3 border-t border-amber-500/10 text-xs text-amber-300/60">
               <span className="font-semibold text-amber-400/80">Note:</span>{' '}
-              Running with persistent SQLite ledger (block chaining + world state).
+              Running with SHA-256 chained audit log (block chaining + world state — cryptographically verifiable).
               To connect to real Fabric network:{' '}
               <code className="bg-amber-500/10 px-1 py-0.5 rounded text-amber-300/80">
                 FABRIC_LIVE=true
@@ -392,8 +392,8 @@ export default function BlockchainExplorer() {
           <p className="text-sm text-[var(--text-secondary)]">
             {isLive
               ? '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
-              : blockchainMode === 'LEDGER_SIMULATION'
-                ? '📦 Records stored in persistent ledger with block chaining. Connect Fabric for immutable blockchain.'
+              : blockchainMode === 'SHA256_AUDIT_LOG'
+                ? '🔐 Records hashed with SHA-256 chained audit log. Connect Fabric for distributed immutability.'
                 : '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
             }
           </p>

@@ -36,7 +36,7 @@ See `deploy-vps.sh` and `docker-compose.production.yml`
 | Mode | Trigger | Description |
 |------|---------|-------------|
 | `FABRIC_LIVE` | `FABRIC_LIVE=true` + running peer | Real Hyperledger Fabric via gRPC |
-| `LEDGER_SIMULATION` | Default / Fabric unavailable | SQLite-backed persistent ledger |
+| `SHA256_AUDIT_LOG` | Default / Fabric unavailable | SHA-256 chained audit log with block integrity |
 
 ## Key Environment Variables
 

@@ -4,20 +4,20 @@ TenderShield — Fabric Service (Strategy Pattern)
 ============================================================================
 Unified service layer that routes blockchain operations to either:
   • FabricGatewayService — Real Hyperledger Fabric via gRPC
-  • FabricSQLiteService  — Local persistence ledger (when Fabric is down)
+  • FabricSQLiteService  — SHA-256 chained audit log (when Fabric is unavailable)
 
 DESIGN DECISION:
-  The strategy pattern allows seamless switching between live and simulated
+  The strategy pattern allows seamless switching between live and local
   modes. The frontend and API routes don't need to know which backend is
   active — they call the same methods regardless.
 
 BLOCKCHAIN MODE:
   "FABRIC_LIVE"     — Connected to real Fabric peer, real TX IDs
-  "LEDGER_SIMULATION" — SQLite-backed persistent ledger (honest label)
+  "SHA256_AUDIT_LOG" — SHA-256 chained audit log with block integrity
 
 CONFIG:
   Set FABRIC_LIVE=true in .env to attempt Fabric connection first.
-  If connection fails, falls back to SQLite simulation automatically.
+  If connection fails, falls back to SHA-256 audit log automatically.
 ============================================================================
 """
 
@@ -44,19 +44,19 @@ except ImportError:
 
 
 # ============================================================================
-# SQLite Persistent Ledger (Simulation Backend)
+# SHA-256 Chained Audit Log (Local Backend)
 # ============================================================================
 
 class FabricSQLiteService:
     """
-    SQLite-backed blockchain simulation.
+    SHA-256 chained audit log with SQLite persistence.
 
     Provides persistent storage with proper block chaining (each block
-    references the previous block hash). This is used when the real
-    Fabric network is not available.
+    references the previous block hash via SHA-256). This is used when
+    the real Fabric network is not available.
 
-    IMPORTANT: All responses include blockchain_mode="LEDGER_SIMULATION"
-    to honestly indicate this is not a real blockchain.
+    IMPORTANT: All responses include blockchain_mode="SHA256_AUDIT_LOG"
+    to honestly indicate this is a local audit log, not a distributed ledger.
     """
 
     def __init__(self, db_path: str = "tendershield_ledger.db"):
@@ -221,7 +221,7 @@ class FabricSQLiteService:
         tx_id, block_num = self._record_block("CreateTender", tender_data)
         tender_data["blockchain_tx_id"] = tx_id
         tender_data["blockchain_block"] = block_num
-        tender_data["blockchain_mode"] = "LEDGER_SIMULATION"
+        tender_data["blockchain_mode"] = "SHA256_AUDIT_LOG"
 
         key = f"TENDER~{ministry}~{tender_id}"
         self._put_state(key, tender_data, tx_id)
@@ -236,7 +236,7 @@ class FabricSQLiteService:
 
         tx_id, block_num = self._record_block("PublishTender", {"ministry_code": ministry_code, "tender_id": tender_id})
         tender["blockchain_tx_id"] = tx_id
-        tender["blockchain_mode"] = "LEDGER_SIMULATION"
+        tender["blockchain_mode"] = "SHA256_AUDIT_LOG"
 
         self._put_state(key, tender, tx_id)
         return tender
@@ -252,7 +252,7 @@ class FabricSQLiteService:
             "ministry_code": ministry_code, "tender_id": tender_id, "reason": reason
         })
         tender["blockchain_tx_id"] = tx_id
-        tender["blockchain_mode"] = "LEDGER_SIMULATION"
+        tender["blockchain_mode"] = "SHA256_AUDIT_LOG"
 
         self._put_state(key, tender, tx_id)
         return tender
@@ -269,7 +269,7 @@ class FabricSQLiteService:
             "winning_bid_id": winning_bid_id
         })
         tender["blockchain_tx_id"] = tx_id
-        tender["blockchain_mode"] = "LEDGER_SIMULATION"
+        tender["blockchain_mode"] = "SHA256_AUDIT_LOG"
 
         self._put_state(key, tender, tx_id)
         return tender
@@ -282,7 +282,7 @@ class FabricSQLiteService:
 
         tx_id, block_num = self._record_block("SubmitBid", bid_data)
         bid_data["blockchain_tx_id"] = tx_id
-        bid_data["blockchain_mode"] = "LEDGER_SIMULATION"
+        bid_data["blockchain_mode"] = "SHA256_AUDIT_LOG"
 
         key = f"BID~{bid_data.get('tender_id')}~{bid_data.get('bid_id', tx_id[:16])}"
         self._put_state(key, bid_data, tx_id)
@@ -301,7 +301,7 @@ class FabricSQLiteService:
             "revealed_amount_paise": revealed_amount_paise,
             "status": "REVEALED",
             "blockchain_tx_id": tx_id,
-            "blockchain_mode": "LEDGER_SIMULATION",
+            "blockchain_mode": "SHA256_AUDIT_LOG",
         }
 
     async def query_tender_by_id(self, ministry_code: str, tender_id: str) -> Optional[dict]:
@@ -345,7 +345,7 @@ class FabricSQLiteService:
             "total_bids": len(bids),
             "status_distribution": status_counts,
             "block_height": self._block_height,
-            "blockchain_mode": "LEDGER_SIMULATION",
+            "blockchain_mode": "SHA256_AUDIT_LOG",
         }
 
     async def get_block(self, block_number: int) -> Optional[dict]:
@@ -409,11 +409,11 @@ class FabricSQLiteService:
         """Return health info."""
         return {
             "fabric_connected": False,
-            "mode": "LEDGER_SIMULATION",
+            "mode": "SHA256_AUDIT_LOG",
             "block_height": self._block_height,
             "world_state_keys": len(self._state),
             "db_path": self._db_path,
-            "demo_mode": True,
+            "note": "SHA-256 chained audit log — cryptographically verifiable locally",
         }
 
 
@@ -437,7 +437,7 @@ class FabricService:
         self._gateway: Optional[Any] = None
         self._sqlite = FabricSQLiteService()
         self._backend: Any = self._sqlite  # Default to SQLite
-        self.mode = "LEDGER_SIMULATION"
+        self.mode = "SHA256_AUDIT_LOG"
         self._initialized = False
 
     async def initialize(self):
@@ -457,15 +457,15 @@ class FabricService:
                 else:
                     logger.warning("[FabricService] Fabric connection failed — falling back to SQLite")
                     self._backend = self._sqlite
-                    self.mode = "LEDGER_SIMULATION"
+                    self.mode = "SHA256_AUDIT_LOG"
             except Exception as e:
                 logger.error(f"[FabricService] Fabric error: {e} — falling back to SQLite")
                 self._backend = self._sqlite
-                self.mode = "LEDGER_SIMULATION"
+                self.mode = "SHA256_AUDIT_LOG"
         else:
-            logger.info("[FabricService] Running in LEDGER_SIMULATION mode (FABRIC_LIVE not set)")
+            logger.info("[FabricService] Running in SHA256_AUDIT_LOG mode (FABRIC_LIVE not set)")
             self._backend = self._sqlite
-            self.mode = "LEDGER_SIMULATION"
+            self.mode = "SHA256_AUDIT_LOG"
 
         self._initialized = True
 

@@ -11,7 +11,7 @@ Dedicated REST endpoints for blockchain operations:
 
 All data comes from either:
   - Real Fabric peer (FABRIC_LIVE mode)
-  - SQLite persistent ledger (LEDGER_SIMULATION mode)
+  - SHA-256 chained audit log (SHA256_AUDIT_LOG mode)
 
 Every response includes `blockchain_mode` for frontend honesty.
 ============================================================================
