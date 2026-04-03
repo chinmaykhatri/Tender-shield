@@ -21,7 +21,7 @@ export async function GET(
     }
 
     return NextResponse.json({ bids: bids || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({ bids: [] }, { status: 500 });
   }
 }

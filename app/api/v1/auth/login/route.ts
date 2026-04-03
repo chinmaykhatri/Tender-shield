@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/v1/auth/login/route.ts
 // SECURITY LAYER: Rate limiting + failed attempt logging
 // BREAKS IF REMOVED: YES — login stops working
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       );
 
       // Log rate limit hit
-      console.warn(`[TenderShield] 🚫 Rate limit hit: ${email} from ${ip}`);
+      logger.warn(`[TenderShield] 🚫 Rate limit hit: ${email} from ${ip}`);
 
       // Try to log to Supabase (non-blocking)
       void (async () => { try { await supabase.from('login_attempts').insert({
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
         attempted_at: new Date().toISOString(),
         user_agent: req.headers.get('user-agent')?.slice(0, 200) ?? null,
         blocked_reason: 'rate_limited',
-      }); } catch {} })();
+      }); } catch { /* non-blocking */ } })();
 
       return NextResponse.json(
         {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
         success: false,
         attempted_at: new Date().toISOString(),
         user_agent: req.headers.get('user-agent')?.slice(0, 200) ?? null,
-      }); } catch {} })();
+      }); } catch { /* non-blocking */ } })();
 
       return NextResponse.json(
         { detail: error?.message || 'Invalid email or password' },
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
       success: true,
       attempted_at: new Date().toISOString(),
       user_agent: req.headers.get('user-agent')?.slice(0, 200) ?? null,
-    }); } catch {} })();
+    }); } catch { /* non-blocking */ } })();
 
     return NextResponse.json({
       access_token: data.session.access_token,
@@ -112,9 +113,10 @@ export async function POST(req: NextRequest) {
       org: profile?.org || 'BidderOrg',
       name: profile?.name || email.split('@')[0],
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Login failed';
     return NextResponse.json(
-      { detail: err.message || 'Login failed' },
+      { detail: message },
       { status: 500 }
     );
   }

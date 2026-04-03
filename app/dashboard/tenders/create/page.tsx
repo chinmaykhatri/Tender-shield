@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
-import { createTender } from '@/lib/dataLayer';
+import { useToast } from '@/components/ToastSystem';
 
 const STEPS = ['Basic Info', 'Financial Details', 'Compliance', 'Documents', 'Review & Submit'];
 
@@ -23,6 +23,7 @@ const GFR_RULES = ['GFR Rule 144', 'GFR Rule 149', 'GFR Rule 153', 'GFR Rule 153
 export default function CreateTenderPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const { addToast } = useToast();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -49,16 +50,57 @@ export default function CreateTenderPage() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+
+    addToast({ type: 'info', title: '🚀 Submitting Tender', message: `Publishing "${form.title}" to blockchain...`, duration: 4000 });
+
     try {
-      const res = await createTender({
-        ...form,
-        estimated_value_crore: parseFloat(form.estimated_value_crore) || 0,
-        deadline: form.deadline || new Date(Date.now() + 30 * 86400000).toISOString(),
+      const res = await fetch('/api/tender-flow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title,
+          ministry_code: form.ministry_code,
+          estimated_value_crore: parseFloat(form.estimated_value_crore) || 100,
+          category: form.category,
+          description: form.description,
+        }),
       });
-      setResult(res.data);
-      setSubmitted(true);
+
+      const data = await res.json();
+
+      if (data.success) {
+        setResult(data);
+        setSubmitted(true);
+
+        // Fire staggered toasts so judges see each step
+        const pipeline = data.pipeline || [];
+        for (let i = 0; i < pipeline.length; i++) {
+          const step = pipeline[i];
+          setTimeout(() => {
+            if (step.step === 'CREATE_TENDER') {
+              addToast({ type: 'success', title: '📋 Tender Created', message: `${data.summary.tender} — ${data.summary.value} saved to Supabase`, duration: 8000 });
+            } else if (step.step === 'BLOCKCHAIN_RECORD') {
+              addToast({ type: 'blockchain', title: '⛓️ Blockchain Recorded', message: `TX: ${(step.data as any)?.tx_hash?.slice(0, 16)}... committed to Fabric ledger`, duration: 8000 });
+            } else if (step.step === 'AI_ANALYSIS') {
+              const risk = (step.data as any)?.risk_score || 0;
+              addToast({
+                type: risk >= 80 ? 'warning' : 'ai',
+                title: risk >= 80 ? '🚨 AI Fraud Alert!' : '🧠 AI Analysis Complete',
+                message: risk >= 80
+                  ? `Risk Score: ${risk}% — potential fraud detected!`
+                  : `Risk Score: ${risk}% — within acceptable threshold`,
+                duration: 10000,
+              });
+            } else if (step.step === 'ENFORCEMENT') {
+              addToast({ type: 'error', title: '❄️ TENDER FROZEN', message: `${data.summary.tender} auto-frozen by AI enforcement engine`, duration: 12000 });
+            }
+          }, (i + 1) * 1500);
+        }
+      } else {
+        addToast({ type: 'error', title: 'Submission Failed', message: data.error || 'Unknown error', duration: 8000 });
+      }
     } catch (e) {
-      console.error(e);
+      addToast({ type: 'error', title: 'Network Error', message: 'Could not reach TenderShield API', duration: 8000 });
     }
     setSubmitting(false);
   };
@@ -66,21 +108,79 @@ export default function CreateTenderPage() {
   if (!isAuthenticated) { router.push('/'); return null; }
 
   if (submitted && result) {
+    const summary = result.summary || {};
+    const isFrozen = summary.status === 'FROZEN_BY_AI';
+    // Extract AI detectors from pipeline
+    const aiStep = (result.pipeline || []).find((s: any) => s.step === 'AI_ANALYSIS');
+    const detectors = aiStep?.data?.detectors || [];
+    const aiSummary = aiStep?.data?.summary || '';
     return (
-      <div className="max-w-lg mx-auto py-16 text-center animate-fade-in">
-        <div className="card-glass p-10">
-          <div className="text-6xl mb-6">✅</div>
-          <h2 className="text-2xl font-display font-bold mb-2">Tender Published!</h2>
-          <p className="text-[var(--text-secondary)] mb-8">Submitted to Hyperledger Fabric blockchain</p>
-          <div className="space-y-3 text-left bg-[var(--bg-secondary)] rounded-xl p-5 text-sm">
-            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Tender ID</span><span className="font-mono">{result.id}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">⛓️ TX Hash</span><span className="font-mono text-xs truncate max-w-[200px]">{result.blockchain_tx}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">📦 Block</span><span>#{result.block_number}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">🕐 Confirmed</span><span>{new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Status</span><span className="text-green-400">{result.status}</span></div>
+      <div className="max-w-2xl mx-auto py-10 animate-fade-in">
+        <div className="card-glass p-8">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-4">{isFrozen ? '❄️' : '✅'}</div>
+            <h2 className="text-2xl font-display font-bold mb-1">
+              {isFrozen ? 'Tender Frozen by AI!' : 'Tender Published!'}
+            </h2>
+            <p className="text-[var(--text-secondary)] text-sm">
+              {isFrozen
+                ? `AI detected risk score ${summary.risk_score}% — auto-frozen for CAG review`
+                : 'Submitted to Hyperledger Fabric blockchain'}
+            </p>
           </div>
-          <div className="flex gap-3 mt-8">
-            <button onClick={() => router.push(`/dashboard/tenders/${result.id}`)} className="btn-primary flex-1">View Tender</button>
+
+          {/* Pipeline Summary */}
+          <div className="space-y-2 bg-[var(--bg-secondary)] rounded-xl p-4 text-sm mb-5">
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Tender ID</span><span className="font-mono text-xs">{summary.tender_id || result.tender_id}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">⛓️ TX Hash</span><span className="font-mono text-xs truncate max-w-[250px]">{summary.blockchain_tx}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">🧠 Risk Score</span>
+              <span style={{ color: (summary.risk_score || 0) >= 80 ? '#ef4444' : (summary.risk_score || 0) >= 50 ? '#f59e0b' : '#22c55e', fontWeight: 700 }}>
+                {summary.risk_score}%
+              </span>
+            </div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Pipeline</span><span>{summary.steps_completed} steps completed</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Status</span>
+              <span style={{ color: isFrozen ? '#ef4444' : '#22c55e', fontWeight: 700 }}>
+                {isFrozen ? '❄️ FROZEN' : '✅ BIDDING_OPEN'}
+              </span>
+            </div>
+          </div>
+
+          {/* AI Fraud Detector Breakdown — Transparent Scoring */}
+          {detectors.length > 0 && (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <span>🧠</span> AI Fraud Analysis — 5 Detector Breakdown
+              </h3>
+              <div className="space-y-2">
+                {detectors.map((d: any, i: number) => (
+                  <div key={i} className="bg-[var(--bg-secondary)] rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium flex items-center gap-1.5">
+                        {d.flag ? '🚩' : '✅'} {d.name}
+                      </span>
+                      <span className="text-xs font-bold" style={{ color: d.score >= 80 ? '#ef4444' : d.score >= 50 ? '#f59e0b' : '#22c55e' }}>
+                        {d.score}%
+                      </span>
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden', marginBottom: 4 }}>
+                      <div style={{ height: '100%', width: `${d.score}%`, background: d.score >= 80 ? '#ef4444' : d.score >= 50 ? '#f59e0b' : '#22c55e', borderRadius: 4, transition: 'width 1s ease' }} />
+                    </div>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-tight">{d.evidence}</p>
+                  </div>
+                ))}
+              </div>
+              {aiSummary && (
+                <div className="mt-3 p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <p className="text-xs text-[var(--text-secondary)]"><strong>AI Summary:</strong> {aiSummary}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => router.push('/dashboard/blockchain')} className="btn-primary flex-1">View on Blockchain</button>
             <button onClick={() => { setSubmitted(false); setStep(0); setForm({ ...form, title: '', description: '' }); }} className="btn-primary flex-1" style={{ background: 'var(--bg-secondary)' }}>Create Another</button>
           </div>
         </div>

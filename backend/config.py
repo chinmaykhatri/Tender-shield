@@ -31,10 +31,12 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # --- Hyperledger Fabric ---
+    FABRIC_LIVE: bool = False  # Set True when real Fabric network is running
     FABRIC_CHANNEL_NAME: str = "tenderchannel"
     FABRIC_AUDIT_CHANNEL_NAME: str = "auditchannel"
     FABRIC_CHAINCODE_NAME: str = "tendershield"
     FABRIC_GATEWAY_PEER: str = "peer0.ministry.tendershield.gov.in"
+    FABRIC_GATEWAY_PEER_ENDPOINT: str = "localhost:7051"
     FABRIC_GATEWAY_PORT: int = 7051
     FABRIC_WALLET_PATH: str = "./wallet"
 

@@ -5,6 +5,7 @@
 import { TENDERSHIELD_CONSTITUTION } from './constitution';
 import { detectPromptInjection } from '../security/sanitize';
 import { logSecurityAttempt } from './securityLogger';
+import { enforceInputSafety, enforceOutputSafety } from './constitutionEnforcer';
 
 interface ClaudeCallOptions {
   taskInstructions: string;
@@ -56,7 +57,8 @@ export async function protectedClaudeCall(
   // LAYER 1: Pre-flight injection check
   // ─────────────────────────────────────────
   const injectionCheck = detectPromptInjection(userMessage);
-  if (injectionCheck.detected) {
+  const constitutionalCheck = enforceInputSafety(userMessage);
+  if (injectionCheck.detected || !constitutionalCheck.allowed) {
     if (userId) {
       await logSecurityAttempt({
         user_id: userId,
@@ -65,11 +67,12 @@ export async function protectedClaudeCall(
         ip_address: ipAddress ?? undefined,
       });
     }
-    console.warn(`[TenderShield] 🚨 Prompt injection blocked on ${endpoint}:`, injectionCheck.pattern);
     return {
       success: false,
       blocked: true,
-      blockReason: 'prompt_injection_detected',
+      blockReason: !constitutionalCheck.allowed
+        ? `constitutional_enforcement: ${constitutionalCheck.violation_type}`
+        : 'prompt_injection_detected',
     };
   }
 
@@ -87,7 +90,7 @@ export async function protectedClaudeCall(
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.warn('[TenderShield] No ANTHROPIC_API_KEY — AI call skipped');
+    // No API key — AI call skipped
     return { success: false, blocked: false };
   }
 
@@ -109,7 +112,7 @@ export async function protectedClaudeCall(
     });
 
     if (!response.ok) {
-      console.error('[TenderShield] Anthropic API error:', response.status);
+      // Anthropic API error — handled gracefully
       return { success: false, blocked: false };
     }
 
@@ -125,7 +128,8 @@ export async function protectedClaudeCall(
     // Log the event if constitution triggered
     // ─────────────────────────────────────────
     const REFUSAL_PHRASE = 'TenderShield AI cannot assist with that request';
-    if (text.includes(REFUSAL_PHRASE)) {
+    const outputCheck = enforceOutputSafety(text);
+    if (text.includes(REFUSAL_PHRASE) || !outputCheck.allowed) {
       if (userId) {
         await logSecurityAttempt({
           user_id: userId,
@@ -137,13 +141,15 @@ export async function protectedClaudeCall(
       return {
         success: false,
         blocked: true,
-        blockReason: 'constitution_triggered',
+        blockReason: !outputCheck.allowed
+          ? `output_enforcement: ${outputCheck.violation_type}`
+          : 'constitution_triggered',
       };
     }
 
     return { success: true, text };
   } catch (error) {
-    console.error('[TenderShield] protectedClaudeCall error:', error);
+    // protectedClaudeCall error — handled gracefully
     return { success: false, blocked: false };
   }
 }

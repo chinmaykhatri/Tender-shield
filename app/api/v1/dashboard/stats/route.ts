@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         fraud_prevented_value_crores: fraudPreventedPaise / 1_00_00_00_000,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({
       stats: {
         total_tenders: 0, active_tenders: 0, total_bids: 0,

@@ -2,28 +2,33 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { DEMO_MODE, DEMO_BLOCKCHAIN_FEED, supabase } from '@/lib/dataLayer';
+import type { BlockchainEvent, Tender, DashboardStats } from '@/lib/types';
 
 const EXTRA_DEMO_EVENTS = [
-  { tx: "0xa1b2...c3d4", event: "BID_COMMITTED", ministry: "MoRTH", amount: "hidden", time: "", block: 0, type: "info" },
-  { tx: "0xd5e6...f7a8", event: "TENDER_CREATED", ministry: "MoHUA", amount: "₹560 Cr", time: "", block: 0, type: "success" },
-  { tx: "0xb9c0...d1e2", event: "ZKP_VERIFIED", ministry: "MoE", amount: "✓ Valid", time: "", block: 0, type: "info" },
-  { tx: "0xf3a4...b5c6", event: "AI_SCAN_COMPLETE", ministry: "MoD", amount: "Score: 12", time: "", block: 0, type: "success" },
-  { tx: "0xc7d8...e9f0", event: "BID_REVEALED", ministry: "MoRTH", amount: "₹421 Cr", time: "", block: 0, type: "info" },
+  { tx: "0xa1b2...c3d4", event: "BID_COMMITTED (sim)", ministry: "MoRTH", amount: "hidden", time: "", block: 0, type: "info" },
+  { tx: "0xd5e6...f7a8", event: "TENDER_CREATED (sim)", ministry: "MoHUA", amount: "₹560 Cr", time: "", block: 0, type: "success" },
+  { tx: "0xb9c0...d1e2", event: "COMMITMENT_VERIFIED (sim)", ministry: "MoE", amount: "✓ Valid", time: "", block: 0, type: "info" },
+  { tx: "0xf3a4...b5c6", event: "AI_SCAN_COMPLETE (sim)", ministry: "MoD", amount: "Score: 12", time: "", block: 0, type: "success" },
+  { tx: "0xc7d8...e9f0", event: "BID_REVEALED (sim)", ministry: "MoRTH", amount: "₹421 Cr", time: "", block: 0, type: "info" },
 ];
 
 export function useBlockchainFeed() {
-  const [feed, setFeed] = useState(DEMO_MODE ? [...DEMO_BLOCKCHAIN_FEED] : []);
+  const [feed, setFeed] = useState<BlockchainEvent[]>(DEMO_MODE ? [...DEMO_BLOCKCHAIN_FEED] : []);
 
   useEffect(() => {
     if (DEMO_MODE) {
-      let blockNum = 1339;
+      // Sync with blockchain API: same genesis + interval so block numbers match
+      const GENESIS = new Date('2025-01-15T00:00:00+05:30').getTime();
+      const BLOCK_INTERVAL = 8000; // 8s per block — matches api/blockchain/blocks/route.ts
+
       const interval = setInterval(() => {
+        const currentBlock = Math.floor((Date.now() - GENESIS) / BLOCK_INTERVAL);
         const randomEvent = EXTRA_DEMO_EVENTS[Math.floor(Math.random() * EXTRA_DEMO_EVENTS.length)];
         const now = new Date();
         const newEvent = {
           ...randomEvent,
           time: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`,
-          block: blockNum++,
+          block: currentBlock,
           tx: "0x" + Math.random().toString(16).slice(2, 6) + "..." + Math.random().toString(16).slice(2, 6),
         };
         setFeed(prev => [newEvent, ...prev].slice(0, 20));
@@ -34,6 +39,7 @@ export function useBlockchainFeed() {
       const channel = supabase
         .channel('audit-events-realtime')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_events' },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase SDK payload type
           (payload: any) => {
             setFeed(prev => [payload.new, ...prev].slice(0, 20));
           }
@@ -46,8 +52,8 @@ export function useBlockchainFeed() {
   return feed;
 }
 
-export function useTendersRealtime(initialTenders: any[]) {
-  const [tenders, setTenders] = useState(initialTenders);
+export function useTendersRealtime(initialTenders: Tender[]) {
+  const [tenders, setTenders] = useState<Tender[]>(initialTenders);
 
   useEffect(() => {
     setTenders(initialTenders);
@@ -58,6 +64,7 @@ export function useTendersRealtime(initialTenders: any[]) {
     const channel = supabase
       .channel('tenders-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tenders' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase SDK payload type
         (payload: any) => {
           if (payload.eventType === 'INSERT') {
             setTenders(prev => [payload.new, ...prev]);
@@ -73,8 +80,8 @@ export function useTendersRealtime(initialTenders: any[]) {
   return tenders;
 }
 
-export function useLiveStats(initialStats: any) {
-  const [stats, setStats] = useState(initialStats);
+export function useLiveStats(initialStats: DashboardStats | null) {
+  const [stats, setStats] = useState<DashboardStats | null>(initialStats);
 
   useEffect(() => {
     setStats(initialStats);
@@ -82,15 +89,13 @@ export function useLiveStats(initialStats: any) {
 
   useEffect(() => {
     if (!DEMO_MODE || !stats) return;
-    const interval = setInterval(() => {
-      setStats((prev: any) => ({
-        ...prev,
-        blockchain_tx_today: (prev?.blockchain_tx_today || 127) + Math.floor(Math.random() * 3),
-        bids_received_today: (prev?.bids_received_today || 23) + (Math.random() > 0.7 ? 1 : 0),
-        tps: 120 + Math.floor(Math.random() * 20),
-      }));
-    }, 10000);
-    return () => clearInterval(interval);
+    // HONEST: In simulation mode, stats are static.
+    // No fake counter increments. TPS = 0 (no Fabric peers).
+    // Real-time updates only happen in Supabase/Fabric-live mode.
+    setStats((prev: DashboardStats | null) => prev ? ({
+      ...prev,
+      tps: 0,  // No Fabric peers running
+    }) : null);
   }, [stats]);
 
   return stats;

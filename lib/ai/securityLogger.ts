@@ -28,7 +28,7 @@ export async function logSecurityAttempt(params: SecurityAttempt): Promise<void>
   try {
     const admin = getAdminClient();
     if (!admin) {
-      console.warn('[TenderShield] Security logger: Supabase admin client not available');
+      // Supabase admin client not available — silent
       return;
     }
 
@@ -49,14 +49,10 @@ export async function logSecurityAttempt(params: SecurityAttempt): Promise<void>
       created_at: new Date().toISOString(),
     });
 
-    console.warn('[TenderShield] 🚨 Security attempt logged:', {
-      endpoint: params.endpoint,
-      user: params.user_id,
-      timestamp: timestamp_ist,
-    });
+    // Security attempt logged — tracked in database only
   } catch (err) {
     // Never let security logging crash the main request
-    console.error('[TenderShield] Failed to log security attempt:', err);
+    // Failed to log — silent
   }
 }
 

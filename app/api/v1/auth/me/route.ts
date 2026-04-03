@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         name: profile?.name || user.email?.split('@')[0] || 'User',
       },
     });
-  } catch (err: any) {
-    return NextResponse.json({ detail: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ detail: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }

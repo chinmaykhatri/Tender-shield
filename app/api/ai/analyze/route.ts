@@ -3,13 +3,32 @@
 // API KEYS USED: ANTHROPIC_API_KEY
 // PURPOSE: Structured fraud analysis — returns guaranteed valid JSON FraudAnalysis, never crashes
 
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 import { safeParseClaudeJSON } from '@/lib/ai/safeParser';
 import { FALLBACK_ANALYSIS, TenderData } from '@/lib/types/fraud';
 import { protectedClaudeCall } from '@/lib/ai/protectedClaudeCall';
+import { aiLimiter } from '@/lib/rateLimit';
+import { z } from 'zod';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+
+// ── Zod Input Validation ────────────────────────────────────────────────────
+const BidSchema = z.object({
+  company: z.string().min(1, 'Company name required'),
+  amount_crore: z.number().positive('Amount must be positive'),
+  submitted_at: z.string(),
+  gstin: z.string().min(10, 'Invalid GSTIN format'),
+});
+
+const AnalyzeInputSchema = z.object({
+  tender_id: z.string().min(1),
+  title: z.string().min(1),
+  ministry: z.string().optional(),
+  value_crore: z.number().positive(),
+  bids: z.array(BidSchema).min(1, 'At least 1 bid required'),
+});
 
 // ── Structured output system prompt ─────────────────────────────────────────
 const STRUCTURE_PROMPT = `You are TenderShield fraud detection API.
@@ -77,11 +96,31 @@ const DEMO_AIIMS_ANALYSIS = {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
+  // ── Rate Limiting (10 AI calls/min per IP) ─────────────────────
+  const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown';
+  const { success: withinLimit } = aiLimiter.check(ip);
+  if (!withinLimit) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Maximum 10 AI analysis requests per minute.', retry_after_seconds: 60 },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    );
+  }
+
   try {
-    const tenderData: TenderData = await request.json();
+    const rawBody = await request.json();
+
+    // ── Zod Input Validation ───────────────────────────────────────
+    const parseResult = AnalyzeInputSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const tenderData = parseResult.data as TenderData;
 
     if (!ANTHROPIC_KEY) {
-      console.log('[TenderShield] Analyze route: No API key — returning demo analysis');
+      logger.info('[TenderShield] Analyze route: No API key — returning demo analysis');
       return NextResponse.json({ ...DEMO_AIIMS_ANALYSIS, detection_time_seconds: 3.2 });
     }
 
@@ -116,7 +155,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
 
     if (!result.success) {
       if (result.blocked) {
-        console.warn('[TenderShield] AI call blocked:', result.blockReason);
+        logger.warn('[TenderShield] AI call blocked:', result.blockReason);
         return NextResponse.json({
           ...FALLBACK_ANALYSIS,
           detection_time_seconds: (Date.now() - startTime) / 1000,
@@ -131,7 +170,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
     const analysis = safeParseClaudeJSON(result.text || '');
     analysis.detection_time_seconds = (Date.now() - startTime) / 1000;
 
-    console.log('[TenderShield] Fraud analysis complete:', {
+    logger.info('[TenderShield] Fraud analysis complete:', {
       tender: tenderData.tender_id,
       risk_score: analysis.risk_score,
       flags: analysis.flags.length,
@@ -140,7 +179,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
 
     return NextResponse.json(analysis);
   } catch (error) {
-    console.error('[TenderShield] Analyze route error:', error);
+    logger.error('[TenderShield] Analyze route error:', error);
     return NextResponse.json({
       ...FALLBACK_ANALYSIS,
       detection_time_seconds: (Date.now() - startTime) / 1000,

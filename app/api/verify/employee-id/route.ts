@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/employee-id/route.ts
 // PURPOSE: Save employee details and mark verification complete
 // DEMO MODE: Accepts any employee ID
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
     }, { onConflict: 'user_id' });
 
     if (error) {
-      console.error('[TenderShield Employee ID] Supabase error:', error);
+      logger.error('[TenderShield Employee ID] Supabase error:', error);
       return Response.json(
         { success: false, error: 'Failed to save employee details' },
         { status: 500 }
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       next_step: 'admin_approval',
     });
   } catch (error) {
-    console.error('[TenderShield Employee ID] Error:', error);
+    logger.error('[TenderShield Employee ID] Error:', error);
     return Response.json(
       { success: false, error: 'Failed to save details.' },
       { status: 500 }

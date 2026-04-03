@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/aadhaar/verify-otp/route.ts
 // PURPOSE: Verify Aadhaar OTP and save to Supabase
 // DEMO MODE: Accepts OTP "123456" always
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
       );
 
     if (updateError) {
-      console.error('[TenderShield Aadhaar] Supabase save error:', updateError);
+      logger.error('[TenderShield Aadhaar] Supabase save error:', updateError);
     }
 
     return Response.json({
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
       message: 'Aadhaar verified successfully',
     });
   } catch (error) {
-    console.error('[TenderShield Aadhaar] Verify OTP error:', error);
+    logger.error('[TenderShield Aadhaar] Verify OTP error:', error);
     return Response.json(
       { success: false, error: 'Verification failed. Please try again.' },
       { status: 500 }

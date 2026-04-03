@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ bid: data, message: 'Bid committed successfully on blockchain' });
-  } catch (err: any) {
-    return NextResponse.json({ detail: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ detail: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }

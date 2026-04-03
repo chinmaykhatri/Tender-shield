@@ -25,8 +25,8 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 def success_response(
     data: Any = None,
-    message: str = None,
-    meta: Dict = None,
+    message: Optional[str] = None,
+    meta: Optional[Dict] = None,
     status_code: int = 200,
 ) -> Dict:
     """Create a standardized success response."""

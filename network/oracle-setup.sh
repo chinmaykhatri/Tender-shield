@@ -54,7 +54,7 @@ export CORE_PEER_LOCALMSPID="MinistryOrgMSP"
 
 peer channel create -o orderer.tendershield.gov:7050 \
   -c tenderchannel \
-  -f channel-artifacts/tenderchannel.tx \
+  -f channel-artifacts/TenderChannel.tx \
   --tls 2>/dev/null || echo "Channel may already exist"
 
 echo ""

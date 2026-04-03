@@ -4,13 +4,20 @@
 
 import crypto from 'crypto';
 
-const INTEGRITY_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'tendershield-integrity-key-2025';
+const INTEGRITY_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
+
+if (!INTEGRITY_SECRET && typeof window === 'undefined') {
+  console.error('[TenderShield Security] CRITICAL: JWT_SECRET not configured — integrity checks disabled');
+}
 
 /**
  * Generate an HMAC-SHA256 checksum for any data object.
  * Keys are sorted to ensure deterministic JSON serialization.
  */
 export function generateChecksum(data: unknown): string {
+  if (!INTEGRITY_SECRET) {
+    return 'no-secret-configured';
+  }
   const json = JSON.stringify(data, Object.keys(data as object).sort());
   return crypto
     .createHmac('sha256', INTEGRITY_SECRET)

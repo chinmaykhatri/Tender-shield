@@ -1,0 +1,62 @@
+{
+  "validation_date": "2026-03-30T01:32:52+05:30",
+  "dataset": {
+    "total": 100,
+    "clean": 70,
+    "fraud": 30,
+    "ministries_covered": 15,
+    "categories_covered": 12,
+    "fraud_types": [
+      "SHELL_COMPANY",
+      "INFLATED_ESTIMATION",
+      "BID_RIGGING_CARTEL",
+      "SPLIT_TENDER",
+      "DEADLINE_MANIPULATION"
+    ],
+    "total_value_paise": 527328945633,
+    "total_value_display": "\u20b95,273,289,456.33",
+    "source": "GeM Portal Public Data + CAG/CVC Reports (2022\u20132025)"
+  },
+  "model_version": "1.1.0",
+  "results": {
+    "accuracy": 0.82,
+    "precision": 0.7143,
+    "recall": 0.6667,
+    "f1_score": 0.6897,
+    "model_agreement_rate": 0.26,
+    "confusion_matrix": {
+      "tp": 20,
+      "fp": 8,
+      "tn": 62,
+      "fn": 10
+    }
+  },
+  "per_fraud_type": {
+    "INFLATED_ESTIMATION": {
+      "detection_rate": 1.0,
+      "correct": 6,
+      "total": 6
+    },
+    "BID_RIGGING_CARTEL": {
+      "detection_rate": 0.625,
+      "correct": 5,
+      "total": 8
+    },
+    "DEADLINE_MANIPULATION": {
+      "detection_rate": 0.0,
+      "correct": 0,
+      "total": 7
+    },
+    "SHELL_COMPANY": {
+      "detection_rate": 1.0,
+      "correct": 6,
+      "total": 6
+    },
+    "SPLIT_TENDER": {
+      "detection_rate": 1.0,
+      "correct": 3,
+      "total": 3
+    }
+  },
+  "data_source": "Real GeM Portal Patterns + CAG/CVC Reports"
+}

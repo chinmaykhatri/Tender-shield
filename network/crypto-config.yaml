@@ -60,7 +60,7 @@ PeerOrgs:
   # ---------------------------------------------------------------------------
   # BidderOrg — Companies and Contractors (Bid Submitters)
   # Represents: All registered bidders, including MSMEs and startups (DPIIT)
-  # Role: Submit ZKP-encrypted bids, reveal bids, upload documents
+  # Role: Submit SHA-256 hash-committed bids, reveal bids, upload documents
   # Verification: GSTIN, PAN, Aadhaar eKYC mandatory
   # ---------------------------------------------------------------------------
   - Name: BidderOrg

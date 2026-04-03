@@ -18,7 +18,7 @@ export function useSessionTimeout() {
   const warningRef = useRef<ReturnType<typeof setTimeout>>();
 
   const handleLogout = useCallback((reason: string) => {
-    console.warn('[TenderShield Auth] Session ended:', reason);
+    // Session ended — silent logout
     logout();
     router.push('/?reason=' + encodeURIComponent(reason));
   }, [logout, router]);

@@ -637,64 +637,7 @@ class AIFraudAlert(BaseModel):
     )
 
 
-# ============================================================================
-# API REQUEST/RESPONSE SCHEMAS
-# ============================================================================
 
-class CreateTenderRequest(BaseModel):
-    """Request schema for creating a new tender."""
-    ministry_code: str
-    department: str
-    title: str = Field(min_length=10, max_length=500)
-    description: str = Field(min_length=20, max_length=5000)
-    estimated_value_paise: int = Field(gt=0)
-    category: TenderCategory
-    procurement_method: ProcurementMethod
-    gem_category_id: Optional[str] = None
-    deadline_ist: datetime
-    evaluation_criteria: Optional[Dict[str, Any]] = None
-    gfr_rule_reference: str
-
-    @field_validator('estimated_value_paise')
-    @classmethod
-    def validate_value(cls, v: int) -> int:
-        return validate_amount_paise(v)
-
-
-class CommitBidRequest(BaseModel):
-    """Request schema for ZKP Phase 1 — bid commitment."""
-    tender_id: str
-    commitment_hash: str
-    zkp_proof: str
-    bidder_documents_ipfs_hash: Optional[str] = None
-
-
-class RevealBidRequest(BaseModel):
-    """Request schema for ZKP Phase 2 — bid reveal after deadline."""
-    bid_id: str
-    revealed_amount_paise: int = Field(gt=0)
-    randomness: str  # Randomness used in Pedersen commitment
-    reveal_proof: str  # Proof that revealed amount matches commitment
-
-
-class FreezeTenderRequest(BaseModel):
-    """Request to freeze a tender due to AI-detected fraud."""
-    ai_alert_id: str
-    reason: str
-    evidence_ipfs_hash: Optional[str] = None
-
-
-class AwardTenderRequest(BaseModel):
-    """Request to award a tender to the winning bidder."""
-    winning_bid_id: str
-    justification: str
-    approval_authority: str
-
-
-class EscalateRequest(BaseModel):
-    """Request to escalate a tender to CAG for investigation."""
-    evidence_summary: str
-    escalation_authority: str
 
 
 class DashboardStats(BaseModel):

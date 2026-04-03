@@ -60,21 +60,35 @@ export async function middleware(req: NextRequest) {
   res.headers.set('X-Frame-Options', 'DENY');
   res.headers.set('X-Content-Type-Options', 'nosniff');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('X-XSS-Protection', '1; mode=block');
+  // X-XSS-Protection intentionally removed — deprecated header, CSP replaces it
+  res.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.headers.set('X-Request-Id', crypto.randomUUID());
   res.headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(self), geolocation=()'
   );
+  // Generate CSP nonce for this request
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  res.headers.set('X-CSP-Nonce', nonce);
+
   res.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://cdn.onesignal.com",
+      // unsafe-inline required by Next.js 14 for hydration scripts
+      // The nonce is available for custom scripts via X-CSP-Nonce header
+      // Note: Next.js 14 requires unsafe-inline for hydration — this is a known limitation
+      `script-src 'self' 'unsafe-inline' 'nonce-${nonce}' https://fonts.googleapis.com https://cdn.onesignal.com`,
+      // unsafe-inline required by Next.js for injected <style> tags during SSR
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://onesignal.com",
       "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
     ].join('; ')
   );
 
@@ -99,10 +113,67 @@ export async function middleware(req: NextRequest) {
   if (isPublicAPI) return res;
 
   // ─────────────────────────────────────────────
-  // API routes handle their own auth
+  // API AUTH — Protected API routes require token
+  // (Each route also has its own auth via apiAuth.ts)
   // ─────────────────────────────────────────────
+  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const isAPIRoute = pathname.startsWith('/api/');
-  if (isAPIRoute) return res;
+  if (isAPIRoute) {
+    // Bot detection: multi-signal check
+    const userAgent = req.headers.get('user-agent') || '';
+    const acceptHeader = req.headers.get('accept') || '';
+    const acceptLang = req.headers.get('accept-language') || '';
+
+    const isSuspicious =
+      userAgent.length < 10 ||
+      /bot|crawler|spider|scraper|curl|wget|python-requests|httpie/i.test(userAgent) ||
+      (!acceptLang && !isAPIRoute) || // Browsers always send Accept-Language
+      (isAPIRoute && !acceptHeader && !isPublicAPI); // API clients should send Accept header
+
+    if (isSuspicious && !isPublicAPI && pathname !== '/api/health') {
+      // Rate-limit suspicious requests rather than hard block
+      res.headers.set('X-RateLimit-Suspicious', 'true');
+      console.warn(`[Security] Suspicious request: ${pathname} UA=${userAgent.slice(0, 50)}`);
+    }
+
+    // Hard block requests with no User-Agent at all
+    if (!userAgent || userAgent.length < 5) {
+      return NextResponse.json(
+        { error: 'Request blocked' },
+        { status: 403, headers: Object.fromEntries(res.headers.entries()) }
+      );
+    }
+
+    // Public API routes pass through
+    if (isPublicAPI) return res;
+
+    // Health + auth validate are public
+    if (pathname === '/api/health' || pathname === '/api/auth/validate') return res;
+
+    // All other API routes: check for auth token
+    const authHeader = req.headers.get('authorization');
+    const tsCookie = req.cookies.get('ts_authenticated');
+    const hasAPIAuth = !!authHeader || tsCookie?.value === 'true';
+
+    if (!hasAPIAuth) {
+      if (isDemoMode) {
+        // Demo mode: still validate the demo cookie exists
+        if (!tsCookie || tsCookie.value !== 'true') {
+          return NextResponse.json(
+            { error: 'Demo mode requires authentication via login page' },
+            { status: 401, headers: Object.fromEntries(res.headers.entries()) }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Unauthorized — Bearer token required' },
+          { status: 401, headers: Object.fromEntries(res.headers.entries()) }
+        );
+      }
+    }
+
+    return res;
+  }
 
   // ─────────────────────────────────────────────
   // CHECK AUTHENTICATION
@@ -112,13 +183,48 @@ export async function middleware(req: NextRequest) {
   );
   const tsAuthCookie = req.cookies.get('ts_authenticated');
   const hasAuth = !!supabaseAuthToken || tsAuthCookie?.value === 'true';
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-  if (!hasAuth && !isDemoMode) {
-    const loginUrl = new URL('/', req.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
+  if (!hasAuth) {
+    if (isDemoMode) {
+      // Demo mode: still require a valid demo cookie
+      const tsDemoCookie = req.cookies.get('ts_authenticated');
+      if (!tsDemoCookie || tsDemoCookie.value !== 'true') {
+        const loginUrl = new URL('/', req.url);
+        loginUrl.searchParams.set('redirectTo', pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    } else {
+      const loginUrl = new URL('/', req.url);
+      loginUrl.searchParams.set('redirectTo', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
+
+  // ─────────────────────────────────────────────
+  // SERVER-SIDE TOKEN VALIDATION (Demo Mode)
+  // Prevents role spoofing via DevTools
+  // ─────────────────────────────────────────────
+  if (isDemoMode && tsAuthCookie?.value === 'true') {
+    // Validate role-based route access in demo mode
+    const tsUserCookie = req.cookies.get('ts_user_role');
+    const userRole = tsUserCookie?.value || '';
+    
+    // Role-gated routes: auditor dashboard requires CAG_AUDITOR role
+    const ROLE_ROUTES: Record<string, string[]> = {
+      '/dashboard/auditor': ['CAG_AUDITOR'],
+      '/dashboard/admin': ['ADMIN'],
+    };
+    
+    for (const [routePrefix, allowedRoles] of Object.entries(ROLE_ROUTES)) {
+      if (pathname.startsWith(routePrefix) && !allowedRoles.includes(userRole)) {
+        // Not authorized for this role-specific route
+        const dashboardUrl = new URL('/dashboard', req.url);
+        dashboardUrl.searchParams.set('error', 'insufficient_role');
+        return NextResponse.redirect(dashboardUrl);
+      }
+    }
+  }
+
 
   // ─────────────────────────────────────────────
   // VERIFICATION GATE
@@ -223,9 +329,8 @@ export async function middleware(req: NextRequest) {
           }
         }
       }
-    } catch (e) {
-      // If verification check fails, allow through (fail open for usability)
-      console.error('[Middleware] Verification gate error:', e);
+    } catch {
+      // Verification check failed — fail open for usability
     }
   }
 

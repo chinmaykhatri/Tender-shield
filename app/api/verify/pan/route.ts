@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/pan/route.ts
 // PURPOSE: PAN verification with duplicate detection
 // DEMO MODE: Uses demo PAN database
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
         : 'PAN verified successfully',
     });
   } catch (error) {
-    console.error('[TenderShield PAN] Error:', error);
+    logger.error('[TenderShield PAN] Error:', error);
     return Response.json({ success: false, error: 'PAN verification failed.' }, { status: 500 });
   }
 }

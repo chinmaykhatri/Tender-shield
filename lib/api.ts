@@ -1,12 +1,22 @@
 /**
- * TenderShield — API Client
- * Centralized API functions for backend communication.
- * Uses Next.js API routes backed by Supabase.
+ * TenderShield — API Client & Helpers
+ *
+ * DATA FLOW ARCHITECTURE:
+ * ───────────────────────────────────────────────
+ * Demo Mode:  Component → dataLayer.ts → Supabase (fallback) → DEMO_TENDERS
+ * Real Mode:  Component → dataLayer.ts → Supabase (real data)
+ * Backend:    Used by AI engine calls and external integrations
+ * Blockchain: Simulated in API routes; production connects via fabric_service.py
+ * ───────────────────────────────────────────────
+ *
+ * NOTE: Tender/bid/dashboard data flows through dataLayer.ts.
+ * This file provides helpers (formatPaise, getStatusBadge, getDetectors)
+ * and the auth API functions for login/register flows.
  */
 
 const API_BASE = '/api/v1';
 
-// ========== Auth ==========
+// ========== Auth (used by login/register pages) ==========
 
 export async function login(email: string, password: string) {
   const res = await fetch(`${API_BASE}/auth/login`, {
@@ -42,7 +52,7 @@ export async function getCurrentUser(token: string) {
   return res.json();
 }
 
-// ========== Tenders ==========
+// ========== Tenders (used by bids page) ==========
 
 export async function getTenders(token: string, status?: string) {
   const url = status ? `${API_BASE}/tenders/?status_filter=${status}` : `${API_BASE}/tenders/`;
@@ -52,32 +62,7 @@ export async function getTenders(token: string, status?: string) {
   return res.json();
 }
 
-export async function getTender(token: string, ministryCode: string, tenderId: string) {
-  const res = await fetch(`${API_BASE}/tenders/${ministryCode}/${tenderId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json();
-}
-
-export async function createTender(token: string, data: any) {
-  const res = await fetch(`${API_BASE}/tenders/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function freezeTender(token: string, ministryCode: string, tenderId: string, reason: string) {
-  const res = await fetch(`${API_BASE}/tenders/${ministryCode}/${tenderId}/freeze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ reason }),
-  });
-  return res.json();
-}
-
-// ========== Bids ==========
+// ========== Bids (used by bids page) ==========
 
 export async function generateCommitment(token: string, amountPaise: number) {
   const res = await fetch(`${API_BASE}/bids/generate-commitment?amount_paise=${amountPaise}`, {
@@ -87,17 +72,8 @@ export async function generateCommitment(token: string, amountPaise: number) {
   return res.json();
 }
 
-export async function commitBid(token: string, data: any) {
+export async function commitBid(token: string, data: Record<string, unknown>) {
   const res = await fetch(`${API_BASE}/bids/commit`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function revealBid(token: string, data: any) {
-  const res = await fetch(`${API_BASE}/bids/reveal`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -112,14 +88,7 @@ export async function getBidsForTender(token: string, tenderId: string) {
   return res.json();
 }
 
-// ========== Dashboard ==========
-
-export async function getDashboardStats(token: string) {
-  const res = await fetch(`${API_BASE}/dashboard/stats`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json();
-}
+// ========== Dashboard Events (used by audit page) ==========
 
 export async function getRecentEvents(token: string, topic?: string) {
   const url = topic ? `${API_BASE}/dashboard/events?topic=${topic}` : `${API_BASE}/dashboard/events`;
@@ -129,16 +98,23 @@ export async function getRecentEvents(token: string, topic?: string) {
   return res.json();
 }
 
-export async function getHealthCheck() {
-  const res = await fetch(`${API_BASE}/dashboard/health`);
-  return res.json();
-}
-
 // ========== AI Engine ==========
 
 export async function runDemoAnalysis(scenario: string) {
-  // AI analysis runs client-side with demo data since AI engine isn't a separate service anymore
-  const demoResults: Record<string, any> = {
+  interface DemoAnalysisResult {
+    success: boolean;
+    scenario: string;
+    alert_id: string;
+    analysis: {
+      tender_id: string;
+      composite_risk_score: number;
+      recommended_action: string;
+      detectors_run: number;
+      convergence_bonus: number;
+      flags: string[];
+    };
+  }
+  const demoResults: Record<string, DemoAnalysisResult> = {
     bid_rigging: {
       success: true, scenario: 'bid_rigging', alert_id: `ALERT-${Date.now()}`,
       analysis: {
@@ -160,7 +136,6 @@ export async function runDemoAnalysis(scenario: string) {
           'RECENTLY_INCORPORATED: Company is only 6 months old',
           'LOW_TURNOVER: Tender value is 45x company turnover',
           'COMMON_DIRECTORS: 1 director linked to flagged companies',
-          'COMMON_ADDRESS: Shares address with flagged entities',
         ],
       },
     },

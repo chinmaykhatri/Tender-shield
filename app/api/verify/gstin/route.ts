@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/gstin/route.ts
 // PURPOSE: GSTIN verification with shell company detection
 // DEMO MODE: Uses demo GSTIN database
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
         : 'GSTIN verified successfully',
     });
   } catch (error) {
-    console.error('[TenderShield GSTIN] Error:', error);
+    logger.error('[TenderShield GSTIN] Error:', error);
     return Response.json({ success: false, error: 'GSTIN verification failed.' }, { status: 500 });
   }
 }

@@ -3,15 +3,33 @@
 // TYPE: PUBLIC PAGE (no login required)
 // SECRET KEYS USED: none
 // WHAT THIS FILE DOES: Visual blockchain explorer — block chain, TX list, hash verifier
+//   + LIVE mode badge — shows real Fabric status from backend /api/v1/blockchain/health
 // ─────────────────────────────────────────────────
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const TX_COLORS: Record<string, string> = {
   TENDER_CREATED: '#6366f1', BID_COMMITTED: '#FF9933', BID_REVEALED: '#f59e0b',
   TENDER_FROZEN: '#ef4444', TENDER_AWARDED: '#22c55e', AUDIT_LOGGED: '#8b5cf6',
+  ZKP_VERIFIED: '#06b6d4', AI_ANALYSIS: '#ec4899', CreateTender: '#6366f1',
+  SubmitBid: '#FF9933', RevealBid: '#f59e0b', FreezeTender: '#ef4444',
+  AwardTender: '#22c55e', PublishTender: '#3b82f6',
 };
+
+interface NetworkHealth {
+  blockchain_mode: string;
+  is_live: boolean;
+  peers_online: number;
+  health: {
+    block_height?: number;
+    world_state_keys?: number;
+    mode?: string;
+    fabric_connected?: boolean;
+    service_mode?: string;
+    fabric_live_configured?: boolean;
+  };
+}
 
 export default function BlockchainExplorer() {
   const [data, setData] = useState<any>(null);
@@ -20,11 +38,33 @@ export default function BlockchainExplorer() {
   const [hashResult, setHashResult] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
   const [newBlockAnim, setNewBlockAnim] = useState(false);
+  const [networkHealth, setNetworkHealth] = useState<NetworkHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Fetch real network health from backend
+  const fetchHealth = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/blockchain/health');
+      if (res.ok) {
+        const json = await res.json();
+        setNetworkHealth(json);
+      }
+    } catch {
+      // Backend not reachable — set to null (will show fallback badge)
+      setNetworkHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetch('/api/blockchain/blocks').then(r => r.json()).then(d => setData(d.data));
-  }, []);
+    fetchHealth();
+    // Poll health every 15 seconds
+    const healthInterval = setInterval(fetchHealth, 15000);
+    return () => clearInterval(healthInterval);
+  }, [fetchHealth]);
 
   // Simulate new block every 30 seconds
   useEffect(() => {
@@ -42,7 +82,6 @@ export default function BlockchainExplorer() {
       if (known) {
         setHashResult({ valid: true, ...known });
       } else if (hashInput.startsWith('0x') && hashInput.length >= 10) {
-        // Check if any block hash matches
         const block = data?.blocks?.find((b: any) => b.hash === hashInput.trim());
         if (block) {
           setHashResult({ valid: true, block: block.block_number, type: 'BLOCK_HASH', detail: `Block #${block.block_number} containing ${block.tx_count} transactions.` });
@@ -66,27 +105,146 @@ export default function BlockchainExplorer() {
 
   const selectedBlockData = data.blocks?.find((b: any) => b.block_number === selectedBlock);
 
+  // Determine badge mode
+  const isLive = networkHealth?.is_live ?? false;
+  const blockchainMode = networkHealth?.blockchain_mode ?? 'UNKNOWN';
+  const peersOnline = networkHealth?.peers_online ?? 0;
+  const blockHeight = networkHealth?.health?.block_height ?? data?.current_block ?? 0;
+
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Network Status Bar */}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* BLOCKCHAIN MODE BADGE — Real-time status from backend       */}
+        {/* ══════════════════════════════════════════════════════════════ */}
         <div className="card-glass p-4 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
+            {/* Mode Badge */}
             <div className="flex items-center gap-3">
-              <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
-              <span className="font-semibold">TenderShield Hyperledger Fabric — LIVE</span>
+              {healthLoading ? (
+                <div className="w-3 h-3 rounded-full bg-yellow-400 animate-pulse" />
+              ) : isLive ? (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+                </span>
+              ) : (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                </span>
+              )}
+
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">
+                  TenderShield Hyperledger Fabric
+                </span>
+
+                {/* Mode Chip */}
+                {healthLoading ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-mono">
+                    CONNECTING...
+                  </span>
+                ) : isLive ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-mono font-bold tracking-wider">
+                    🟢 FABRIC LIVE
+                  </span>
+                ) : blockchainMode === 'LEDGER_SIMULATION' ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-bold tracking-wider"
+                    title="Backend is running with SQLite-backed persistent ledger. Set FABRIC_LIVE=true in .env when Fabric network is running.">
+                    ⚡ PERSISTENT LEDGER
+                  </span>
+                ) : (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 font-mono font-bold tracking-wider">
+                    ⚪ OFFLINE
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {data.peers.map((p: any) => (
-                <span key={p.name} className="badge badge-success text-xs">{p.name} 🟢</span>
-              ))}
+
+            {/* Peer Status */}
+            <div className="flex flex-wrap gap-2">
+              {isLive ? (
+                // Real peer info from Fabric network
+                <>
+                  <span className="badge badge-success text-xs">Org1 (Ministry) 🟢</span>
+                  <span className="badge badge-success text-xs">Org2 (Bidder) 🟢</span>
+                  <span className="text-xs text-[var(--text-secondary)] px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                    CouchDB ✓ | TLS ✓ | Raft ✓
+                  </span>
+                </>
+              ) : blockchainMode === 'LEDGER_SIMULATION' ? (
+                // Simulation mode badges
+                <>
+                  <span className="text-xs px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+                    📦 SQLite Ledger
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+                    🔗 Block Chaining ✓
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-md bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]">
+                    🗃️ World State ✓
+                  </span>
+                </>
+              ) : (
+                // Simulated peer display from frontend-only
+                data.peers?.map((p: any) => (
+                  <span key={p.name} className="badge badge-success text-xs">{p.name} 🟢</span>
+                ))
+              )}
             </div>
+
+            {/* Stats */}
             <div className="flex gap-6 text-sm">
-              <div><span className="text-[var(--text-secondary)]">Blocks: </span><span className="font-mono font-bold text-[var(--accent)]">{data.current_block.toLocaleString()}</span></div>
-              <div><span className="text-[var(--text-secondary)]">TXs: </span><span className="font-mono font-bold">{data.total_transactions.toLocaleString()}</span></div>
-              <div><span className="text-[var(--text-secondary)]">Peers: </span><span className="font-mono font-bold">{data.peers.length * 2}</span></div>
+              <div>
+                <span className="text-[var(--text-secondary)]">Blocks: </span>
+                <span className="font-mono font-bold text-[var(--accent)]">
+                  {isLive || blockchainMode === 'LEDGER_SIMULATION'
+                    ? blockHeight.toLocaleString()
+                    : data.current_block.toLocaleString()
+                  }
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--text-secondary)]">TXs: </span>
+                <span className="font-mono font-bold">
+                  {data.total_transactions.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--text-secondary)]">Peers: </span>
+                <span className="font-mono font-bold">
+                  {isLive ? peersOnline : blockchainMode === 'LEDGER_SIMULATION' ? '0 (sim)' : data.peers?.length * 2}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Fabric Live Mode — Additional Info Bar */}
+          {isLive && (
+            <div className="mt-3 pt-3 border-t border-green-500/10 flex flex-wrap gap-4 text-xs text-green-300/70">
+              <span>📡 gRPC: localhost:7051</span>
+              <span>📜 Channel: tenderchannel</span>
+              <span>⛓️ Chaincode: tendershield v1.0</span>
+              <span>🔐 Mutual TLS: Enabled</span>
+              <span>💾 State DB: CouchDB</span>
+            </div>
+          )}
+
+          {/* Simulation Mode — Upgrade Hint */}
+          {blockchainMode === 'LEDGER_SIMULATION' && (
+            <div className="mt-3 pt-3 border-t border-amber-500/10 text-xs text-amber-300/60">
+              <span className="font-semibold text-amber-400/80">Note:</span>{' '}
+              Running with persistent SQLite ledger (block chaining + world state).
+              To connect to real Fabric network:{' '}
+              <code className="bg-amber-500/10 px-1 py-0.5 rounded text-amber-300/80">
+                FABRIC_LIVE=true
+              </code>{' '}
+              in <code className="bg-amber-500/10 px-1 py-0.5 rounded text-amber-300/80">.env</code>
+              {' '}+ start Docker network.
+            </div>
+          )}
         </div>
 
         {/* Block Chain Visualization */}
@@ -114,7 +272,7 @@ export default function BlockchainExplorer() {
                   }`}>
                   <p className="text-xs font-mono text-[var(--text-secondary)]">Block</p>
                   <p className="text-2xl font-bold font-mono">{`#${block.block_number}`}</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">{block.timestamp_ist.split('T')[1]?.substring(0, 8)} IST</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">{block.timestamp_ist.split('T')[1]?.substring(0, 8) || block.timestamp_ist.split(', ')[1]?.substring(0, 8)} IST</p>
                   <p className="text-xs text-[var(--text-secondary)]">{block.tx_count} TX{block.tx_count > 1 ? 's' : ''}</p>
                   <p className="text-[10px] font-mono text-[var(--accent)] mt-2 truncate">
                     {block.hash.substring(0, 8)}...{block.hash.substring(block.hash.length - 8)}
@@ -158,14 +316,14 @@ export default function BlockchainExplorer() {
                     <td className="font-mono text-xs">{tx.tx_id}</td>
                     <td>
                       <span className="badge text-xs" style={{
-                        background: `${TX_COLORS[tx.type] || '#6366f1'}15`,
-                        color: TX_COLORS[tx.type] || '#6366f1',
-                        border: `1px solid ${TX_COLORS[tx.type] || '#6366f1'}30`,
-                      }}>{tx.type}</span>
+                        background: `${TX_COLORS[tx.type] || TX_COLORS[tx.function_name] || '#6366f1'}15`,
+                        color: TX_COLORS[tx.type] || TX_COLORS[tx.function_name] || '#6366f1',
+                        border: `1px solid ${TX_COLORS[tx.type] || TX_COLORS[tx.function_name] || '#6366f1'}30`,
+                      }}>{tx.type || tx.function_name}</span>
                     </td>
-                    <td className="text-xs">{tx.tender_id}</td>
-                    <td className="text-xs text-[var(--text-secondary)]">{tx.invoker}</td>
-                    <td className="text-xs font-mono">{tx.timestamp_ist.split('T')[1]?.substring(0, 8)}</td>
+                    <td className="text-xs">{tx.tender_id || '—'}</td>
+                    <td className="text-xs text-[var(--text-secondary)]">{tx.invoker || tx.msp_id || '—'}</td>
+                    <td className="text-xs font-mono">{(tx.timestamp_ist || '').split('T')[1]?.substring(0, 8) || tx.timestamp_ist?.split(', ')[1]?.substring(0, 8) || '—'}</td>
                     <td>
                       <button className="text-xs text-[var(--accent)] hover:underline"
                         onClick={() => {
@@ -231,7 +389,14 @@ export default function BlockchainExplorer() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-[var(--text-secondary)]">🔗 All records are immutable and independently verifiable on Hyperledger Fabric</p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {isLive
+              ? '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
+              : blockchainMode === 'LEDGER_SIMULATION'
+                ? '📦 Records stored in persistent ledger with block chaining. Connect Fabric for immutable blockchain.'
+                : '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
+            }
+          </p>
           <a href="/dashboard" className="text-[var(--accent)] text-sm hover:underline mt-2 inline-block">← Back to Dashboard</a>
         </div>
       </div>

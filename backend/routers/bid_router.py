@@ -1,25 +1,31 @@
 """
 ============================================================================
-TenderShield — Bid API Router
+TenderShield — Bid API Router (ORM-Integrated)
 ============================================================================
 ZKP-based bid submission and reveal endpoints.
 Phase 1: Submit encrypted commitment (no one sees the bid amount).
 Phase 2: Reveal after deadline (chaincode verifies ZKP proof).
+Dual-write: ORM + Blockchain for every mutation.
 ============================================================================
 """
 
 import logging
+import math
 import hashlib
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.auth.jwt_handler import TokenData, get_current_user, require_bidder
 from backend.services.fabric_service import fabric_service
-from backend.services.kafka_service import kafka_service
+from backend.services.event_bus import event_bus
+from backend.db.repositories import BidRepository, AuditRepository
 from backend.models.data_models import CommitBidRequest, RevealBidRequest
 
 logger = logging.getLogger("tendershield.routers.bid")
 router = APIRouter(prefix="/api/v1/bids", tags=["Bids (ZKP)"])
+
+bid_repo = BidRepository()
+audit_repo = AuditRepository()
 
 
 @router.post("/commit", status_code=status.HTTP_201_CREATED)
@@ -29,7 +35,7 @@ async def commit_bid(
 ):
     """
     ZKP Phase 1: Submit a bid commitment (encrypted amount).
-    The actual bid amount is hidden using Pedersen commitment scheme.
+    Dual-write: Blockchain + ORM.
     ACCESS: BidderOrg only.
     """
     bid_data = {
@@ -41,7 +47,32 @@ async def commit_bid(
 
     bid = await fabric_service.submit_bid(bid_data, current_user.sub)
 
-    await kafka_service.produce_bid_event(
+    # Persist to ORM
+    try:
+        await bid_repo.create({
+            "bid_id": bid["bid_id"],
+            "tender_id": request.tender_id,
+            "bidder_did": current_user.sub,
+            "commitment_hash": request.commitment_hash,
+            "zkp_proof": request.zkp_proof,
+            "documents_ipfs_hash": request.bidder_documents_ipfs_hash,
+            "status": "COMMITTED",
+            "blockchain_tx_id": bid.get("blockchain_tx_id"),
+            "blockchain_mode": bid.get("blockchain_mode", "LEDGER_SIMULATION"),
+        })
+        await audit_repo.record(
+            event_type="BID_SUBMITTED",
+            actor_did=current_user.sub,
+            actor_role="BIDDER",
+            tender_id=request.tender_id,
+            description=f"ZKP Phase 1: Bid committed for tender {request.tender_id}",
+            payload_hash=hashlib.sha256(request.commitment_hash.encode()).hexdigest(),
+            blockchain_tx_id=bid.get("blockchain_tx_id"),
+        )
+    except Exception as e:
+        logger.warning(f"ORM write failed (blockchain write succeeded): {e}")
+
+    await event_bus.publish_bid_event(
         request.tender_id, bid["bid_id"],
         "BID_COMMITTED",
         {"bid_id": bid["bid_id"], "bidder": current_user.sub, "phase": "ZKP_COMMIT"},
@@ -62,10 +93,8 @@ async def reveal_bid(
 ):
     """
     ZKP Phase 2: Reveal bid amount after the deadline.
-    The chaincode verifies that the revealed amount matches the commitment.
     ACCESS: BidderOrg only.
     """
-    # Find the bid in the state
     bid = None
     for key, value in fabric_service._state.items():
         if key.startswith("BID~") and value.get("bid_id") == request.bid_id:
@@ -83,16 +112,14 @@ async def reveal_bid(
     recomputed_hash = hashlib.sha256(pre_image.encode()).hexdigest()
 
     if recomputed_hash != bid.get("commitment_hash"):
-        # SECURITY: Log failed verification as HIGH risk
-        await kafka_service.produce_audit_event({
+        await event_bus.publish_audit_event({
             "event_type": "ZKP_VERIFICATION_FAILED",
             "tender_id": bid.get("tender_id"),
             "bid_id": request.bid_id,
             "bidder_did": current_user.sub,
             "risk_level": "HIGH",
-            "description": f"🚨 ZKP commitment mismatch for bid {request.bid_id} — possible bid tampering",
+            "description": f"🚨 ZKP commitment mismatch for bid {request.bid_id}",
         })
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="ZKP verification FAILED: revealed amount does not match the original commitment. This incident has been logged.",
@@ -103,7 +130,21 @@ async def reveal_bid(
         current_user.sub, request.revealed_amount_paise,
     )
 
-    await kafka_service.produce_bid_event(
+    # Update ORM
+    try:
+        await bid_repo.reveal(request.bid_id, request.revealed_amount_paise)
+        await audit_repo.record(
+            event_type="BID_REVEALED",
+            actor_did=current_user.sub,
+            actor_role="BIDDER",
+            tender_id=bid["tender_id"],
+            description=f"ZKP Phase 2: Bid revealed — ₹{request.revealed_amount_paise / 100:,.2f}",
+            payload_hash=recomputed_hash,
+        )
+    except Exception as e:
+        logger.warning(f"ORM update failed: {e}")
+
+    await event_bus.publish_bid_event(
         bid["tender_id"], request.bid_id,
         "BID_REVEALED",
         {
@@ -129,11 +170,36 @@ async def get_bids_for_tender(
 ):
     """
     Get all bids for a specific tender.
-    ACCESS: All authenticated users (amounts visible only after reveal).
+    Tries ORM first, falls back to blockchain.
+    ACCESS: All authenticated users.
     """
-    bids = await fabric_service.query_bids_by_tender(tender_id)
+    # Try ORM first
+    try:
+        orm_bids = await bid_repo.get_by_tender(tender_id)
+        if orm_bids:
+            bids = []
+            for b in orm_bids:
+                sanitized = {
+                    "bid_id": b.bid_id,
+                    "tender_id": b.tender_id,
+                    "bidder_did": b.bidder_did,
+                    "status": b.status,
+                    "submitted_at_ist": b.submitted_at_ist.isoformat() if b.submitted_at_ist else None,
+                    "blockchain_mode": b.blockchain_mode,
+                    "data_source": "ORM",
+                }
+                if b.status == "REVEALED":
+                    sanitized["revealed_amount_paise"] = b.revealed_amount_paise
+                    sanitized["reveal_at_ist"] = b.reveal_at_ist.isoformat() if b.reveal_at_ist else None
+                else:
+                    sanitized["commitment_hash"] = (b.commitment_hash or "")[:16] + "..."
+                bids.append(sanitized)
+            return {"success": True, "tender_id": tender_id, "count": len(bids), "bids": bids, "data_source": "ORM"}
+    except Exception:
+        pass
 
-    # Hide commitment details for non-revealed bids
+    # Fallback to blockchain
+    bids = await fabric_service.query_bids_by_tender(tender_id)
     sanitized_bids = []
     for bid in bids:
         sanitized = {**bid}
@@ -142,7 +208,7 @@ async def get_bids_for_tender(
             sanitized.pop("zkp_proof", None)
         sanitized_bids.append(sanitized)
 
-    return {"success": True, "tender_id": tender_id, "count": len(bids), "bids": sanitized_bids}
+    return {"success": True, "tender_id": tender_id, "count": len(bids), "bids": sanitized_bids, "data_source": "BLOCKCHAIN"}
 
 
 @router.post("/generate-commitment")
@@ -151,12 +217,8 @@ async def generate_commitment(
     current_user: TokenData = Depends(require_bidder),
 ):
     """
-    Helper endpoint: Generate a ZKP commitment for a bid amount.
-    Returns the commitment hash and randomness (bidder must save the randomness!).
+    Helper: Generate a ZKP commitment for a bid amount.
     ACCESS: BidderOrg only.
-
-    SECURITY NOTE: In production, this would be done client-side.
-    This endpoint exists for demo/testing convenience.
     """
     if amount_paise <= 0:
         raise HTTPException(
@@ -164,12 +226,10 @@ async def generate_commitment(
             detail="Amount must be positive (in paise). ₹1 = 100 paise.",
         )
 
-    randomness = secrets.token_hex(32)  # 256-bit randomness
+    randomness = secrets.token_hex(32)
     pre_image = f"{amount_paise}||{randomness}"
     commitment_hash = hashlib.sha256(pre_image.encode()).hexdigest()
 
-    # Simple range proof
-    import math
     bit_length = int(math.log2(amount_paise)) + 1
     proof_nonce = secrets.token_hex(16)
     range_proof = f"RANGE_PROOF_V1:{bit_length}:{commitment_hash[:16]}:{proof_nonce}"
@@ -180,5 +240,5 @@ async def generate_commitment(
         "randomness": randomness,
         "zkp_proof": range_proof,
         "amount_display": f"₹{amount_paise / 100:,.2f}",
-        "warning": "⚠️ SAVE THE RANDOMNESS! You will need it to reveal your bid. If lost, your bid cannot be revealed.",
+        "warning": "⚠️ SAVE THE RANDOMNESS! You will need it to reveal your bid.",
     }

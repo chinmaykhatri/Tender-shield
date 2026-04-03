@@ -2,6 +2,8 @@
 // PURPOSE: Financial trail showing money flow for a tender
 // ACCESS: CAG_AUDITOR and NIC_ADMIN only
 
+import { logger } from '@/lib/logger';
+
 export const dynamic = 'force-dynamic';
 
 interface PaymentNode {
@@ -98,7 +100,7 @@ export async function GET(
       demo_note: 'Financial trail data is simulated. Real deployment connects to PFMS and RBI APIs.',
     });
   } catch (error) {
-    console.error('[FinancialTrail] Error:', error);
+    logger.error('[FinancialTrail] Error:', error);
     return Response.json({ success: false, error: 'Failed to fetch financial trail' }, { status: 500 });
   }
 }

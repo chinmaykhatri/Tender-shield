@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/enforcement/approve-unlock/route.ts
 // PURPOSE: Multi-party approval to unlock AI-locked tenders
 // Tender unlocks ONLY when ALL required approvers have signed
@@ -133,7 +134,7 @@ export async function POST(req: Request) {
       blockchain_tx: txHash,
     });
   } catch (error) {
-    console.error('[ApproveUnlock] Error:', error);
+    logger.error('[ApproveUnlock] Error:', error);
     return Response.json(
       { success: false, error: 'Approval failed' },
       { status: 500 }

@@ -1,0 +1,82 @@
+{
+  "pipeline_version": "1.1.0",
+  "dataset": {
+    "total_samples": 2010,
+    "clean": 1402,
+    "fraud": 608,
+    "fraud_rate": 0.3025,
+    "features": [
+      "bid_count",
+      "cv",
+      "min_ratio",
+      "max_ratio",
+      "benford_distance",
+      "round_number_pct",
+      "timing_cluster",
+      "gap_cv",
+      "state_diversity",
+      "deadline_proximity_min",
+      "avg_incorporation_months",
+      "min_employee_count",
+      "shared_directors_ratio",
+      "shared_address_ratio",
+      "turnover_to_bid_ratio"
+    ],
+    "generation_time_s": 0.13
+  },
+  "gradient_boosting": {
+    "n_estimators": 50,
+    "max_depth": 3,
+    "learning_rate": 0.15,
+    "training_time_s": 33.67,
+    "test_metrics": {
+      "accuracy": 0.99,
+      "precision": 1.0,
+      "recall": 0.968,
+      "f1_score": 0.9837,
+      "auc_roc": 1.0,
+      "confusion_matrix": {
+        "tp": 121,
+        "fp": 0,
+        "tn": 277,
+        "fn": 4
+      },
+      "total_samples": 402
+    },
+    "feature_importances": {
+      "bid_count": 0.0256,
+      "cv": 0.1182,
+      "min_ratio": 0.0383,
+      "max_ratio": 0.0479,
+      "benford_distance": 0.0256,
+      "round_number_pct": 0.0,
+      "timing_cluster": 0.0511,
+      "gap_cv": 0.016,
+      "state_diversity": 0.0703,
+      "deadline_proximity_min": 0.1438,
+      "avg_incorporation_months": 0.1693,
+      "min_employee_count": 0.1214,
+      "shared_directors_ratio": 0.0703,
+      "shared_address_ratio": 0.0703,
+      "turnover_to_bid_ratio": 0.0319
+    }
+  },
+  "isolation_forest": {
+    "n_estimators": 100,
+    "max_samples": 128,
+    "optimal_threshold": 0.49,
+    "training_time_s": 0.01,
+    "test_metrics": {
+      "accuracy": 0.8458,
+      "precision": 0.8,
+      "recall": 0.672,
+      "f1_score": 0.7304,
+      "confusion_matrix": {
+        "tp": 84,
+        "fp": 21,
+        "tn": 256,
+        "fn": 41
+      }
+    }
+  }
+}

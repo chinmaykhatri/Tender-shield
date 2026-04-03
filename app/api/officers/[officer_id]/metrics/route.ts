@@ -2,6 +2,7 @@
 // PURPOSE: Officer accountability metrics — integrity score, decisions, flags
 // DEMO MODE: Returns hardcoded realistic data
 
+import { logger } from '@/lib/logger';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -199,7 +200,7 @@ export async function GET(
 
     return Response.json({ success: true, data: result });
   } catch (error) {
-    console.error('[OfficerMetrics] Error:', error);
+    logger.error('[OfficerMetrics] Error:', error);
     return Response.json({ success: false, error: 'Failed to fetch metrics' }, { status: 500 });
   }
 }

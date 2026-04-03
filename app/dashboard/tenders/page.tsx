@@ -8,11 +8,14 @@ import { useTendersRealtime } from '@/hooks/useRealtimeData';
 import { getStatusBadge } from '@/lib/api';
 import DataSourceBadge from '@/components/DataSourceBadge';
 import Link from 'next/link';
+import type { Tender } from '@/lib/types';
+import { SkeletonTenderList } from '@/components/Skeleton';
+import BlockchainProof from '@/components/BlockchainProof';
 
 export default function TendersPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
-  const [rawTenders, setRawTenders] = useState<any[]>([]);
+  const [rawTenders, setRawTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [usingRealData, setUsingRealData] = useState(false);
@@ -39,7 +42,7 @@ export default function TendersPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" role="main" aria-label="Tenders Management">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
@@ -62,9 +65,7 @@ export default function TendersPage() {
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-24 shimmer rounded-2xl" />)}
-        </div>
+        <SkeletonTenderList />
       ) : tenders.length === 0 ? (
         <div className="text-center py-16 card-glass">
           <p className="text-4xl mb-3">📋</p>
@@ -72,7 +73,7 @@ export default function TendersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tenders.map((tender: any) => {
+          {tenders.map((tender: Tender) => {
             const badge = getStatusBadge(tender.status);
             return (
               <Link key={tender.id} href={`/dashboard/tenders/${tender.id}`}
@@ -90,6 +91,9 @@ export default function TendersPage() {
                       <span>📦 {tender.category}</span>
                       <span>📝 {tender.bids_count || 0} bids</span>
                       <span>📅 {tender.deadline_display || new Date(tender.deadline || tender.created_at).toLocaleDateString('en-IN')}</span>
+                    </div>
+                    <div style={{ marginTop: '8px' }}>
+                      <BlockchainProof txHash={tender.blockchain_tx} blockNumber={tender.block_number} compact />
                     </div>
                   </div>
                   <div className="text-right shrink-0">

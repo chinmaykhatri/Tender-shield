@@ -1,8 +1,12 @@
 """
 ============================================================================
-TenderShield — Shell Company Detector
+TenderShield — Shell Company Detector (Rule-Based Pattern Matching)
 ============================================================================
 Identifies shell/front companies used to create illusion of competition.
+
+DETECTION METHOD: Rule-based pattern matching (NOT machine learning).
+Each bidder is scored against 6 deterministic heuristic checks.
+This is transparent and auditable — every flag has a clear reason.
 
 INDICATORS:
   1. Common registered address among multiple bidders

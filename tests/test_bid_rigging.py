@@ -43,11 +43,13 @@ class TestCoverBidDetection:
     """Test Z-score based cover bid identification."""
 
     def test_cover_bid_detected(self, detector, sample_tender):
+        # 8 tightly clustered bids + 1 extreme outlier.
+        # The tight cluster keeps std_dev low, making the outlier Z-score >> 2.5
         bids = [
-            {"bidder_did": "b1", "revealed_amount_paise": 100 * 100},
-            {"bidder_did": "b2", "revealed_amount_paise": 101 * 100},
-            {"bidder_did": "b3", "revealed_amount_paise": 102 * 100},
-            {"bidder_did": "cover", "revealed_amount_paise": 500 * 100},
+            {"bidder_did": f"b{i}", "revealed_amount_paise": (100 + i) * 100}
+            for i in range(8)
+        ] + [
+            {"bidder_did": "cover", "revealed_amount_paise": 10000 * 100},
         ]
         result = detector.analyze(bids, sample_tender)
         assert result["evidence"]["cover_bids"]["detected"] is True

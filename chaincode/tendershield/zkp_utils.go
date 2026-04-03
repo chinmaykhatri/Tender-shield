@@ -1,7 +1,7 @@
 // ============================================================================
-// TenderShield — Zero-Knowledge Proof Utilities (Pedersen Commitments)
+// TenderShield — SHA-256 Hash-Based Bid Commitment Utilities
 // ============================================================================
-// Implements ZKP-based bid confidentiality using Pedersen Commitment scheme.
+// Implements cryptographic bid confidentiality using SHA-256 commitment scheme.
 //
 // PROTOCOL OVERVIEW:
 //   Phase 1 (COMMIT): Bidder creates commitment C = SHA256(amount || randomness)
@@ -25,7 +25,7 @@
 //   - Both properties are essential for fair secret-bid procurement
 //
 // INDIA CONTEXT:
-//   CVC Guidelines mandate sealed bids — ZKP provides the digital equivalent.
+//   CVC Guidelines mandate sealed bids — SHA-256 commitment provides the digital equivalent.
 //   Even the blockchain nodes cannot see bid amounts until the reveal phase.
 // ============================================================================
 
@@ -63,7 +63,7 @@ const (
 // Commitment Scheme Implementation
 // ============================================================================
 
-// CreateCommitment generates a Pedersen commitment for a bid amount.
+// CreateCommitment generates a SHA-256 hash commitment for a bid amount.
 // Returns the commitment hash and the randomness used (bidder must keep the randomness secret).
 //
 // PROTOCOL:

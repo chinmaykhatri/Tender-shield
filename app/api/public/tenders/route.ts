@@ -2,6 +2,7 @@
 // PURPOSE: Public tender data — no auth, no sensitive fields
 // ACCESS: PUBLIC — anyone can call this
 
+import { logger } from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 
 interface PublicTender {
@@ -174,7 +175,8 @@ export async function GET(req: Request) {
       total: tenders.length,
     });
   } catch (error) {
-    console.error('[PublicTenders] Error:', error);
+    logger.error('[PublicTenders] Error:', error);
     return Response.json({ success: false, error: 'Failed to fetch public data' }, { status: 500 });
   }
 }
+

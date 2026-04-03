@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/ai/judge-simulator/route.ts
 // SECURITY: SERVER ONLY
 // API KEYS USED: ANTHROPIC_API_KEY
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       session_id: session_id || `session-${Date.now()}`,
     });
   } catch (error) {
-    console.error('[TenderShield] Judge simulator error:', error);
+    logger.error('[TenderShield] Judge simulator error:', error);
     return NextResponse.json({ error: 'Simulation failed' }, { status: 500 });
   }
 }

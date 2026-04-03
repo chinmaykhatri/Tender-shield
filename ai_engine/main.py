@@ -75,14 +75,21 @@ app = FastAPI(
     title="TenderShield AI Engine",
     description=(
         "🤖 AI Fraud Detection Microservice for TenderShield\n\n"
-        "Runs 5 fraud detection algorithms in parallel:\n"
-        "1. **Bid Rigging** — Statistical analysis (CV, Benford's Law, Z-scores)\n"
+        "**Architecture:** Hybrid ML + Rule-Based Scoring\n\n"
+        "Runs 5 rule-based fraud detectors + 2 ML models in parallel:\n\n"
+        "**Rule-Based Detectors (55% weight):**\n"
+        "1. **Bid Rigging** — CV, Benford's Law, Z-score cover bids\n"
         "2. **Collusion Graph** — Network analysis of bidder relationships\n"
         "3. **Shell Company** — Entity verification (GSTIN, directors, address)\n"
         "4. **Cartel Rotation** — Win pattern rotation detection\n"
-        "5. **Timing Anomaly** — Submission timing irregularities\n"
+        "5. **Timing Anomaly** — Submission timing irregularities\n\n"
+        "**ML Models (45% weight):**\n"
+        "6. **Gradient Boosting** — 100-tree classifier (30% weight)\n"
+        "7. **Isolation Forest** — 150-tree anomaly detector (15% weight)\n\n"
+        "All models trained on 10,000 synthetic Indian procurement patterns.\n"
+        "Explainability via /api/v1/ai/explain/* endpoints."
     ),
-    version="1.0.0",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -93,8 +100,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the composite risk scorer
+# Initialize the hybrid risk scorer (rules + ML)
 risk_scorer = CompositeRiskScorer()
+logger.info(f"[AI Engine] Scoring mode: {risk_scorer.get_model_info().get('scoring_mode', 'UNKNOWN')}")
+
+# Register explainability router
+try:
+    from ai_engine.routers.explain import router as explain_router
+    app.include_router(explain_router)
+    logger.info("[AI Engine] ✅ Explainability endpoints registered")
+except ImportError as e:
+    logger.warning(f"[AI Engine] Explainability router not loaded: {e}")
 
 
 # ============================================================================
@@ -281,11 +297,16 @@ async def demo_analyze(request: DemoAnalyzeRequest):
 @app.get("/health")
 async def health_check():
     """AI Engine health check."""
+    model_info = risk_scorer.get_model_info()
     return {
         "status": "healthy",
         "service": "TenderShield AI Engine",
-        "version": "1.0.0",
-        "detectors_loaded": 5,
+        "version": "2.0.0",
+        "scoring_mode": model_info.get("scoring_mode", "RULE_BASED"),
+        "rule_detectors_loaded": 5,
+        "ml_models_loaded": model_info.get("ml_loaded", False),
+        "ml_pipeline": model_info.get("ml_pipeline", {}),
+        "weights": model_info.get("weights", {}),
         "timestamp_ist": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
     }
 
@@ -293,10 +314,15 @@ async def health_check():
 @app.get("/")
 async def root():
     """AI Engine root."""
+    model_info = risk_scorer.get_model_info()
     return {
         "name": "TenderShield AI Fraud Detection Engine",
-        "version": "1.0.0",
-        "detectors": 5,
+        "version": "2.0.0",
+        "architecture": "Hybrid: 5 Rule-Based Detectors + 2 ML Models",
+        "scoring_mode": model_info.get("scoring_mode", "RULE_BASED"),
+        "rule_detectors": 5,
+        "ml_models": 2 if model_info.get("ml_loaded") else 0,
         "documentation": "/docs",
         "demo": "POST /demo/analyze with {\"scenario\": \"bid_rigging\"}",
+        "explainability": "/api/v1/ai/explain/features",
     }

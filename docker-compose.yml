@@ -1,0 +1,128 @@
+# ============================================================================
+# TenderShield — Complete Stack (One Command Startup)
+# ============================================================================
+# USAGE:
+#   docker compose -f docker-compose.yml up --build
+#
+# SERVICES:
+#   frontend     — Next.js 14 (port 3000)
+#   backend      — FastAPI + SQLAlchemy (port 8000)
+#   ai-engine    — AI/ML fraud detection (port 8001)
+#   postgres     — PostgreSQL 16 (port 5432)
+#   redis        — Redis 7 (port 6379)
+#
+# DATA:
+#   PostgreSQL data persists in ./docker-data/postgres
+#   Redis data persists in ./docker-data/redis
+#   Trained ML models mounted from ./ai_engine/models
+#
+# NOTE: Fabric network uses separate docker-compose.fabric.yml
+#   To run with Fabric: docker compose -f docker-compose.yml
+#                        -f docker-compose.fabric.yml up --build
+# ============================================================================
+
+services:
+
+  # ─── PostgreSQL 16 ───────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ts-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tendershield_db
+      POSTGRES_USER: tendershield
+      POSTGRES_PASSWORD: Tender@2026Secure
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tendershield -d tendershield_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis 7 ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ts-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker-data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ─── FastAPI Backend ─────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ts-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://tendershield:Tender@2026Secure@postgres:5432/tendershield_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - AI_ENGINE_URL=http://ai-engine:8001
+      - FABRIC_LIVE=false
+      - APP_ENV=production
+      - JWT_SECRET_KEY=tendershield-jwt-secret-change-in-production
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/dashboard/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── AI/ML Engine ────────────────────────────────────────
+  ai-engine:
+    build:
+      context: .
+      dockerfile: ai_engine/Dockerfile
+    container_name: ts-ai-engine
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./ai_engine/models:/app/ai_engine/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ─── Next.js Frontend ────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ts-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_DEMO_MODE=true
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
+      - AI_ENGINE_URL=http://ai-engine:8001
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

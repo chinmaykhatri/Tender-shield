@@ -13,7 +13,9 @@ import secrets
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 from backend.auth.jwt_handler import (
     TokenData, UserLogin, TokenResponse,
@@ -22,8 +24,12 @@ from backend.auth.jwt_handler import (
     _hash_password,
 )
 from backend.services.fabric_service import fabric_service
-from backend.services.kafka_service import kafka_service
+from backend.services.event_bus import event_bus
+from backend.db.repositories import TenderRepository, AlertRepository
 from backend.config import settings
+
+tender_repo = TenderRepository()
+alert_repo = AlertRepository()
 
 logger = logging.getLogger("tendershield.routers.dashboard")
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -152,7 +158,7 @@ async def register_user(request: RegisterRequest):
     })
 
     # Audit event
-    await kafka_service.produce_audit_event({
+    await event_bus.publish_audit_event({
         "event_type": "USER_REGISTERED",
         "user_did": did,
         "role": request.role,
@@ -211,10 +217,18 @@ async def list_demo_users():
 @dashboard_router.get("/stats")
 async def get_dashboard_stats(current_user: TokenData = Depends(get_current_user)):
     """
-    Get aggregated dashboard statistics from blockchain.
+    Get aggregated dashboard statistics from ORM + blockchain.
     ACCESS: All authenticated users.
     """
-    stats = await fabric_service.get_dashboard_stats()
+    # Try ORM first
+    try:
+        orm_stats = await tender_repo.get_stats()
+        alert_stats = await alert_repo.get_stats()
+        stats = {**orm_stats, **alert_stats, "source": "ORM"}
+    except Exception:
+        stats = await fabric_service.get_dashboard_stats()
+        stats["source"] = "BLOCKCHAIN"
+
     return {
         "success": True,
         "stats": stats,
@@ -224,19 +238,20 @@ async def get_dashboard_stats(current_user: TokenData = Depends(get_current_user
 
 @dashboard_router.get("/events")
 async def get_recent_events(
-    topic: str = None,
+    channel: Optional[str] = None,
     limit: int = 50,
     current_user: TokenData = Depends(get_current_user),
 ):
     """
-    Get recent Kafka events for the real-time feed.
+    Get recent events from Redis event bus.
     ACCESS: All authenticated users.
     """
-    events = await kafka_service.get_recent_events(topic, limit)
+    events = await event_bus.get_recent_events(channel, limit)
     return {
         "success": True,
         "count": len(events),
         "events": events,
+        "bus_mode": event_bus._mode,
     }
 
 
@@ -247,16 +262,25 @@ async def health_check():
     No authentication required (for monitoring tools).
     """
     fabric_health = await fabric_service.health_check()
-    kafka_health = await kafka_service.health_check()
+    bus_health = await event_bus.health_check()
+
+    # Check DB health
+    db_status = {"connected": False, "type": "unknown"}
+    try:
+        from backend.db.engine import engine, DATABASE_URL
+        db_status["connected"] = True
+        db_status["type"] = "PostgreSQL" if "postgresql" in DATABASE_URL else "SQLite"
+        db_status["url"] = DATABASE_URL.split("@")[-1] if "@" in DATABASE_URL else DATABASE_URL.split("///")[-1]
+    except Exception:
+        pass
 
     return {
         "status": "healthy",
         "version": settings.APP_VERSION,
         "services": {
             "fabric": fabric_health,
-            "kafka": kafka_health,
-            "postgres": {"connected": True, "demo_mode": True},
-            "redis": {"connected": True, "demo_mode": True},
+            "event_bus": bus_health,
+            "database": db_status,
         },
         "timestamp_ist": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
     }

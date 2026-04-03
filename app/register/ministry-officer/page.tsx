@@ -2,7 +2,6 @@
 // PURPOSE: 4-step Ministry Officer verification flow
 // INDIA API: Email domain check + Aadhaar + Employee ID
 // MOCK MODE: YES — demo data accepted, OTP 123456
-
 'use client';
 
 import { useState } from 'react';

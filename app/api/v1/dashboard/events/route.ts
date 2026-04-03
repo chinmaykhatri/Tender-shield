@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ events: events || [] });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return NextResponse.json({ events: [] }, { status: 500 });
   }
 }

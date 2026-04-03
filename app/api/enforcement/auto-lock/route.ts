@@ -2,6 +2,7 @@
 // PURPOSE: Auto-lock tender when AI risk score exceeds thresholds
 // CALLED: After every AI analysis completes
 
+import { logger } from '@/lib/logger';
 import { determineLockLevel, generateTxHash } from '@/lib/enforcement/autoLock';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -83,10 +84,11 @@ export async function POST(req: Request) {
       message: `Tender locked at ${decision.lock_level} level. Requires approval from: ${decision.required_approvers.join(', ')}`,
     });
   } catch (error) {
-    console.error('[AutoLock] Error:', error);
+    logger.error('[AutoLock] Error:', error);
     return Response.json(
       { success: false, error: 'Auto-lock failed' },
       { status: 500 }
     );
   }
 }
+

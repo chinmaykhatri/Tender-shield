@@ -44,7 +44,8 @@ export async function POST(req: NextRequest) {
       },
 
       demoFn: (): any => {
-        const txHash = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        const uuid = crypto.randomUUID().replace(/-/g, '');
+        const txHash = '0x' + uuid + uuid; // 64 hex chars from CSPRNG
         const blockNumber = 1200 + Math.floor(Math.random() * 300);
         return {
           tx_hash: txHash,
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
     } catch { /* non-critical — table might not exist yet */ }
 
     return NextResponse.json(result.data);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }

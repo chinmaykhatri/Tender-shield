@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       mode: 'REAL',
       prediction_made_at_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message, ...DEMO_PREDICTION, mode: 'DEMO_FALLBACK' });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)), ...DEMO_PREDICTION, mode: 'DEMO_FALLBACK' });
   }
 }

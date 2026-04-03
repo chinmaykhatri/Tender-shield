@@ -25,6 +25,7 @@ export default function TenderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'bids' | 'ai' | 'blockchain' | 'audit'>('overview');
   const [riskAnimated, setRiskAnimated] = useState(0);
+  const [ipfsData, setIpfsData] = useState<{ cid: string; pinned_via: string; gateway_url: string } | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) { router.push('/'); return; }
@@ -37,6 +38,32 @@ export default function TenderDetailPage() {
     };
     load();
   }, [isAuthenticated, params.id, router]);
+
+  // Fetch IPFS data for this tender
+  useEffect(() => {
+    if (!tender) return;
+    const fetchIPFS = async () => {
+      try {
+        const res = await fetch('/api/ipfs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'pin-tender',
+            tender_id: tender.id || tender.tender_id,
+            title: tender.title,
+            specifications: tender.description || '',
+            estimated_value: tender.estimated_value_crore,
+            ministry: tender.ministry_code || tender.ministry,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) setIpfsData({ cid: data.cid, pinned_via: data.pinned_via, gateway_url: data.gateway_url });
+        }
+      } catch {}
+    };
+    fetchIPFS();
+  }, [tender]);
 
   // Animate risk gauge when AI tab opens
   useEffect(() => {
@@ -110,6 +137,21 @@ export default function TenderDetailPage() {
               <p style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#a5b4fc' }}>{tender.blockchain_tx}</p>
             </div>
             <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", color: '#666' }}>Block #{tender.block_number}</span>
+          </div>
+        )}
+        {ipfsData && (
+          <div style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span>📎</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '10px', color: '#14b8a6' }}>IPFS Document Hash</p>
+              <p style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#5eead4' }}>{ipfsData.cid}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="badge badge-info" style={{ fontSize: '9px' }}>{ipfsData.pinned_via === 'sha256-fallback' ? 'content-hash' : ipfsData.pinned_via}</span>
+              {ipfsData.pinned_via !== 'sha256-fallback' && (
+                <a href={ipfsData.gateway_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', color: '#14b8a6', textDecoration: 'none' }}>View →</a>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -358,6 +400,30 @@ export default function TenderDetailPage() {
                 blockNumber={1345}
                 label="AI Freeze Action — Immutable Record"
               />
+            </div>
+          )}
+
+          {/* IPFS Document Integrity */}
+          {ipfsData && (
+            <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.15)' }}>
+              <h3 style={{ fontWeight: 600, marginBottom: '16px', color: '#14b8a6' }}>📎 IPFS Document Storage</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[
+                  ['Content Identifier (CID)', ipfsData.cid],
+                  ['Pinning Service', ipfsData.pinned_via],
+                  ['Gateway URL', ipfsData.gateway_url],
+                  ['Blockchain Field', 'Tender.DocumentsIPFSHash'],
+                  ['Integrity', 'SHA-256 Content-Addressed'],
+                ].map(([label, value]) => (
+                  <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: '#888' }}>{label as string}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", color: '#5eead4', wordBreak: 'break-all', maxWidth: '60%', textAlign: 'right' }}>{value as string}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: '16px', padding: '10px', borderRadius: '8px', background: 'rgba(20,184,166,0.08)', fontSize: '11px', color: '#99f6e4' }}>
+                💡 This CID is a cryptographic hash of the tender document. Anyone can verify the document was not tampered with by recomputing SHA-256 and comparing.
+              </div>
             </div>
           )}
         </div>

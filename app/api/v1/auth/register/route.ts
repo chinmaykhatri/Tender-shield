@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       detail: 'Registration failed — please try again.',
     }, { status: 500 });
-  } catch (err: any) {
-    return NextResponse.json({ detail: err.message || 'Registration failed' }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ detail: (err instanceof Error ? err.message : String(err)) || 'Registration failed' }, { status: 500 });
   }
 }

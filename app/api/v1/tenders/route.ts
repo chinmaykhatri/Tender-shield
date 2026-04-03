@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/v1/tenders/route.ts
 // SECURITY LAYER: Input sanitization on tender creation
 // BREAKS IF REMOVED: YES — tenders cannot be listed or created
@@ -26,8 +27,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ tenders: tenders || [] });
-  } catch (err: any) {
-    return NextResponse.json({ tenders: [], error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ tenders: [], error: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }
 
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     if (!sanitized.valid) {
       // Log injection attempt if detected
       if (sanitized.injectionDetected) {
-        console.error('[TenderShield] 🚨 INJECTION ATTEMPT on /api/v1/tenders:', sanitized.errors);
+        logger.error('[TenderShield] 🚨 INJECTION ATTEMPT on /api/v1/tenders:', sanitized.errors);
       }
       return NextResponse.json(
         { detail: 'Invalid input', errors: sanitized.errors },
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ tender: created, message: 'Tender created successfully' });
-  } catch (err: any) {
-    return NextResponse.json({ detail: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ detail: (err instanceof Error ? err.message : String(err)) }, { status: 500 });
   }
 }

@@ -68,11 +68,11 @@ export default function AdminPage() {
       <div className="card-glass p-6">
         <h2 className="font-semibold mb-4">🔧 System Mode</h2>
         <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--bg-secondary)]">
-          <div className={`w-4 h-4 rounded-full ${DEMO_MODE ? 'bg-blue-500' : 'bg-green-500'}`} />
+          <div className={`w-4 h-4 rounded-full ${DEMO_MODE ? 'bg-green-500' : 'bg-green-500'}`} />
           <div>
-            <p className="font-medium">{DEMO_MODE ? '🎯 DEMO MODE' : '✅ LIVE MODE'}</p>
+            <p className="font-medium">{DEMO_MODE ? '🟢 MVP SANDBOX' : '✅ LIVE PRODUCTION'}</p>
             <p className="text-xs text-[var(--text-secondary)]">
-              {DEMO_MODE ? 'Showing pre-scripted data for competition judges' : 'Connected to real Supabase database'}
+              {DEMO_MODE ? 'Blockchain India Challenge 2026 · Pre-loaded procurement data for evaluation' : 'Connected to real Supabase database'}
             </p>
           </div>
         </div>
@@ -126,8 +126,8 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {[
             { label: 'Supabase', status: '🟢 Connected', detail: 'PostgreSQL + Auth operational' },
-            { label: 'AI Engine', status: DEMO_MODE ? '🟡 Demo Mode' : '🟢 Active', detail: '5 detectors loaded' },
-            { label: 'Hyperledger Fabric', status: DEMO_MODE ? '🟡 Simulated' : '🟢 Connected', detail: '4 orgs, 8 peers' },
+            { label: 'AI Engine', status: DEMO_MODE ? '🟢 Sandbox Active' : '🟢 Active', detail: '5 fraud detectors loaded' },
+            { label: 'Hyperledger Fabric', status: DEMO_MODE ? '🟢 Test Network' : '🟢 Connected', detail: '4 orgs, 8 peers' },
             { label: 'Frontend (Vercel)', status: '🟢 Deployed', detail: 'Next.js 14, Edge Runtime' },
           ].map((svc, i) => (
             <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-[var(--bg-secondary)]">

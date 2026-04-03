@@ -1,0 +1,215 @@
+# ============================================================================
+# TenderShield — Hyperledger Fabric Channel Configuration
+# ============================================================================
+# DEPRECATED: This file is kept for backwards compatibility only.
+# The AUTHORITATIVE configuration is at: network/configtx.yaml
+#
+# This file mirrors network/configtx.yaml with Raft consensus,
+# 4 organizations, and dual-channel architecture.
+# ============================================================================
+
+---
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+
+  - &MinistryOrg
+    Name: MinistryOrgMSP
+    ID: MinistryOrgMSP
+    MSPDir: crypto-config/peerOrganizations/ministry.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin', 'MinistryOrgMSP.peer', 'MinistryOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin', 'MinistryOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('MinistryOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.ministry.tendershield.gov.in
+        Port: 7051
+
+  - &BidderOrg
+    Name: BidderOrgMSP
+    ID: BidderOrgMSP
+    MSPDir: crypto-config/peerOrganizations/bidder.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin', 'BidderOrgMSP.peer', 'BidderOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin', 'BidderOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('BidderOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.bidder.tendershield.gov.in
+        Port: 8051
+
+  - &AuditorOrg
+    Name: AuditorOrgMSP
+    ID: AuditorOrgMSP
+    MSPDir: crypto-config/peerOrganizations/auditor.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin', 'AuditorOrgMSP.peer', 'AuditorOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin', 'AuditorOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AuditorOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.auditor.tendershield.gov.in
+        Port: 9051
+
+  - &NICOrg
+    Name: NICOrgMSP
+    ID: NICOrgMSP
+    MSPDir: crypto-config/peerOrganizations/nic.tendershield.gov.in/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin', 'NICOrgMSP.peer', 'NICOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin', 'NICOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('NICOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.nic.tendershield.gov.in
+        Port: 10051
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer0.orderer.tendershield.gov.in:7050
+  EtcdRaft:
+    Consenters:
+      - Host: orderer0.orderer.tendershield.gov.in
+        Port: 7050
+        ClientTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/tls/server.crt
+        ServerTLSCert: crypto-config/ordererOrganizations/orderer.tendershield.gov.in/orderers/orderer0.orderer.tendershield.gov.in/tls/server.crt
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  TenderShieldGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      TenderShieldConsortium:
+        Organizations:
+          - *MinistryOrg
+          - *BidderOrg
+          - *AuditorOrg
+          - *NICOrg
+
+  TenderChannel:
+    Consortium: TenderShieldConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *MinistryOrg
+        - *BidderOrg
+        - *AuditorOrg
+        - *NICOrg
+      Capabilities:
+        <<: *ApplicationCapabilities

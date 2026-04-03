@@ -20,7 +20,7 @@ export async function executeTool(
   toolInput: Record<string, unknown>
 ): Promise<ToolResult> {
   const timestamp_ist = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
-  console.log(`[TenderShield Agent] Executing: ${toolName}`);
+  // Executing tool — silent
 
   try {
     let data: unknown;
@@ -139,7 +139,7 @@ export async function executeTool(
       case 'send_fraud_alert': {
         const ids = toolInput.tender_ids as string[];
         const alertMsg = `🚨 *AGENT INVESTIGATION COMPLETE*\n━━━━━━━━━━━━━━━━━━\n${toolInput.summary}\n\nTenders frozen: ${ids.length}\nTotal value at risk: ₹${toolInput.total_value_crore ?? 0} Crore\nSeverity: ${toolInput.severity}\n\n_TenderShield AI Agent — ${timestamp_ist}_`;
-        console.log('[TenderShield Agent] Alert:', alertMsg);
+        // Alert generated — silent
         data = {
           sent: true, demo: DEMO_MODE,
           phone: '+91****9134',

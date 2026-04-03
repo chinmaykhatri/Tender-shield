@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/aadhaar/send-otp/route.ts
 // PURPOSE: Send Aadhaar OTP for identity verification
 // DEMO MODE: Returns success immediately, no real API call
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
 
     // DEMO MODE — return fake success
     if (isDemoMode || !hasSurepassKey) {
-      console.log('[TenderShield Aadhaar] Demo mode — OTP simulated');
+      logger.info('[TenderShield Aadhaar] Demo mode — OTP simulated');
       return Response.json({
         success: true,
         txn_id: `DEMO-${Date.now()}`,
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
       message: 'OTP sent to Aadhaar-linked mobile',
     });
   } catch (error) {
-    console.error('[TenderShield Aadhaar] Send OTP error:', error);
+    logger.error('[TenderShield Aadhaar] Send OTP error:', error);
     return Response.json(
       { success: false, error: 'Service temporarily unavailable' },
       { status: 500 }

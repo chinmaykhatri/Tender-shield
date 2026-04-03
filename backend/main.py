@@ -23,6 +23,7 @@ from backend.config import settings
 from backend.routers.tender_router import router as tender_router
 from backend.routers.bid_router import router as bid_router
 from backend.routers.dashboard_router import auth_router, dashboard_router
+from backend.routers.blockchain_router import router as blockchain_router
 from backend.middleware.security import (
     SecurityHeadersMiddleware,
     RateLimitMiddleware,
@@ -52,6 +53,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 async def lifespan(app: FastAPI):
     """Application startup and shutdown logic."""
     # --- Startup ---
+    from backend.services.fabric_service import fabric_service
+    from backend.services.event_bus import event_bus
+
     logger.info("=" * 70)
     logger.info("🏛️  TenderShield — AI-Secured Government Procurement System")
     logger.info(f"   Version: {settings.APP_VERSION}")
@@ -60,8 +64,25 @@ async def lifespan(app: FastAPI):
     logger.info(f"   Chaincode: {settings.FABRIC_CHAINCODE_NAME}")
     logger.info(f"   AI Engine: {settings.AI_ENGINE_URL}")
     logger.info("=" * 70)
+
+    # Initialize database (SQLAlchemy ORM — creates tables)
+    try:
+        from backend.db.engine import init_db
+        await init_db()
+    except Exception as e:
+        logger.warning(f"⚠️  Database init skipped: {e}")
+
+    # Initialize Fabric connection (strategy pattern: live or simulation)
+    await fabric_service.initialize()
+    logger.info(f"🔗 Blockchain Mode: {fabric_service.mode}")
+    logger.info(f"🔗 Peers Online: {fabric_service.get_peer_count()}")
+
+    # Initialize Redis event bus (Pub/Sub)
+    await event_bus.connect()
+    bus_health = await event_bus.health_check()
+    logger.info(f"📡 Event Bus Mode: {bus_health['mode']}")
+
     logger.info("✅ Backend services initialized")
-    logger.info("✅ Demo data seeded (3 tenders)")
     logger.info(f"📊 Swagger Docs: http://localhost:{settings.APP_PORT}/docs")
     logger.info(f"📊 ReDoc: http://localhost:{settings.APP_PORT}/redoc")
     logger.info("=" * 70)
@@ -70,6 +91,12 @@ async def lifespan(app: FastAPI):
 
     # --- Shutdown ---
     logger.info("🛑 TenderShield shutting down...")
+    await event_bus.disconnect()
+    try:
+        from backend.db.engine import dispose_db
+        await dispose_db()
+    except Exception:
+        pass
 
 
 # ============================================================================
@@ -166,6 +193,7 @@ app.include_router(auth_router)
 app.include_router(dashboard_router)
 app.include_router(tender_router)
 app.include_router(bid_router)
+app.include_router(blockchain_router)
 
 
 # ============================================================================

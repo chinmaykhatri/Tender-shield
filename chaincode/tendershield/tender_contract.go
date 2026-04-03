@@ -13,8 +13,8 @@
 //     4.  FreezeTender        — AI/NIC freezes a suspect tender
 //     5.  AwardTender         — Awards tender to winning bidder
 //
-//   BID LIFECYCLE (ZKP Commit-Reveal):
-//     6.  SubmitBid           — Phase 1: Submit ZKP commitment hash
+//   BID LIFECYCLE (SHA-256 Commit-Reveal):
+//     6.  SubmitBid           — Phase 1: Submit SHA-256 commitment hash
 //     7.  RevealBid           — Phase 2: Reveal bid amount after deadline
 //     8.  EvaluateBids        — Evaluate all revealed bids for a tender
 //
@@ -388,14 +388,15 @@ func (c *TenderShieldContract) AwardTender(ctx contractapi.TransactionContextInt
 }
 
 // ============================================================================
-// 6. SubmitBid — ZKP Phase 1: Submit Commitment Hash
+// 6. SubmitBid — Commit Phase: Submit SHA-256 Commitment Hash
 // ============================================================================
-// Bidder submits a ZKP commitment hash. The actual bid amount is encrypted.
-// No one — not even the blockchain nodes — can see the bid amount.
+// Bidder submits a SHA-256 commitment hash. The actual bid amount is hidden
+// behind a cryptographic commitment: C = SHA-256(amount || randomness).
+// No one — not even the blockchain nodes — can reverse the hash to see the amount.
 //
 // ACCESS: BidderOrgMSP only
 func (c *TenderShieldContract) SubmitBid(ctx contractapi.TransactionContextInterface, bidJSON string) error {
-	log.Println("[TenderShield] SubmitBid (ZKP Phase 1) called")
+	log.Println("[TenderShield] SubmitBid (Commit Phase) called")
 
 	err := ValidateOrgAccess(ctx, "BidderOrgMSP")
 	if err != nil {
@@ -410,12 +411,12 @@ func (c *TenderShieldContract) SubmitBid(ctx contractapi.TransactionContextInter
 		return fmt.Errorf("SUBMIT_BID_FAILED: invalid bid JSON: %v", err)
 	}
 
-	// Validate ZKP fields
+	// Validate commitment fields
 	if bid.CommitmentHash == "" {
-		return fmt.Errorf("SUBMIT_BID_FAILED: commitment_hash is required for ZKP Phase 1")
+		return fmt.Errorf("SUBMIT_BID_FAILED: commitment_hash is required for commit phase")
 	}
 	if bid.ZKPProof == "" {
-		return fmt.Errorf("SUBMIT_BID_FAILED: zkp_proof (range proof) is required")
+		return fmt.Errorf("SUBMIT_BID_FAILED: range_check_proof is required")
 	}
 
 	// Verify range proof format
@@ -463,7 +464,7 @@ func (c *TenderShieldContract) SubmitBid(ctx contractapi.TransactionContextInter
 		ActorRole:      RoleBidder,
 		TenderID:       bid.TenderID,
 		PayloadHash:    HashBidData(bid.BidID, bid.TenderID, bid.BidderDID, 0),
-		Description:    fmt.Sprintf("ZKP bid committed: %s for tender %s by %s. Amount ENCRYPTED (Phase 1).", bid.BidID, bid.TenderID, identity.DID),
+		Description:    fmt.Sprintf("Sealed bid committed: %s for tender %s by %s. Amount HIDDEN (Commit Phase — SHA-256 commitment).", bid.BidID, bid.TenderID, identity.DID),
 		RiskLevel:      RiskInfo,
 		TimestampIST:   GetCurrentIST(),
 		BlockchainTxID: ctx.GetStub().GetTxID(),
@@ -472,19 +473,19 @@ func (c *TenderShieldContract) SubmitBid(ctx contractapi.TransactionContextInter
 	auditKey := CreateAuditCompositeKey(bid.TenderID, auditEvent.EventID)
 	ctx.GetStub().PutState(auditKey, auditBytes)
 
-	log.Printf("[TenderShield] Bid committed (ZKP Phase 1): %s for tender %s ✅", bid.BidID, bid.TenderID)
+	log.Printf("[TenderShield] Bid committed (Commit Phase): %s for tender %s ✅", bid.BidID, bid.TenderID)
 	return nil
 }
 
 // ============================================================================
-// 7. RevealBid — ZKP Phase 2: Reveal Bid Amount
+// 7. RevealBid — Reveal Phase: Reveal Bid Amount
 // ============================================================================
 // After the bid deadline, bidders reveal their actual amount + randomness.
-// The chaincode verifies the reveal matches the original commitment.
+// The chaincode verifies: SHA-256(amount || randomness) == stored commitment.
 //
 // ACCESS: BidderOrgMSP only
 func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInterface, tenderID, bidID, bidderDID string, revealedAmountPaise int64, randomnessHex string) error {
-	log.Printf("[TenderShield] RevealBid (ZKP Phase 2): %s — Revealing amount", bidID)
+	log.Printf("[TenderShield] RevealBid (Reveal Phase): %s — Revealing amount", bidID)
 
 	err := ValidateOrgAccess(ctx, "BidderOrgMSP")
 	if err != nil {
@@ -508,7 +509,7 @@ func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInter
 			bidID, string(bid.Status))
 	}
 
-	// Verify ZKP commitment
+	// Verify SHA-256 commitment: SHA-256(revealed_amount || randomness) == stored_hash
 	valid, err := VerifyCommitment(bid.CommitmentHash, revealedAmountPaise, randomnessHex)
 	if !valid || err != nil {
 		// SECURITY: Failed verification is logged as HIGH risk — possible tampering
@@ -520,7 +521,7 @@ func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInter
 			ActorRole:      RoleBidder,
 			TenderID:       tenderID,
 			PayloadHash:    HashBidData(bidID, tenderID, bidderDID, revealedAmountPaise),
-			Description:    fmt.Sprintf("🚨 ZKP VERIFICATION FAILED: bid %s — commitment mismatch. Possible bid tampering by %s", bidID, identity.DID),
+			Description:    fmt.Sprintf("🚨 COMMITMENT VERIFICATION FAILED: bid %s — hash mismatch. Possible bid tampering by %s", bidID, identity.DID),
 			RiskLevel:      RiskHigh,
 			TimestampIST:   GetCurrentIST(),
 			BlockchainTxID: ctx.GetStub().GetTxID(),
@@ -529,7 +530,7 @@ func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInter
 		auditKey := CreateAuditCompositeKey(tenderID, auditEvent.EventID)
 		ctx.GetStub().PutState(auditKey, auditBytes)
 
-		return fmt.Errorf("REVEAL_BID_FAILED: ZKP verification failed for bid %s: %v", bidID, err)
+		return fmt.Errorf("REVEAL_BID_FAILED: SHA-256 commitment verification failed for bid %s: %v", bidID, err)
 	}
 
 	// Update bid with revealed amount
@@ -550,7 +551,7 @@ func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInter
 		ActorRole:      RoleBidder,
 		TenderID:       tenderID,
 		PayloadHash:    HashBidData(bidID, tenderID, bidderDID, revealedAmountPaise),
-		Description:    fmt.Sprintf("Bid revealed: %s — Amount: %s (ZKP verified ✅)", bidID, PaiseToRupeesDisplay(revealedAmountPaise)),
+		Description:    fmt.Sprintf("Bid revealed: %s — Amount: %s (commitment verified ✅)", bidID, PaiseToRupeesDisplay(revealedAmountPaise)),
 		RiskLevel:      RiskInfo,
 		TimestampIST:   GetCurrentIST(),
 		BlockchainTxID: ctx.GetStub().GetTxID(),
@@ -559,7 +560,7 @@ func (c *TenderShieldContract) RevealBid(ctx contractapi.TransactionContextInter
 	auditKey := CreateAuditCompositeKey(tenderID, auditEvent.EventID)
 	ctx.GetStub().PutState(auditKey, auditBytes)
 
-	log.Printf("[TenderShield] Bid REVEALED: %s — %s (ZKP verified ✅)", bidID, PaiseToRupeesDisplay(revealedAmountPaise))
+	log.Printf("[TenderShield] Bid REVEALED: %s — %s (commitment verified ✅)", bidID, PaiseToRupeesDisplay(revealedAmountPaise))
 	return nil
 }
 

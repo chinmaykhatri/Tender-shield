@@ -286,7 +286,7 @@ export default function StreamingAnalysis({
       if (finalScore >= 76) onCriticalDetected?.();
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      console.warn('[TenderShield] Streaming error — falling back to demo:', err);
+      // Streaming error — falling back to demo
       await runDemoScript();
     }
   }, [tenderId, tenderData, finalizeLine, runDemoScript, completedRiskScore, onComplete, onCriticalDetected]);

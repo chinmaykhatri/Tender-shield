@@ -1,6 +1,7 @@
 // FILE: app/api/trust/[company_id]/route.ts
 // PURPOSE: Get trust score for a company
 
+import { logger } from '@/lib/logger';
 import { calculateTrustScore } from '@/lib/trust/calculateTrustScore';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,7 @@ export async function GET(
       trust: result,
     });
   } catch (error) {
-    console.error('[TrustScore] Error:', error);
+    logger.error('[TrustScore] Error:', error);
     return Response.json({ success: false, error: 'Failed to calculate trust score' }, { status: 500 });
   }
 }

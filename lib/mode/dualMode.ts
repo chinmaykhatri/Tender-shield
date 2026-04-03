@@ -81,17 +81,17 @@ export async function withFallback<T>(options: {
   const serviceMode = mode.services[service];
 
   if (serviceMode === 'DEMO') {
-    console.log(`[TenderShield] ${label} → DEMO MODE`);
+    // Demo mode — silent
     const data = await demoFn();
     return { data, mode: 'DEMO' };
   }
 
   try {
-    console.log(`[TenderShield] ${label} → REAL MODE`);
+    // Real mode — silent
     const data = await realFn();
     return { data, mode: 'REAL' };
   } catch (error) {
-    console.warn(`[TenderShield] ${label} → REAL failed, using DEMO:`, error);
+    // Real failed, using demo — silent fallback
     const data = await demoFn();
     return { data, mode: 'DEMO' };
   }

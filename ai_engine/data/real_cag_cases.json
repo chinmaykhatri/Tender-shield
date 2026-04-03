@@ -1,0 +1,197 @@
+[
+  {
+    "source": "CAG Report No. 7 of 2024, Para 3.2",
+    "url": "https://cag.gov.in/en/audit-reports",
+    "ministry": "Ministry of Health & Family Welfare",
+    "state": "Uttar Pradesh",
+    "year": 2024,
+    "category": "Medical Equipment",
+    "amount_crore": 45.2,
+    "fraud_types": ["BID_RIGGING", "SHELL_COMPANY"],
+    "features": {
+      "num_bidders": 3,
+      "bid_cv_pct": 1.2,
+      "min_company_age_months": 4,
+      "has_shared_director": true,
+      "deadline_days": 18,
+      "winning_bid_vs_estimate_pct": 97.8
+    },
+    "is_fraud": 1,
+    "notes": "Three companies found to be related parties. Director PAN shared across all three."
+  },
+  {
+    "source": "CAG Report No. 12 of 2023, Para 5.1",
+    "url": "https://cag.gov.in/en/audit-reports",
+    "ministry": "Ministry of Road Transport",
+    "state": "Bihar",
+    "year": 2023,
+    "category": "Civil Construction",
+    "amount_crore": 28.7,
+    "fraud_types": ["SPLIT_TENDERING"],
+    "features": {
+      "num_bidders": 1,
+      "is_split_tender": 1,
+      "deadline_days": 9,
+      "estimated_value_crore": 28.7,
+      "winning_bid_vs_estimate_pct": 99.2
+    },
+    "is_fraud": 1,
+    "notes": "Large work split into 12 packages below ₹25 lakh threshold to avoid open tendering (GFR 2017 violation)."
+  },
+  {
+    "source": "CAG Report No. 3 of 2023, Para 2.4",
+    "url": "https://cag.gov.in/en/audit-reports",
+    "ministry": "Ministry of Defence",
+    "state": "National",
+    "year": 2023,
+    "category": "Defence Equipment",
+    "amount_crore": 127.3,
+    "fraud_types": ["SINGLE_BID", "SPEC_BIAS"],
+    "features": {
+      "num_bidders": 1,
+      "spec_bias_score": 72,
+      "winning_bid_vs_estimate_pct": 99.1,
+      "deadline_days": 14
+    },
+    "is_fraud": 1,
+    "notes": "Single bid accepted at 99.1% of estimate. Specifications written for specific vendor."
+  },
+  {
+    "source": "CAG Report No. 15 of 2022, Para 4.3",
+    "url": "https://cag.gov.in/en/audit-reports",
+    "ministry": "Ministry of Railways",
+    "state": "Rajasthan",
+    "year": 2022,
+    "category": "Track Material",
+    "amount_crore": 82.5,
+    "fraud_types": ["BID_RIGGING", "TIMING_COLLUSION"],
+    "features": {
+      "num_bidders": 4,
+      "bid_cv_pct": 0.8,
+      "timing_std_minutes": 3.2,
+      "deadline_days": 21,
+      "winning_bid_vs_estimate_pct": 96.5
+    },
+    "is_fraud": 1,
+    "notes": "Four bids submitted within 5-minute window. CV of bid amounts was 0.8% — statistically improbable."
+  },
+  {
+    "source": "CAG Report No. 9 of 2022, Para 6.1",
+    "url": "https://cag.gov.in/en/audit-reports",
+    "ministry": "Ministry of Housing and Urban Affairs",
+    "state": "Maharashtra",
+    "year": 2022,
+    "category": "Smart City Infrastructure",
+    "amount_crore": 215.0,
+    "fraud_types": ["CARTEL_ROTATION"],
+    "features": {
+      "num_bidders": 5,
+      "bid_cv_pct": 12.3,
+      "deadline_days": 30,
+      "winning_bid_vs_estimate_pct": 88.4,
+      "repeat_winner_count": 4
+    },
+    "is_fraud": 1,
+    "notes": "Same set of 5 companies won contracts in rotation across 4 consecutive years. Reverse auction on GeM showed 22% lower prices."
+  },
+  {
+    "source": "CVC Annual Report 2023, Chapter 3",
+    "url": "https://cvc.gov.in/annual-reports",
+    "ministry": "Multiple Ministries",
+    "state": "National",
+    "year": 2023,
+    "category": "IT Services",
+    "amount_crore": 342.0,
+    "fraud_types": ["SHELL_COMPANY", "BID_RIGGING"],
+    "features": {
+      "num_bidders": 6,
+      "bid_cv_pct": 2.1,
+      "min_company_age_months": 2,
+      "has_shared_director": true,
+      "deadline_days": 15,
+      "winning_bid_vs_estimate_pct": 98.7
+    },
+    "is_fraud": 1,
+    "notes": "CVC investigation found 3 of 6 bidders were shell companies registered at same address. Directors were family members."
+  },
+  {
+    "source": "Clean tender — GeM procurement data 2024",
+    "url": "https://gem.gov.in",
+    "ministry": "Ministry of Education",
+    "state": "Kerala",
+    "year": 2024,
+    "category": "Laboratory Equipment",
+    "amount_crore": 18.5,
+    "fraud_types": [],
+    "features": {
+      "num_bidders": 12,
+      "bid_cv_pct": 28.5,
+      "min_company_age_months": 96,
+      "has_shared_director": false,
+      "deadline_days": 30,
+      "winning_bid_vs_estimate_pct": 72.3
+    },
+    "is_fraud": 0,
+    "notes": "Healthy competition: 12 independent bidders, wide bid spread (CV 28.5%), winning bid 27.7% below estimate."
+  },
+  {
+    "source": "Clean tender — GeM procurement data 2024",
+    "url": "https://gem.gov.in",
+    "ministry": "Ministry of Health & Family Welfare",
+    "state": "Tamil Nadu",
+    "year": 2024,
+    "category": "Pharmaceutical Supplies",
+    "amount_crore": 56.8,
+    "fraud_types": [],
+    "features": {
+      "num_bidders": 8,
+      "bid_cv_pct": 22.1,
+      "min_company_age_months": 144,
+      "has_shared_director": false,
+      "deadline_days": 28,
+      "winning_bid_vs_estimate_pct": 78.9
+    },
+    "is_fraud": 0,
+    "notes": "Competitive procurement with established companies. Rate contract based on CDSCO-approved list."
+  },
+  {
+    "source": "Clean tender — CPWD data 2023",
+    "url": "https://eprocure.gov.in",
+    "ministry": "Ministry of Housing and Urban Affairs",
+    "state": "Delhi",
+    "year": 2023,
+    "category": "Building Construction",
+    "amount_crore": 89.2,
+    "fraud_types": [],
+    "features": {
+      "num_bidders": 15,
+      "bid_cv_pct": 18.7,
+      "min_company_age_months": 180,
+      "has_shared_director": false,
+      "deadline_days": 45,
+      "winning_bid_vs_estimate_pct": 81.5
+    },
+    "is_fraud": 0,
+    "notes": "Open tender with 15 qualified bidders. CPWD standard procedures followed. Pre-qualification criteria met by all."
+  },
+  {
+    "source": "Clean tender — Indian Railways e-procurement 2024",
+    "url": "https://ireps.gov.in",
+    "ministry": "Ministry of Railways",
+    "state": "National",
+    "year": 2024,
+    "category": "Rolling Stock Components",
+    "amount_crore": 125.0,
+    "fraud_types": [],
+    "features": {
+      "num_bidders": 7,
+      "bid_cv_pct": 15.3,
+      "min_company_age_months": 240,
+      "has_shared_director": false,
+      "deadline_days": 42,
+      "winning_bid_vs_estimate_pct": 85.2
+    },
+    "is_fraud": 0,
+    "notes": "Indian Railways e-procurement. All bidders RDSO-approved. L1 evaluation per standard railway procurement norms."
+  }
+]

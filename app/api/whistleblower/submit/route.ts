@@ -3,6 +3,7 @@
 // SECURITY: NO AUTH — completely anonymous endpoint
 // PRIVACY: Never logs IP, user agent, or any identifying info
 
+import { logger } from '@/lib/logger';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
@@ -77,10 +78,11 @@ export async function POST(req: Request) {
         'Save your Submission ID and Evidence Hash. Present these to CAG to claim a reward if fraud is confirmed. Your identity is not recorded.',
     });
   } catch (error) {
-    console.error('[Whistleblower] Error:', error);
+    logger.error('[Whistleblower] Error:', error);
     return Response.json(
       { success: false, error: 'Submission failed. Please try again.' },
       { status: 500 }
     );
   }
 }
+

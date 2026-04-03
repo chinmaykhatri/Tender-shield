@@ -229,7 +229,7 @@ type BidRecord struct {
 	// DPIITNumber — DPIIT startup recognition number (if applicable)
 	DPIITNumber string `json:"dpiit_number,omitempty"`
 
-	// CommitmentHash — ZKP Phase 1: Pedersen commitment C = g^amount * h^randomness mod p
+	// CommitmentHash — SHA-256 commitment: C = SHA256(amount_paise || "||" || randomness_hex)
 	CommitmentHash string `json:"commitment_hash" validate:"required"`
 
 	// ZKPProof — zero-knowledge proof of bid validity (range proof)

@@ -42,7 +42,7 @@ class FraudEventBus {
       try {
         listener(event);
       } catch (e) {
-        console.error(`[FraudEventBus] Listener error for ${event.type}:`, e);
+        // Listener error — silently caught
       }
     }
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 // FILE: app/api/verify/access-code/route.ts
 // PURPOSE: Verify CAG auditor access code — auto-approves auditors
 // DEMO MODE: Accepts code "TS-AUD-DEMO01"
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
       redirect: '/dashboard',
     });
   } catch (error) {
-    console.error('[TenderShield Access Code] Error:', error);
+    logger.error('[TenderShield Access Code] Error:', error);
     return Response.json(
       { success: false, error: 'Verification failed.' },
       { status: 500 }

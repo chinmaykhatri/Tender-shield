@@ -3,6 +3,7 @@
 // API KEYS USED: ANTHROPIC_API_KEY
 // PURPOSE: Receives PDF (base64 or text), sends to Claude Vision, returns structured tender extraction + bias analysis
 
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 import { DOCUMENT_SCANNER_PROMPT } from '@/lib/aiPrompts';
@@ -103,7 +104,7 @@ const DEMO_RESULT = {
 
 export async function POST(request: NextRequest) {
   if (!ANTHROPIC_KEY) {
-    console.log('[TenderShield] scan-document: No API key — returning demo result');
+    logger.info('[TenderShield] scan-document: No API key — returning demo result');
     return NextResponse.json(DEMO_RESULT);
   }
 
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
-      console.error('[TenderShield] scan-document API error:', res.status, error);
+      logger.error('[TenderShield] scan-document API error:', res.status, error);
       return NextResponse.json(DEMO_RESULT);
     }
 
@@ -165,7 +166,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(parsed);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
-    console.error('[TenderShield] scan-document error:', message);
+    logger.error('[TenderShield] scan-document error:', message);
     return NextResponse.json(DEMO_RESULT);
   }
 }
+

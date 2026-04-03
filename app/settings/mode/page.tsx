@@ -53,7 +53,7 @@ export default function ModeStatusPage() {
           ⚙️ System Mode Status
         </h1>
         <p style={{ color: '#888', fontSize: '14px', marginBottom: '24px' }}>
-          Shows which services are using real APIs vs demo mode
+          Shows which services are using real APIs vs sandbox mode
         </p>
 
         {/* Overall Banner */}
@@ -68,7 +68,7 @@ export default function ModeStatusPage() {
           }}>
             {mode.overall === 'REAL' ? '✅ FULL PRODUCTION MODE — All services connected' :
              mode.overall === 'PARTIAL' ? `🔵 PARTIAL MODE — ${realCount}/${totalCount} services real` :
-             '🟡 DEMO MODE — Perfect for competition demonstration'}
+             '🟢 MVP SANDBOX — Blockchain India Challenge 2026 · All features operational'}
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function ModeStatusPage() {
                   background: isReal ? 'rgba(34,197,94,0.1)' : 'rgba(251,191,36,0.1)',
                   color: isReal ? '#4ade80' : '#fbbf24',
                 }}>
-                  {isReal ? '✅ REAL' : '🟡 DEMO'}
+                  {isReal ? '✅ REAL' : '🟢 SANDBOX'}
                 </span>
                 <span style={{ color: '#888', fontSize: '12px' }}>
                   {isReal ? meta.realDesc : meta.demoDesc}
@@ -108,7 +108,7 @@ export default function ModeStatusPage() {
         {/* Competition Note */}
         <div style={{ padding: '16px 20px', background: 'rgba(34,197,94,0.04)', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.1)' }}>
           <p style={{ color: '#4ade80', fontSize: '13px', fontWeight: 600 }}>✅ Competition Ready — All features operational</p>
-          <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>Demo mode provides identical functionality with pre-loaded Indian government procurement data.</p>
+          <p style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>MVP Sandbox provides identical functionality with pre-loaded Indian government procurement data for evaluation.</p>
         </div>
       </div>
     </div>

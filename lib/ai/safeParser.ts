@@ -29,8 +29,8 @@ export function safeParseClaudeJSON(rawText: string): FraudAnalysis {
   const endIndex = cleaned.lastIndexOf('}');
 
   if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-    console.error('[TenderShield] safeParseClaudeJSON: No JSON object found in response');
-    console.error('[TenderShield] Raw response preview:', rawText.slice(0, 200));
+    // No JSON object found — silent
+    // Raw response preview available in debugger
     return { ...FALLBACK_ANALYSIS };
   }
 
@@ -41,8 +41,8 @@ export function safeParseClaudeJSON(rawText: string): FraudAnalysis {
   try {
     parsed = JSON.parse(jsonString);
   } catch (parseError) {
-    console.error('[TenderShield] safeParseClaudeJSON: JSON.parse failed:', parseError);
-    console.error('[TenderShield] Attempted to parse:', jsonString.slice(0, 300));
+    // JSON parse failed — silent
+    // Attempted parse string available in debugger
     return { ...FALLBACK_ANALYSIS };
   }
 

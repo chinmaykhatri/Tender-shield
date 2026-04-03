@@ -1,135 +1,236 @@
 'use client';
+import { useState, useEffect } from 'react';
 
-import { useEffect, useState } from 'react';
-import { useAuthStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import { getBlockchainFeed, DEMO_TENDERS, DEMO_MODE } from '@/lib/dataLayer';
-import { useBlockchainFeed } from '@/hooks/useRealtimeData';
+interface Block {
+  blockNumber: number;
+  blockHash: string;
+  previousHash: string;
+  timestamp: string;
+  txCount: number;
+  transactions: Transaction[];
+}
 
-export default function BlockchainPage() {
-  const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const blockchainFeed = useBlockchainFeed();
-  const [selectedBlock, setSelectedBlock] = useState<number | null>(null);
+interface Transaction {
+  txId: string;
+  type: string;
+  chaincode: string;
+  function: string;
+  args: string[];
+  creator: { mspId: string; org: string };
+  endorsers: string[];
+  timestamp: string;
+  status: string;
+}
 
-  useEffect(() => { if (!isAuthenticated) router.push('/'); }, [isAuthenticated, router]);
+interface Peer {
+  name: string;
+  mspId: string;
+  role: string;
+  status: string;
+  ledgerHeight: number;
+  chaincodes: string[];
+  stateDb: string;
+}
 
-  const networkStats = DEMO_MODE ? {
-    peers: 8, orgs: 4, blocks: 1338, channel: 'TenderChannel',
-    chaincode: 'tendershield_cc', consensus: 'Raft', tps: 127,
-    orgs_list: [
-      { name: 'MinistryOrg', peers: 2, status: '🟢', role: 'Endorser' },
-      { name: 'BidderOrg', peers: 2, status: '🟢', role: 'Endorser' },
-      { name: 'AuditorOrg (CAG)', peers: 2, status: '🟢', role: 'Endorser + Auditor' },
-      { name: 'NICOrg', peers: 2, status: '🟢', role: 'Orderer + Admin' },
-    ]
-  } : { peers: 0, orgs: 0, blocks: 0, channel: 'TenderChannel', chaincode: 'tendershield_cc', consensus: 'Raft', tps: 0, orgs_list: [] };
+interface NetworkData {
+  network: { name: string; channel: string; chaincode: { name: string; version: string; language: string; functions: number; endorsementPolicy: string }; consensus: string; stateDb: string };
+  channel: { name: string; height: number; currentBlockHash: string; previousBlockHash: string };
+  peers: Peer[];
+  orderers: { name: string; mspId: string; type: string; status: string }[];
+  organizations: { name: string; mspId: string; domain: string; role: string; peers: number }[];
+  blocks: Block[];
+  stats: { totalBlocks: number; totalTransactions: number; chaincodeInvocations: number; frozenByAI: number; zkpBids: number; endorsementPolicyViolations: number };
+}
 
-  const eventColor = (type: string) => type === 'danger' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6366f1';
+export default function BlockchainExplorer() {
+  const [data, setData] = useState<NetworkData | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/blockchain')
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, border: '4px solid rgba(99,102,241,0.3)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#94a3b8' }}>Connecting to Fabric Network...</p>
+      </div>
+    </div>
+  );
+
+  if (!data) return <div style={{ padding: 40, color: '#ef4444' }}>Failed to connect to blockchain network</div>;
+
+  const fnColors: Record<string, string> = {
+    CreateTender: '#22c55e', PublishTender: '#3b82f6', FreezeTender: '#ef4444',
+    SubmitBid: '#a855f7', RevealBid: '#f59e0b', EvaluateBids: '#06b6d4',
+    AwardTender: '#10b981', JoinChain: '#6b7280',
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-display font-bold">⛓️ Blockchain Explorer</h1>
-        <p className="text-sm text-[var(--text-secondary)]">Hyperledger Fabric network visualization</p>
+    <div style={{ padding: '24px 32px', maxWidth: 1400, margin: '0 auto' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
+        .block-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important; }
+        .tx-row:hover { background: rgba(99,102,241,0.1) !important; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <span style={{ fontSize: 28 }}>⛓️</span>
+          <h1 style={{ fontSize: 28, fontWeight: 800, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Blockchain Explorer
+          </h1>
+          <span style={{ background: '#22c55e', color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, animation: 'pulse 2s infinite' }}>
+            🟢 LIVE
+          </span>
+        </div>
+        <p style={{ color: '#94a3b8', fontSize: 14 }}>
+          Hyperledger Fabric v2.5 • Channel: <strong>{data.channel.name}</strong> • Consensus: {data.network.consensus} • State DB: {data.network.stateDb}
+        </p>
       </div>
 
-      {/* Network Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
-          { icon: '📦', label: 'Total Blocks', value: networkStats.blocks, color: '#6366f1' },
-          { icon: '🖥️', label: 'Peers Online', value: networkStats.peers, color: '#22c55e' },
-          { icon: '🏛️', label: 'Organizations', value: networkStats.orgs, color: '#f59e0b' },
-          { icon: '⚡', label: 'Throughput', value: `${networkStats.tps} TPS`, color: '#ef4444' },
-        ].map((s, i) => (
-          <div key={i} className="stat-card">
-            <div className="flex items-center gap-2 mb-2">
-              <span>{s.icon}</span>
-              <span className="text-xs text-[var(--text-secondary)] uppercase">{s.label}</span>
-            </div>
-            <p className="text-2xl font-display font-bold" style={{ color: s.color }}>{s.value}</p>
+          { label: 'Block Height', value: data.channel.height, icon: '📦', color: '#6366f1' },
+          { label: 'Transactions', value: data.stats.totalTransactions, icon: '📝', color: '#3b82f6' },
+          { label: 'Chaincode Calls', value: data.stats.chaincodeInvocations, icon: '⚡', color: '#22c55e' },
+          { label: 'Frozen by AI', value: data.stats.frozenByAI, icon: '🚨', color: '#ef4444' },
+          { label: 'ZKP Bids', value: data.stats.zkpBids, icon: '🔐', color: '#a855f7' },
+          { label: 'Policy Violations', value: data.stats.endorsementPolicyViolations, icon: '✅', color: '#10b981' },
+        ].map(stat => (
+          <div key={stat.label} style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '20px 16px', backdropFilter: 'blur(10px)' }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Block Chain Visualization */}
-        <div className="lg:col-span-2 card-glass p-6">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> Live Block Chain
-          </h2>
-          <div className="flex gap-3 overflow-x-auto pb-4">
-            {blockchainFeed.slice(0, 8).map((event: any, i: number) => (
-              <button key={i} onClick={() => setSelectedBlock(event.block)}
-                className={`shrink-0 w-32 p-4 rounded-xl border transition-all text-left ${
-                  selectedBlock === event.block ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--border-glow)]'
-                }`}>
-                <p className="text-xs font-mono text-[var(--text-secondary)]">Block</p>
-                <p className="text-lg font-bold font-mono">#{event.block}</p>
-                <div className="w-2 h-2 rounded-full mt-2" style={{ backgroundColor: eventColor(event.type) }} />
-                <p className="text-[10px] text-[var(--text-secondary)] mt-1 truncate">{event.event}</p>
-              </button>
-            ))}
-          </div>
-
-          {selectedBlock && (() => {
-            const block = blockchainFeed.find((e: any) => e.block === selectedBlock);
-            if (!block) return null;
-            return (
-              <div className="mt-4 p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-                <h3 className="font-semibold mb-3">Block #{selectedBlock} Details</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Event</span><span>{block.event}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Ministry</span><span>{block.ministry}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Amount</span><span>{block.amount}</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Time</span><span>{block.time} IST</span></div>
-                  <div className="flex justify-between"><span className="text-[var(--text-secondary)]">TX Hash</span><span className="font-mono">{block.tx}</span></div>
+      {/* Network Topology */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+        {/* Peers */}
+        <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>🖥️ Peer Nodes</h2>
+          {data.peers.map(peer => (
+            <div key={peer.name} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', marginBottom: 8, border: '1px solid rgba(34,197,94,0.3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{peer.name}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{peer.mspId} • {peer.role}</div>
                 </div>
+                <span style={{ background: peer.status === 'RUNNING' ? '#22c55e' : '#f59e0b', color: '#fff', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                  {peer.status}
+                </span>
               </div>
-            );
-          })()}
+              <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: '#64748b' }}>
+                <span>Height: {peer.ledgerHeight}</span>
+                <span>CC: {peer.chaincodes[0]}</span>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Organizations */}
-        <div className="card-glass p-6">
-          <h2 className="font-semibold mb-4">🏛️ Network Organizations</h2>
-          <div className="space-y-3">
-            {networkStats.orgs_list.map((org, i) => (
-              <div key={i} className="p-3 rounded-lg bg-[var(--bg-secondary)]">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium">{org.name}</span>
-                  <span>{org.status}</span>
-                </div>
-                <p className="text-xs text-[var(--text-secondary)]">{org.role} · {org.peers} peers</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 p-3 rounded-lg bg-[var(--bg-secondary)]">
-            <p className="text-xs text-[var(--text-secondary)]">Channel: <span className="font-mono">{networkStats.channel}</span></p>
-            <p className="text-xs text-[var(--text-secondary)]">Chaincode: <span className="font-mono">{networkStats.chaincode}</span></p>
-            <p className="text-xs text-[var(--text-secondary)]">Consensus: <span className="font-mono">{networkStats.consensus}</span></p>
-          </div>
+        <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>🏛️ Organizations</h2>
+          {data.organizations.map(org => (
+            <div key={org.name} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', marginBottom: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{org.name}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{org.mspId} • {org.domain}</div>
+              <div style={{ fontSize: 11, color: '#6366f1', marginTop: 4 }}>{org.role}</div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Transaction Log */}
-      <div className="card-glass p-6">
-        <h2 className="font-semibold mb-4">📝 Recent Transactions</h2>
-        <table className="table-premium">
-          <thead><tr><th>Block</th><th>Event</th><th>Ministry</th><th>Amount</th><th>Time</th><th>TX Hash</th></tr></thead>
-          <tbody>
-            {blockchainFeed.slice(0, 10).map((event: any, i: number) => (
-              <tr key={i}>
-                <td className="font-mono font-bold">#{event.block}</td>
-                <td><span className="badge" style={{ background: `${eventColor(event.type)}22`, color: eventColor(event.type), border: `1px solid ${eventColor(event.type)}44` }}>{event.event}</span></td>
-                <td>{event.ministry}</td>
-                <td className="font-medium">{event.amount}</td>
-                <td className="text-[var(--text-secondary)]">{event.time} IST</td>
-                <td className="font-mono text-xs">{event.tx}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Channel Info */}
+      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, marginBottom: 32, backdropFilter: 'blur(10px)' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>📋 Channel: {data.channel.name}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div><span style={{ color: '#64748b', fontSize: 12 }}>Current Block Hash</span><div style={{ fontFamily: 'monospace', fontSize: 12, color: '#22c55e', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.currentBlockHash}</div></div>
+          <div><span style={{ color: '#64748b', fontSize: 12 }}>Previous Block Hash</span><div style={{ fontFamily: 'monospace', fontSize: 12, color: '#f59e0b', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.previousBlockHash}</div></div>
+        </div>
+        <div style={{ marginTop: 12, padding: '8px 16px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, fontSize: 12, color: '#a5b4fc' }}>
+          <strong>Endorsement Policy:</strong> {data.network.chaincode.endorsementPolicy}
+          <br />
+          <strong>Chaincode:</strong> {data.network.chaincode.name} v{data.network.chaincode.version} ({data.network.chaincode.language}) — {data.network.chaincode.functions} functions
+        </div>
+      </div>
+
+      {/* Block List */}
+      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>📦 Blocks</h2>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {data.blocks.map(block => (
+            <div
+              key={block.blockNumber}
+              className="block-card"
+              onClick={() => setSelectedBlock(selectedBlock?.blockNumber === block.blockNumber ? null : block)}
+              style={{
+                padding: 16, borderRadius: 12,
+                background: selectedBlock?.blockNumber === block.blockNumber ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.5)',
+                border: `1px solid ${selectedBlock?.blockNumber === block.blockNumber ? 'rgba(99,102,241,0.5)' : 'rgba(51,65,85,0.5)'}`,
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: '#fff', flexShrink: 0 }}>
+                  #{block.blockNumber}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {block.transactions.map(tx => (
+                      <span key={tx.txId} style={{ background: `${fnColors[tx.function] || '#6b7280'}22`, color: fnColors[tx.function] || '#6b7280', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid ${fnColors[tx.function] || '#6b7280'}44` }}>
+                        {tx.function}({tx.args[0] ? tx.args[0].slice(0, 25) : ''})
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'flex', gap: 16 }}>
+                    <span>🕐 {new Date(block.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
+                    <span>TX: {block.txCount}</span>
+                    <span style={{ fontFamily: 'monospace' }}>Hash: {block.blockHash.slice(0, 16)}...</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Transaction Details */}
+              {selectedBlock?.blockNumber === block.blockNumber && (
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(99,102,241,0.2)' }}>
+                  {block.transactions.map(tx => (
+                    <div key={tx.txId} className="tx-row" style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.8)', marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px 16px', fontSize: 12 }}>
+                        <span style={{ color: '#64748b' }}>TX ID</span>
+                        <span style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all' }}>{tx.txId}</span>
+                        <span style={{ color: '#64748b' }}>Type</span>
+                        <span style={{ color: '#e2e8f0' }}>{tx.type}</span>
+                        <span style={{ color: '#64748b' }}>Chaincode</span>
+                        <span style={{ color: '#22c55e' }}>{tx.chaincode}::{tx.function}</span>
+                        <span style={{ color: '#64748b' }}>Creator</span>
+                        <span style={{ color: '#f59e0b' }}>{tx.creator.mspId} ({tx.creator.org})</span>
+                        <span style={{ color: '#64748b' }}>Endorsers</span>
+                        <span style={{ color: '#a855f7' }}>{tx.endorsers.join(', ')}</span>
+                        <span style={{ color: '#64748b' }}>Status</span>
+                        <span style={{ color: tx.status === 'VALID' ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{tx.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+                    <span>Previous Hash: </span>
+                    <span style={{ fontFamily: 'monospace', color: '#f59e0b' }}>{block.previousHash.slice(0, 32)}...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

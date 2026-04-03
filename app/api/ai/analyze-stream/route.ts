@@ -3,6 +3,7 @@
 // API KEYS USED: ANTHROPIC_API_KEY
 // PURPOSE: Streams Claude fraud analysis word-by-word as Server-Sent Events — live terminal effect for judges
 
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 
@@ -35,7 +36,7 @@ DETECTION TIME: [X.X] seconds
 
 export async function POST(request: NextRequest) {
   if (!ANTHROPIC_KEY) {
-    console.log('[TenderShield] Streaming route: No API key — frontend will use fallback demo script');
+    logger.info('[TenderShield] Streaming route: No API key — frontend will use fallback demo script');
     return NextResponse.json(
       { error: 'AI service not configured', use_fallback: true },
       { status: 503 }
@@ -72,7 +73,7 @@ Analyze for:
 
 Use exact numbers. Show your working. Be specific.`;
 
-    console.log('[TenderShield] Starting streaming analysis for:', title);
+    logger.info('[TenderShield] Starting streaming analysis for:', title);
 
     const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -92,7 +93,7 @@ Use exact numbers. Show your working. Be specific.`;
 
     if (!anthropicResponse.ok) {
       const errorData = await anthropicResponse.json().catch(() => ({}));
-      console.error('[TenderShield] Anthropic streaming error:', anthropicResponse.status, errorData);
+      logger.error('[TenderShield] Anthropic streaming error:', anthropicResponse.status, errorData);
       return NextResponse.json(
         { error: 'AI analysis failed', use_fallback: true },
         { status: 500 }
@@ -110,10 +111,11 @@ Use exact numbers. Show your working. Be specific.`;
       },
     });
   } catch (error) {
-    console.error('[TenderShield] Streaming route error:', error);
+    logger.error('[TenderShield] Streaming route error:', error);
     return NextResponse.json(
       { error: 'Internal error', use_fallback: true },
       { status: 500 }
     );
   }
 }
+

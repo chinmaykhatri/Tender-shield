@@ -1,0 +1,62 @@
+# ============================================================================
+# TenderShield — Crypto Material Configuration
+# ============================================================================
+# Generates X.509 certificates and TLS keys for all network participants.
+# Mirrors network/crypto-config.yaml — this is the fabric-config/ copy.
+# ============================================================================
+
+OrdererOrgs:
+  - Name: OrdererOrg
+    Domain: orderer.tendershield.gov.in
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer0.orderer.tendershield.gov.in
+
+PeerOrgs:
+  - Name: MinistryOrg
+    Domain: ministry.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 2
+
+  - Name: BidderOrg
+    Domain: bidder.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 2
+
+  - Name: AuditorOrg
+    Domain: auditor.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1
+
+  - Name: NICOrg
+    Domain: nic.tendershield.gov.in
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - 127.0.0.1
+    Users:
+      Count: 1
