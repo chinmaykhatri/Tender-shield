@@ -103,6 +103,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+          SUPABASE_SERVICE_ROLE_KEY: 'ci-placeholder-key'
+          JWT_SECRET: 'ci-build-placeholder-secret-not-for-production'
           NEXT_PUBLIC_DEMO_MODE: 'true'
           NEXT_TELEMETRY_DISABLED: '1'
 
