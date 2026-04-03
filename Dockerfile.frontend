@@ -9,7 +9,7 @@
 # ============================================
 
 # Stage 1: Build
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies first (better layer caching)
@@ -27,7 +27,7 @@ COPY public/ ./public/
 
 # Build-time env (these get baked into the Next.js bundle)
 # Runtime values are passed via .env.production.local at run time
-ARG NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+ARG NEXT_PUBLIC_SUPABASE_URL=https://bwbwxpkjrlzcbvtnbdpr.supabase.co
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key
 ARG NEXT_PUBLIC_DEMO_MODE=true
 
@@ -42,7 +42,7 @@ ENV SUPABASE_SERVICE_ROLE_KEY=build-time-placeholder-key
 RUN npm run build
 
 # Stage 2: Production
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

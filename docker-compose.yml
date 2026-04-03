@@ -119,6 +119,10 @@ services:
       - NEXT_PUBLIC_DEMO_MODE=true
       - NEXT_PUBLIC_BACKEND_URL=http://backend:8000
       - AI_ENGINE_URL=http://ai-engine:8001
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-https://bwbwxpkjrlzcbvtnbdpr.supabase.co}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder-key}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-placeholder-key}
+      - JWT_SECRET=${JWT_SECRET:-N1GSc6iLlm6GLRJbiLaq7HzoKo9sSsMSulg6svg07PJWcZz5fCoxT7yCNHQISq72jEcRWd37DSZ14QPN4IKf+w==}
     depends_on:
       backend:
         condition: service_healthy
