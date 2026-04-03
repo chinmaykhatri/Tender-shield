@@ -28,7 +28,6 @@ export default function TenderDetailPage() {
   const [ipfsData, setIpfsData] = useState<{ cid: string; pinned_via: string; gateway_url: string } | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
     const load = async () => {
       const id = params.id as string;
       const [tenderRes, auditRes] = await Promise.all([getTenderById(id), getAuditTrail(id)]);
@@ -37,7 +36,7 @@ export default function TenderDetailPage() {
       setLoading(false);
     };
     load();
-  }, [isAuthenticated, params.id, router]);
+  }, [params.id]);
 
   // Fetch IPFS data for this tender
   useEffect(() => {

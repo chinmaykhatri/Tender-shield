@@ -12,7 +12,6 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
     const load = async () => {
       if (DEMO_MODE) {
         setPendingUsers([
@@ -27,7 +26,7 @@ export default function AdminPage() {
       setLoading(false);
     };
     load();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const approveUser = async (userId: string) => {
     if (DEMO_MODE) {

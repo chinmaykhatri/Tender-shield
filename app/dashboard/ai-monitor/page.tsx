@@ -104,9 +104,8 @@ export default function AIMonitorPage() {
   const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
     runAnalysis(SAMPLE_BIDS);
-  }, [isAuthenticated, router]);
+  }, []);
 
   async function runAnalysis(bids: any[]) {
     setLoading(true);

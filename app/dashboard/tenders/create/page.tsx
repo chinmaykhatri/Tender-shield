@@ -105,7 +105,7 @@ export default function CreateTenderPage() {
     setSubmitting(false);
   };
 
-  if (!isAuthenticated) { router.push('/'); return null; }
+
 
   if (submitted && result) {
     const summary = result.summary || {};

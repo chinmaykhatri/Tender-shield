@@ -29,7 +29,6 @@ export default function DashboardPage() {
   const [chainStats, setChainStats] = useState<{ chain_height: number; merkle_root: string; integrity_status: string; total_transactions: number; tps: number; source: string } | null>(null);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
     const load = async () => {
       try {
         const statsRes = await getStatsFromDataLayer();
@@ -42,7 +41,7 @@ export default function DashboardPage() {
     load();
     // Fetch live blockchain stats
     fetch('/api/blockchain/stats').then(r => r.json()).then(d => setChainStats(d)).catch(() => {});
-  }, [isAuthenticated, router]);
+  }, []);
 
   // IST Clock
   useEffect(() => {

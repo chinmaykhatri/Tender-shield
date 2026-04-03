@@ -61,20 +61,62 @@ const mobileNavConfig: Record<string, { href: string; icon: string; label: strin
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated, checkSessionExpiry } = useAuthStore();
   useSessionTimeout(); // Auto-logout after 30 min inactivity
 
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  // Close sidebar on navigation
+  // ────────────────────────────────────────────────
+  // AUTH GUARD: Wait for hydration, then check auth
+  // This prevents the black-screen redirect loop
+  // ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mounted) return;
+    // Check session expiry
+    checkSessionExpiry();
+    // If not authenticated after hydration, redirect to login
+    if (!isAuthenticated) {
+      router.push('/?message=login_required');
+    }
+  }, [mounted, isAuthenticated, router, checkSessionExpiry]);
+
+  // Close sidebar on navigation (must be before early return — Rules of Hooks)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   const handleLogout = () => {
     logout();
     router.push('/');
   };
+
+  // Show loading skeleton while waiting for hydration
+  // IMPORTANT: This must come AFTER all hook calls (Rules of Hooks)
+  if (!mounted || !isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: '#080808',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ textAlign: 'center', color: '#888' }}>
+          <div style={{
+            width: 48, height: 48,
+            border: '3px solid rgba(255,153,51,0.3)',
+            borderTopColor: '#FF9933',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px',
+          }} />
+          <p style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>Loading TenderShield...</p>
+          <p style={{ fontSize: 11, color: '#555', marginTop: 4 }}>Verifying session...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
+      </div>
+    );
+  }
 
   const roleBadge: Record<string, { color: string; label: string }> = {
     OFFICER: { color: '#6366f1', label: '🏛️ Officer' },

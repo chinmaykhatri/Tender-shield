@@ -25,6 +25,8 @@ const PUBLIC_ROUTES = [
   '/verify-pending',
   '/awaiting-approval',
   '/registration-rejected',
+  '/architecture',
+  '/demo',
 ];
 
 // API routes that do NOT need authentication
@@ -36,9 +38,11 @@ const PUBLIC_API_ROUTES = [
   '/api/setup/check',
   '/api/setup/validate',
   '/api/auth/validate-registration',
+  '/api/auth/validate',
   '/api/verify/',
   '/api/admin/approve',
   '/api/mode/status',
+  '/api/health',
 ];
 
 // Static files and Next.js internals
@@ -71,24 +75,24 @@ export async function middleware(req: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   res.headers.set('X-CSP-Nonce', nonce);
 
+  // Only apply strict CSP in production; in dev mode Next.js needs eval for HMR
+  const isDev = process.env.NODE_ENV === 'development';
   res.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      // unsafe-inline required by Next.js 14 for hydration scripts
-      // The nonce is available for custom scripts via X-CSP-Nonce header
-      // Note: Next.js 14 requires unsafe-inline for hydration — this is a known limitation
-      `script-src 'self' 'unsafe-inline' 'nonce-${nonce}' https://fonts.googleapis.com https://cdn.onesignal.com`,
-      // unsafe-inline required by Next.js for injected <style> tags during SSR
+      // Next.js requires unsafe-inline + unsafe-eval for hydration and HMR
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://cdn.onesignal.com`,
+      // unsafe-inline for Next.js injected <style> tags during SSR
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://onesignal.com",
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://onesignal.com${isDev ? ' ws://localhost:* http://localhost:*' : ''}`,
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "upgrade-insecure-requests",
+      ...(isDev ? [] : ["upgrade-insecure-requests"]),
     ].join('; ')
   );
 

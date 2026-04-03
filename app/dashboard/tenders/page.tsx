@@ -22,9 +22,8 @@ export default function TendersPage() {
   const tenders = useTendersRealtime(rawTenders);
 
   useEffect(() => {
-    if (!isAuthenticated) { router.push('/'); return; }
     loadTenders();
-  }, [isAuthenticated, router, statusFilter]);
+  }, [statusFilter]);
 
   const loadTenders = async () => {
     setLoading(true);
