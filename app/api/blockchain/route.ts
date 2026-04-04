@@ -14,14 +14,20 @@ import { createHash } from 'crypto';
 // A judge can independently verify any hash by running SHA-256 on the input.
 // ============================================================================
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+// Lazy Supabase client — avoids crash during Vercel page data collection
+// when env vars are not yet available at build time.
+let _supabase: ReturnType<typeof createClient> | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    );
+  }
+  return _supabase;
+}
 
-// Mode detection
-const FABRIC_PEER_ENDPOINT = process.env.FABRIC_PEER_ENDPOINT || '';
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !FABRIC_PEER_ENDPOINT;
+// Mode detection — read lazily in GET() to avoid build-time env var issues
 
 // ─── Real SHA-256 Hash Functions ───
 // These produce genuine cryptographic hashes, not JS integer bit-shifting.
@@ -58,8 +64,12 @@ const eventToFunction: Record<string, string> = {
   TENDER_EVALUATED: 'EvaluateBids',
 };
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || '';
+  const FABRIC_PEER_ENDPOINT = process.env.FABRIC_PEER_ENDPOINT || '';
+  const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !FABRIC_PEER_ENDPOINT;
 
   // ─── Strategy 1: Try real Fabric peer via backend ───
   if (FABRIC_PEER_ENDPOINT && BACKEND_URL) {
@@ -89,10 +99,11 @@ export async function GET() {
   }
 
   // ─── Strategy 2: Build blocks from Supabase audit_events ───
-  const { data: events, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: events, error } = await getSupabase()
     .from('audit_events')
     .select('*')
-    .order('timestamp_ist', { ascending: true });
+    .order('timestamp_ist', { ascending: true }) as { data: any[] | null; error: any };
 
   if (error || !events) {
     return NextResponse.json({ error: 'Failed to query audit_events', details: error?.message }, { status: 500 });
@@ -203,7 +214,7 @@ export async function GET() {
   const chaincodeInvocations = events.length;
 
   // Dynamic mode detection
-  const hasFabricPeer = !!FABRIC_PEER_ENDPOINT && !DEMO_MODE;
+  const hasFabricPeer = !!FABRIC_PEER_ENDPOINT && !DEMO_MODE;  // uses local vars from top of GET()
   const blockchainMode = hasFabricPeer ? 'FABRIC_LIVE' : 'DEMO_SHA256';
 
   // Dynamic peer status — never hardcoded
