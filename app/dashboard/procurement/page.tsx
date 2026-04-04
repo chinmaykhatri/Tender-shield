@@ -205,7 +205,7 @@ export default function ProcurementLifecyclePage() {
               📦 Full Procurement Lifecycle
             </h1>
             <p style={{ color: '#94a3b8', fontSize: 13 }}>
-              End-to-end flow: Create Tender → ZKP-Sealed Bids → Reveal → ML Evaluation → Award
+              End-to-end flow: Create Tender → SHA-256 Sealed Bids → Reveal → ML Evaluation → Award
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -301,8 +301,8 @@ export default function ProcurementLifecyclePage() {
 
           {/* Phase 2: Submit Bids */}
           {tender && tender.phase === 'BIDDING_OPEN' && (
-            <PhaseCard title="Phase 2 — Submit ZKP-Sealed Bids" icon="🔐" color="#8b5cf6"
-              description={`Bidders submit encrypted bids using Pedersen commitments (C = g^v · h^r mod p). ${bidsSubmitted} of ${DEMO_BIDDERS.length} submitted.`}>
+            <PhaseCard title="Phase 2 — Submit SHA-256 Sealed Bids" icon="🔐" color="#8b5cf6"
+              description={`Bidders submit sealed bids using SHA-256 commitments (C = SHA-256(amount || randomness)). ${bidsSubmitted} of ${DEMO_BIDDERS.length} submitted.`}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {DEMO_BIDDERS.map((bidder, i) => {
                   const alreadySubmitted = i < bidsSubmitted;
@@ -340,7 +340,7 @@ export default function ProcurementLifecyclePage() {
           {/* Phase 3: Reveal */}
           {tender && tender.phase === 'REVEAL' && (
             <PhaseCard title="Phase 3 — Reveal Bids" icon="🔓" color="#f59e0b"
-              description="Bidders reveal their bid amounts. Each commitment is verified: C = g^v · h^r mod p. If C matches, the bid is valid.">
+              description="Bidders reveal their bid amounts. Each commitment is verified: C = SHA-256(v || r). If recomputed C matches the stored hash, the bid is authentic.">
               <button onClick={revealBids} disabled={loading} style={btnStyle('#f59e0b', loading)}>
                 {loading ? '⏳ Revealing...' : '🔓 Reveal All Bids'}
               </button>
@@ -350,7 +350,7 @@ export default function ProcurementLifecyclePage() {
           {/* Phase 4: Evaluate */}
           {tender && tender.phase === 'EVALUATION' && !evalResult && (
             <PhaseCard title="Phase 4 — ML + AI Evaluation" icon="🤖" color="#ef4444"
-              description="Random Forest model analyzes bid patterns for fraud. ZKP proofs are independently verified.">
+              description="Random Forest model analyzes bid patterns for fraud. Commitment proofs are independently verified.">
               <button onClick={evaluate} disabled={loading} style={btnStyle('#ef4444', loading)}>
                 {loading ? '⏳ Analyzing...' : '🤖 Run ML Evaluation'}
               </button>
@@ -377,7 +377,7 @@ export default function ProcurementLifecyclePage() {
                   </div>
                 </div>
 
-                {/* ZKP Verification */}
+                {/* Commitment Verification */}
                 {evalResult.proofResults?.map((pr: any, i: number) => (
                   <div key={i} style={{
                     padding: '8px 12px', borderRadius: 8,
@@ -388,7 +388,7 @@ export default function ProcurementLifecyclePage() {
                       {pr.zkpValid ? '✅' : '❌'} {pr.bidder}
                     </span>
                     <span style={{ color: '#64748b', marginLeft: 8 }}>
-                      ZKP Schnorr proof: {pr.zkpValid ? 'VALID' : 'INVALID'}
+                      SHA-256 Commitment: {pr.zkpValid ? 'VALID' : 'INVALID'}
                     </span>
                   </div>
                 ))}
@@ -456,7 +456,7 @@ export default function ProcurementLifecyclePage() {
                     <th style={{ textAlign: 'left', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>Company</th>
                     <th style={{ textAlign: 'center', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>Amount (₹ Cr)</th>
                     <th style={{ textAlign: 'center', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>Commitment Valid</th>
-                    <th style={{ textAlign: 'center', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>ZKP Proof</th>
+                    <th style={{ textAlign: 'center', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>Commitment</th>
                     <th style={{ textAlign: 'center', padding: '8px 4px', color: '#94a3b8', fontWeight: 600, fontSize: 11 }}>Rank</th>
                   </tr>
                 </thead>
@@ -588,9 +588,9 @@ export default function ProcurementLifecyclePage() {
           }}>
             <h4 style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa', marginBottom: 8 }}>🔑 Cryptographic Primitives</h4>
             <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.6 }}>
-              <div><strong style={{ color: '#e2e8f0' }}>Pedersen:</strong> C = g<sup>v</sup> · h<sup>r</sup> mod p (1024-bit safe prime)</div>
-              <div><strong style={{ color: '#e2e8f0' }}>ZKP:</strong> Schnorr + Fiat-Shamir (proves knowledge of v,r)</div>
-              <div><strong style={{ color: '#e2e8f0' }}>Reveal:</strong> Bidder opens (v, r) → verifier checks C</div>
+              <div><strong style={{ color: '#e2e8f0' }}>Commitment:</strong> C = SHA-256(amount || &quot;||&quot; || randomness) — 256-bit hash</div>
+              <div><strong style={{ color: '#e2e8f0' }}>Proof:</strong> Fiat-Shamir challenge-response (binds commitment to session)</div>
+              <div><strong style={{ color: '#e2e8f0' }}>Reveal:</strong> Bidder opens (v, r) → verifier recomputes SHA-256 and checks C</div>
               <div><strong style={{ color: '#e2e8f0' }}>ML:</strong> Random Forest (100 trees, 14 features, F1=99.5%)</div>
             </div>
           </div>

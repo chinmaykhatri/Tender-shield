@@ -41,7 +41,7 @@ Source: CVC Annual Reports, CAG Audit Findings
 ## Slide 3: Our Solution
 
 ```
-TENDERSHIELD = AI + BLOCKCHAIN + ZKP
+TENDERSHIELD = AI + BLOCKCHAIN + SEALED BIDS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🧠 AI Fraud Detection    → 5 independent detectors
@@ -92,22 +92,21 @@ RESULT: Composite Risk Score (0-100)
 
 ---
 
-## Slide 6: ZKP Implementation
+## Slide 6: Sealed Bid Implementation
 
 ```
-REAL PEDERSEN COMMITMENTS (secp256k1)
+SHA-256 HASH COMMITMENT (SEALED BIDDING)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-C = g^v · h^r mod p
+C = SHA-256(amount || "||" || randomness)
 
-• g = secp256k1 generator
-• h = independent generator (no known DLP)
-• v = bid amount (HIDDEN)
-• r = random blinding factor
+• amount = bid value in paise (HIDDEN)
+• randomness = 256-bit random blinding factor
+• || = separator ensuring distinct pre-images
 
-Verification: Schnorr Protocol + Fiat-Shamir
-• Commitment BINDING: Cannot change bid
-• Commitment HIDING: Cannot see amount
+Verification: Fiat-Shamir Challenge-Response
+• Commitment BINDING: Cannot change bid (collision-resistant)
+• Commitment HIDING: Cannot see amount (pre-image resistant)
 ```
 
 ---
@@ -149,7 +148,7 @@ Show:
 
 Show:
 1. Create a new tender (GFR validated)
-2. ZKP bid commitment (Pedersen)
+2. SHA-256 sealed commitment (verified)
 3. Bid reveal (proof verification)
 4. Award → Blockchain transaction
 5. CAG Auditor sees complete trail
@@ -179,7 +178,7 @@ Show:
 ━━━━━━━━━━━━━━━━━━━━━
 
 CreateTender     → with GFR compliance check
-SubmitBid        → sealed with ZKP commitment
+SubmitBid        → sealed with SHA-256 commitment
 RevealBid        → verify & open
 FreezeTender     → AI-triggered auto-freeze
 RecordAuditEvent → immutable trail
@@ -200,7 +199,7 @@ STRIDE THREAT MODEL IMPLEMENTED
 ✅ Spoofing    → Aadhaar eKYC + DSC + JWT
 ✅ Tampering   → Blockchain immutability
 ✅ Repudiation → On-chain audit trail
-✅ Info Leak   → ZKP hides bids
+✅ Info Leak   → SHA-256 hides bids
 ✅ DoS         → Rate limiting + Raft consensus
 ✅ EoP         → RBAC + MSP identity
 
@@ -235,8 +234,8 @@ UNIQUE DIFFERENTIATORS
 ━━━━━━━━━━━━━━━━━━━━━
 
 Most competitors:           TenderShield:
-• Single blockchain         • Fabric + AI + ZKP combined
-• Simulated ZKP             • Real Pedersen commitments
+• Single blockchain         • Fabric + AI + Sealed Bids combined
+• Simulated commitments     • Real SHA-256 hash commitments
 • No AI                     • 5 detectors + ML model
 • No compliance check       • Full GFR 2017 validation
 • Desktop only              • Mobile responsive

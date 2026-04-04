@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 const TX_COLORS: Record<string, string> = {
   TENDER_CREATED: '#6366f1', BID_COMMITTED: '#FF9933', BID_REVEALED: '#f59e0b',
   TENDER_FROZEN: '#ef4444', TENDER_AWARDED: '#22c55e', AUDIT_LOGGED: '#8b5cf6',
-  ZKP_VERIFIED: '#06b6d4', AI_ANALYSIS: '#ec4899', CreateTender: '#6366f1',
+  COMMITMENT_VERIFIED: '#06b6d4', AI_ANALYSIS: '#ec4899', CreateTender: '#6366f1',
   SubmitBid: '#FF9933', RevealBid: '#f59e0b', FreezeTender: '#ef4444',
   AwardTender: '#22c55e', PublishTender: '#3b82f6',
 };

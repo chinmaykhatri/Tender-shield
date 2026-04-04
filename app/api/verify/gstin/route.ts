@@ -1,12 +1,11 @@
 import { logger } from '@/lib/logger';
 // FILE: app/api/verify/gstin/route.ts
 // PURPOSE: GSTIN verification with shell company detection
-// DEMO MODE: Uses demo GSTIN database
+// DEMO MODE: Uses demo GSTIN database when API_SETU_KEY is not set
 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
-
 
 export async function POST(req: Request) {
   try {
@@ -97,6 +96,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
+      verification_mode: (isDemoMode || !hasApiKey) ? 'DEMO_MOCK' : 'REAL_API_SETU',
       data: companyData,
       message: (companyData.is_shell_company_risk as boolean)
         ? 'Company verified but shell company risk detected'

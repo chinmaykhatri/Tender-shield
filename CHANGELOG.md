@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Initial release for Blockchain India Competition 2025
 - Hyperledger Fabric 2.5 network with 4 organizations
 - 5 AI fraud detectors (bid rigging, collusion, shell company, cartel rotation, timing anomaly)
-- Zero-Knowledge Proof (Pedersen Commitments) for bid confidentiality
+- Zero-Knowledge Proof (SHA-256 Hash Commitments) for bid confidentiality
 - FastAPI backend with JWT authentication
 - Next.js 14 dashboard with real-time blockchain feed
 - GFR 2017 compliance engine

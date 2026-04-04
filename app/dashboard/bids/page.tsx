@@ -64,7 +64,7 @@ export default function BidsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-display font-bold">ZKP Sealed Bids</h1>
+        <h1 className="text-2xl font-display font-bold">Sealed Bid Commitments</h1>
         <p className="text-sm text-[var(--text-secondary)]">SHA-256 Commitment scheme — bid amounts cryptographically hidden, cross-verified with Go chaincode</p>
       </div>
 
@@ -110,7 +110,7 @@ export default function BidsPage() {
                       <span className="ml-1">{commitment.security}</span>
                     </div>
                     <div>
-                      <span className="text-[var(--text-secondary)]">ZK Proof Valid:</span>
+                      <span className="text-[var(--text-secondary)]">Proof Valid:</span>
                       <span className="ml-1" style={{ color: commitment.verified ? '#22c55e' : '#ef4444' }}>
                         {commitment.verified ? '✅ VALID' : '❌ INVALID'}
                       </span>
@@ -156,7 +156,7 @@ export default function BidsPage() {
                   </div>
                 )}
 
-                {/* Blockchain Proof — shows this ZKP is recorded on chain */}
+                {/* Blockchain Proof — commitment recorded on chain */}
                 {commitment && (
                   <div style={{ marginTop: '8px' }}>
                     <BlockchainProof
@@ -177,7 +177,7 @@ export default function BidsPage() {
           </div>
         </div>
 
-        {/* ZKP Math Explanation */}
+        {/* Commitment Math Explanation */}
         <div className="space-y-4">
           <div className="card-glass p-6">
             <h2 className="text-lg font-semibold mb-3">🧮 Cryptographic Foundation</h2>
@@ -216,7 +216,7 @@ export default function BidsPage() {
           </div>
 
           <div className="card-glass p-6">
-            <h2 className="text-lg font-semibold mb-3">📋 ZK Proof Protocol</h2>
+            <h2 className="text-lg font-semibold mb-3">📋 Commitment Protocol</h2>
             <div className="space-y-2">
               {[
                 { step: '1', title: 'Commit', desc: 'Bidder creates C = SHA-256(amount || "||" || randomness)', formula: 'C = SHA-256(v || sep || r)' },

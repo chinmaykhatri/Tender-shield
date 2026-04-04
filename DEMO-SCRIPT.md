@@ -71,7 +71,7 @@ Click **Ministry Officer** demo login.
 *Navigate to the AIIMS tender bids tab.*
 
 > "Now look at these 4 bids. Notice something?
-> The amounts are **encrypted with Pedersen Commitments** — that's
+> The amounts are **sealed with SHA-256 Hash Commitments** — that's
 > Zero-Knowledge Proof. No officer can see the amounts until the
 > deadline passes. **Mathematical certainty** — not just policy."
 
@@ -178,7 +178,7 @@ Click **Ministry Officer** demo login.
 > Analogy: Word doc vs published newspaper.
 
 **Q2: How does ZKP work?**
-> Pedersen Commitment — mathematical lock on bid amount.
+> SHA-256 Hash Commitment — cryptographic lock on bid amount.
 > Everyone sees the lock. Nobody opens it until the deadline.
 > Not even the officer. Analogy: sealed safe, visible to all.
 

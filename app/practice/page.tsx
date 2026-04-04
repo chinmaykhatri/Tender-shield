@@ -31,8 +31,8 @@ const STUDY_QA = [
     a: 'A database administrator can edit, delete, or back-date entries. In the ₹1.76 lakh crore 2G Scam, records were altered. Hyperledger Fabric requires all 4 organizations to agree before any write — no single party, not even the government, can change history. A database is a Word document (editable). Blockchain is a printed newspaper (published everywhere permanently).',
   },
   {
-    q: 'How does ZKP work — explain simply?',
-    a: 'A bidder creates a Pedersen Commitment: hash(amount + random_nonce). This locks the bid value mathematically. Anyone can verify the lock exists on blockchain. Nobody can see inside until deadline — not even the officer. After deadline, all bidders reveal amount + nonce. AI verifies commitment matches reveal. Analogy: A sealed safe. Everyone sees it is locked. Nobody opens it until the deadline.',
+    q: 'How does Sealed Bid Commitment work — explain simply?',
+    a: 'A bidder creates a SHA-256 Sealed Commitment: C = SHA-256(amount || randomness). This locks the bid value cryptographically. Anyone can verify the lock exists on blockchain. Nobody can see inside until deadline — not even the officer. After deadline, all bidders reveal amount + randomness. The verifier recomputes SHA-256 and checks the hash matches. Analogy: A sealed safe. Everyone sees it is locked. Nobody opens it until the deadline.',
   },
   {
     q: 'What is your false positive rate?',
@@ -147,7 +147,7 @@ export default function PracticePage() {
     : null;
 
   const TOPICS = [
-    'ZKP / Pedersen Commitments explained',
+    'Sealed Bid Commitments explained',
     'Hyperledger Fabric vs Ethereum justified',
     'Fraud detection accuracy rate given',
     'GFR 2017 rules referenced correctly',
@@ -164,7 +164,7 @@ export default function PracticePage() {
 
   const topicCovered = (topic: string) => {
     const keywords: Record<string, string[]> = {
-      'zkp': ['zkp', 'pedersen', 'commitment', 'zero-knowledge'],
+      'zkp': ['zkp', 'sha-256', 'commitment', 'zero-knowledge', 'sealed'],
       'hyperledger': ['hyperledger', 'fabric', 'ethereum', 'blockchain'],
       'fraud detection accuracy': ['accuracy', 'false positive', 'detection rate', '%'],
       'gfr': ['gfr', 'rule 144', 'rule 149', 'general financial'],

@@ -9,7 +9,7 @@ export default function RoadmapPage() {
       color: '#22c55e',
       items: [
         'AI-powered fraud detection (5 detectors)',
-        'Zero-Knowledge sealed bidding (Pedersen Commitments)',
+        'Zero-Knowledge sealed bidding (SHA-256 Hash Commitments)',
         'Hyperledger Fabric audit trail',
         '3-tier registration with Aadhaar + GSTIN + PAN verification',
         'Auto-lock enforcement on high-risk tenders',

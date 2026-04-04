@@ -8,7 +8,7 @@
 
 ## Project Scope Confirmation
 
-TenderShield addresses India's ₹1.5 lakh crore annual procurement fraud problem by building an immutable, AI-monitored, cryptographically secure tender management system that integrates with existing Indian government infrastructure (GeM, Aadhaar, PFMS, NIC). The system uses Hyperledger Fabric for tamper-proof record keeping, Pedersen Commitment ZKPs for bid confidentiality, and a multi-algorithm AI fraud detection engine that continuously monitors blockchain events in real-time. Every action — tender creation, bid submission, evaluation, award, and audit — generates an immutable blockchain transaction, ensuring zero retroactive alteration and complete auditability by CAG.
+TenderShield addresses India's ₹1.5 lakh crore annual procurement fraud problem by building an immutable, AI-monitored, cryptographically secure tender management system that integrates with existing Indian government infrastructure (GeM, Aadhaar, PFMS, NIC). The system uses Hyperledger Fabric for tamper-proof record keeping, SHA-256 hash commitment ZKPs for bid confidentiality, and a multi-algorithm AI fraud detection engine that continuously monitors blockchain events in real-time. Every action — tender creation, bid submission, evaluation, award, and audit — generates an immutable blockchain transaction, ensuring zero retroactive alteration and complete auditability by CAG.
 
 ---
 
@@ -28,7 +28,7 @@ TenderShield addresses India's ₹1.5 lakh crore annual procurement fraud proble
 ║  │   (Ministry Staff)      (GSTIN+PAN          (Comptroller &      (National       │  ║
 ║  │   (Create Tenders)       Verified)           Auditor General)    Informatics     │  ║
 ║  │   (Award Contracts)     (Submit Bids)       (Monitor + Audit)    Centre)         │  ║
-║  │                         (ZKP Commits)       (Escalate Fraud)    (Infra Admin)   │  ║
+║  │                         (Sealed Bids)    (Escalate Fraud)    (Infra Admin)   │  ║
 ║  │                                                                                 │  ║
 ║  └────────────────┬─────────────┬──────────────┬───────────────┬───────────────────┘  ║
 ║                   │ HTTPS/TLS   │ HTTPS/TLS    │ HTTPS/TLS     │ HTTPS/TLS            ║
@@ -71,11 +71,11 @@ TenderShield addresses India's ₹1.5 lakh crore annual procurement fraud proble
 ║  │                 LAYER 4: APPLICATION SERVICES LAYER                             │  ║
 ║  │                                                                                 │  ║
 ║  │  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐    │  ║
-║  │  │ Tender Service │ │ Bid Service    │ │ ZKP Service    │ │ Alert Service  │    │  ║
+║  │  │ Tender Service │ │ Bid Service    │ │ Commitment Svc │ │ Alert Service  │    │  ║
 ║  │  │                │ │                │ │                │ │                │    │  ║
-║  │  │ • Create       │ │ • Commit       │ │ • Pedersen     │ │ • AI Alert     │    │  ║
+║  │  │ • Create       │ │ • Commit       │ │ • SHA-256      │ │ • AI Alert     │    │  ║
 ║  │  │ • Publish      │ │ • Reveal       │ │   Commitment   │ │   Management   │    │  ║
-║  │  │ • Evaluate     │ │ • Verify ZKP   │ │ • Generate     │ │ • Escalation   │    │  ║
+║  │  │ • Evaluate     │ │ • Verify bid  │ │ • Generate     │ │ • Escalation   │    │  ║
 ║  │  │ • Award        │ │ • Query by     │ │   Proof        │ │ • CAG Notify   │    │  ║
 ║  │  │ • Freeze       │ │   Tender       │ │ • Verify       │ │ • Freeze       │    │  ║
 ║  │  │ • GFR Validate │ │ • GSTIN Check  │ │   Commitment   │ │   Trigger      │    │  ║
@@ -265,14 +265,14 @@ TenderShield addresses India's ₹1.5 lakh crore annual procurement fraud proble
 - AI continuously monitors for suspicious patterns (e.g., officer-bidder correlation)
 - Aadhaar eKYC ties every action to a verified real identity — no anonymous manipulation
 
-### Vulnerability 3: ZKP Implementation Weakness
-**Risk:** Incorrectly implemented Pedersen commitments could leak bid amounts or allow bidders to change bids after commitment.
+### Vulnerability 3: Commitment Implementation Weakness
+**Risk:** Incorrectly implemented hash commitments could leak bid amounts or allow bidders to change bids after commitment.
 **Mitigation:**
-- Standard cryptographic parameters for Pedersen commitments (NIST recommended curves)
+- Standard SHA-256 hash function (FIPS 180-4 compliant, collision-resistant)
 - Commitment binding property: computationally infeasible to find two different amounts for same commitment
 - Commitment hiding property: commitment reveals zero information about the bid amount
 - Range proofs ensure bid is positive and within valid range without revealing exact value
-- All ZKP operations audited and logged on blockchain
+- All commitment operations audited and logged on blockchain
 
 ---
 

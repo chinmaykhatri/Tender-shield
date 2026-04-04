@@ -31,7 +31,7 @@
 │  BOUND  │  (PostgreSQL)│    │  (Port 8001) │  │ Fabric     │   │
 │         └──────────────┘    └──────────────┘  └────────────┘   │
 │                                                                  │
-│     TRUST BOUNDARY: CRYPTO   ZKP Operations (secp256k1)        │
+│     TRUST BOUNDARY: CRYPTO   Commitment Ops (SHA-256 Commitments)       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,7 +52,7 @@
 | Threat | Impact | Likelihood | Mitigation |
 |--------|--------|------------|------------|
 | Modify tender after publication | CRITICAL | Very Low | Blockchain immutability — every state change is a new TX |
-| Alter bid amount after commitment | CRITICAL | Very Low | Pedersen commitment binding property (secp256k1) |
+| Alter bid amount after commitment | CRITICAL | Very Low | SHA-256 hash commitment binding property (collision-resistant) |
 | Manipulate AI fraud scores | HIGH | Low | Deterministic fallback engine, scores logged on-chain |
 | Frontend DOM manipulation | LOW | Medium | Server-side validation on all API routes |
 
@@ -61,14 +61,14 @@
 | Threat | Impact | Likelihood | Mitigation |
 |--------|--------|------------|------------|
 | Officer denies creating a tender | HIGH | Medium | Blockchain TX with officer DID + timestamp |
-| Bidder claims different bid amount | HIGH | Low | ZKP commitment hash on-chain before reveal |
+| Bidder claims different bid amount | HIGH | Low | Commitment hash on-chain before reveal |
 | Auditor denies seeing alert | MEDIUM | Low | `audit_events` table with immutable trail |
 
 ### 2.4 Information Disclosure
 
 | Threat | Impact | Likelihood | Mitigation |
 |--------|--------|------------|------------|
-| Bid amounts leaked before reveal | CRITICAL | Low | ZKP hides values — commitment reveals zero info |
+| Bid amounts leaked before reveal | CRITICAL | Low | SHA-256 hides values — commitment reveals zero info |
 | Aadhaar data exposure | CRITICAL | Very Low | §29 compliance — only stores verification hash, never raw data |
 | API key exposure in frontend | HIGH | Medium | All keys in `.env.local`, never in client bundle |
 
@@ -128,7 +128,7 @@
 | **Authentication** | Multi-factor identity | Aadhaar eKYC + DSC + Password |
 | **Authorization** | RBAC + ABAC | JWT roles + Fabric MSP attributes |
 | **Data Integrity** | Blockchain | Hyperledger Fabric endorsement policy |
-| **Confidentiality** | ZKP | Pedersen commitments (secp256k1) |
+| **Confidentiality** | Commitment Scheme | SHA-256 hash commitments (collision-resistant) |
 | **Availability** | Redundancy | Raft consensus (3 orderers), peer replication |
 | **Monitoring** | AI + Alerts | 5-detector fraud engine, auto-freeze |
 | **Audit** | Complete trail | Every action = immutable blockchain TX |

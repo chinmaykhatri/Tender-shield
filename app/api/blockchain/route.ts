@@ -54,7 +54,7 @@ const eventToFunction: Record<string, string> = {
   TENDER_FROZEN: 'FreezeTender',
   CAG_NOTIFIED: 'NotifyCAG',
   TENDER_AWARDED: 'AwardTender',
-  ZKP_VERIFIED: 'VerifyZKP',
+  COMMITMENT_VERIFIED: 'VerifyCommitment',
   TENDER_EVALUATED: 'EvaluateBids',
 };
 
@@ -165,7 +165,7 @@ export async function GET() {
       endorsers = ['MinistryOrgMSP', 'NICOrgMSP', 'AuditorOrgMSP'];
     } else if (fnName === 'SubmitBid' || fnName === 'RevealBid') {
       endorsers = ['BidderOrgMSP', 'MinistryOrgMSP'];
-    } else if (fnName === 'VerifyZKP') {
+    } else if (fnName === 'VerifyCommitment') {
       endorsers = ['MinistryOrgMSP', 'NICOrgMSP'];
     }
 
@@ -199,7 +199,7 @@ export async function GET() {
 
   // Real stats from actual event counts
   const frozenCount = events.filter(e => e.event_type === 'TENDER_FROZEN').length;
-  const zkpCount = events.filter(e => ['BID_COMMITTED', 'BID_REVEALED', 'ZKP_VERIFIED'].includes(e.event_type)).length;
+  const zkpCount = events.filter(e => ['BID_COMMITTED', 'BID_REVEALED', 'COMMITMENT_VERIFIED'].includes(e.event_type)).length;
   const chaincodeInvocations = events.length;
 
   // Dynamic mode detection

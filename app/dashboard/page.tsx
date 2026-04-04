@@ -62,7 +62,7 @@ export default function DashboardPage() {
 
   if (loading) return <SkeletonDashboard />;
 
-  const eventIcon = (e: string) => e.includes('FROZEN') || e.includes('ESCALAT') ? '🚨' : e.includes('BID') ? '🔒' : e.includes('TENDER') ? '📋' : e.includes('AI') || e.includes('ZKP') ? '🤖' : '📜';
+  const eventIcon = (e: string) => e.includes('FROZEN') || e.includes('ESCALAT') ? '🚨' : e.includes('BID') ? '🔒' : e.includes('TENDER') ? '📋' : e.includes('AI') || e.includes('COMMIT') ? '🤖' : '📜';
   const eventColor = (type: string) => type === 'danger' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6366f1';
 
   return (

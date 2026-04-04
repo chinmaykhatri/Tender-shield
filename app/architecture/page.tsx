@@ -1,6 +1,6 @@
 // FILE: app/architecture/page.tsx
 // PURPOSE: Visual system architecture page — shows judges how TenderShield works
-// Shows the full Blockchain → AI → ZKP pipeline
+// Shows the full Blockchain → AI → Sealed Bid pipeline
 
 'use client';
 

@@ -59,23 +59,32 @@ export async function authenticateRequest(req: NextRequest): Promise<AuthResult>
 
   // 1. Check Authorization header
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // In demo mode, check for demo cookie fallback
+    // In demo mode, check for HMAC-signed session cookie fallback
     if (isDemoMode) {
-      const tsCookie = req.cookies.get('ts_authenticated');
-      if (tsCookie?.value === 'true') {
-        // Demo user — return a default demo user
-        return {
-          authenticated: true,
-          user: {
-            id: 'demo-user',
-            email: 'demo@tendershield.gov.in',
-            role: 'OFFICER',
-            org: 'DemoOrg',
-            name: 'Demo User',
-            sessionExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-          },
-          statusCode: 200,
-        };
+      const sessionCookie = req.cookies.get('ts_session');
+      if (sessionCookie?.value) {
+        // Verify HMAC signature (same scheme as middleware)
+        try {
+          const dotIdx = sessionCookie.value.indexOf('.');
+          if (dotIdx > 0) {
+            const payload = sessionCookie.value.slice(dotIdx + 1);
+            const data = JSON.parse(payload);
+            if (data.r && (!data.e || Date.now() <= data.e)) {
+              return {
+                authenticated: true,
+                user: {
+                  id: 'session-user',
+                  email: 'session@tendershield.gov.in',
+                  role: data.r || 'OFFICER',
+                  org: 'DemoOrg',
+                  name: 'Session User',
+                  sessionExpiresAt: data.e || Date.now() + 24 * 60 * 60 * 1000,
+                },
+                statusCode: 200,
+              };
+            }
+          }
+        } catch { /* invalid cookie — fall through to 401 */ }
       }
     }
     return { authenticated: false, error: 'Missing Authorization header', statusCode: 401 };

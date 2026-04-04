@@ -1,287 +1,284 @@
 # TenderShield 🛡️
-### AI-Powered Fraud Detection for Indian Government Procurement
 
-India's CAG documents **₹4-6 lakh crore** in annual procurement fraud. TenderShield detects it in 3 seconds.
+### AI + Blockchain Fraud Detection for Indian Government Procurement
+
+India's CAG documents **₹4-6 lakh crore** in annual procurement fraud. TenderShield detects it in **3 seconds**.
 
 > **Blockchain India Challenge 2026** · MeitY + C-DAC · e-Procurement Track
 
-![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-success?logo=github)
-![Next.js](https://img.shields.io/badge/Frontend-Next.js_14-black?logo=nextdotjs)
-![Hyperledger](https://img.shields.io/badge/Blockchain-Hyperledger_Fabric_2.5-blue?logo=hyperledger)
-![Python](https://img.shields.io/badge/AI_Engine-Python_3.11-yellow?logo=python)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![Tests](https://img.shields.io/badge/Tests-107%20passing-brightgreen)](.)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](./Dockerfile)
 
 ---
 
-## Live Demo
+## 🌐 Live Demo
 
-🌐 **URL:** [tender-shield-final2.vercel.app](https://tender-shield-final2.vercel.app)
+**URL:** [tender-shield-final2.vercel.app](https://tender-shield-final2.vercel.app)
 
 | Role | Email | Password |
 |------|-------|----------|
-| Ministry Officer | officer@morth.gov.in | Tender@2025 |
-| Company Bidder | medtech@medtechsolutions.com | Bid@2025 |
-| CAG Auditor | auditor@cag.gov.in | Audit@2025 |
+| Ministry Officer | `officer@morth.gov.in` | `Tender@2025` |
+| Company Bidder | `medtech@medtechsolutions.com` | `Bid@2025` |
+| CAG Auditor | `auditor@cag.gov.in` | `Audit@2025` |
 
 ---
 
-## What Actually Works
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| 5 fraud detectors | ✅ Real | Benford's Law, CV analysis, shell company, timing, shared director |
-| ML fraud model | ✅ Real | GBM + Isolation Forest — trained on 847 GeM-calibrated records + 5 real CAG cases |
-| Streaming AI analysis | ✅ Real | Claude explains detector output in real-time |
-| Supabase data layer | ✅ Real | Live read/write on all tender operations |
-| SHA-256 audit log | ✅ Real | Every TX is SHA-256 hash of actual content — cryptographically verifiable |
-| Bid commitment scheme | ✅ Real | SHA-256 commit-reveal — verified matching test vectors |
-| Go chaincode | ⚙️ Compiled | 13 functions, compiled and tested, deployable to Fabric |
-| Hyperledger Fabric | ⚙️ Deployable | 4-org network config complete — connects when `FABRIC_LIVE=true` |
-| Aadhaar eKYC | ⚙️ Demo | Accepts OTP 123456 — Surepass API key needed for production |
-| GSTIN verification | ⚙️ Demo | Pre-loaded companies — API Setu key needed for production |
-| GFR 2017 compliance | ✅ Real | Rules 144, 149, 153, 153A, 154, 166 validated in chaincode |
-
----
-
-## The Honest Technical Claims
-
-### What IS real:
-- **5 fraud detectors** — Coefficient of Variation analysis, Benford's Law first-digit distribution, shell company age detection, timing collusion (60-second window), shared director PAN cross-referencing. These are the genuine technical contribution. Real statistical algorithms. Correct math.
-- **ML model** — Pure-Python Gradient Boosting (100 trees) and Isolation Forest (150 trees). Trained on 847 records calibrated to real GeM procurement statistics (GeM Annual Report 2024), with 5 real CAG audit cases as ground truth anchors.
-- **SHA-256 audit trail** — Every action hashes actual transaction content. Block chaining (each block references previous block hash). Cryptographically honest even without Fabric.
-- **Go chaincode** — 900 lines, compiles, passes `go vet`, implements 13 functions covering full tender lifecycle with GFR compliance validation.
-
-### What is NOT real (yet):
-- **Hyperledger Fabric** is not running in production. The chaincode compiles and is deployable. Network configuration (4 orgs, 8 peers, Raft consensus) is complete. Demo uses SHA-256 chained audit log with honest labeling. Set `FABRIC_LIVE=true` to connect to a running peer.
-- **Aadhaar/GSTIN** are demo flows. Real integration requires Surepass (Aadhaar) and API Setu (GSTIN) production API keys.
-- **ML training data** is GeM-calibrated synthetic + 5 real CAG cases. Full GeM dataset is not publicly available via API.
-
----
-
-## Architecture
+## 🏗️ System Architecture
 
 ```
-Citizen / Officer / Auditor
-       ↓
-Next.js 14 Frontend (Vercel)
-       ↓
-Supabase (PostgreSQL + Auth + Realtime)
-       ↓
-FastAPI Backend (Python 3.11)
-  ├── 5 Statistical Fraud Detectors
-  ├── GBM + Isolation Forest ML Model
-  └── Claude AI (explanation layer)
-       ↓
-SHA-256 Chained Audit Log
-(→ Hyperledger Fabric when FABRIC_LIVE=true)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CLIENT LAYER                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
+│  │  Ministry     │  │  Bidder      │  │  CAG Auditor │                 │
+│  │  Officer UI   │  │  Portal UI   │  │  Dashboard   │                 │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                 │
+│         └──────────────────┼──────────────────┘                        │
+│                            ↓                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                        APPLICATION LAYER                                │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │  Next.js 14 App Router (40+ API Routes)                         │   │
+│  │  ├── HMAC-SHA256 Auth + Zod Input Validation                    │   │
+│  │  ├── /api/procurement-lifecycle  ← Multi-tenant lifecycle       │   │
+│  │  ├── /api/v1/bids/commit         ← Real SHA-256 commitment     │   │
+│  │  ├── /api/ai-analyze             ← Claude + ML fraud engine    │   │
+│  │  ├── /api/verify/{pan,gstin}     ← KYC (API Setu / Demo)      │   │
+│  │  └── /api/chaincode-invoke       ← Fabric gateway / fallback  │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                       INTELLIGENCE LAYER                                │
+│  ┌──────────────────────┐  ┌────────────────────────────────────────┐  │
+│  │  Random Forest ML    │  │  5 Statistical Fraud Detectors         │  │
+│  │  (100 trees, 15 feat)│  │  ├── CV Analysis (bid clustering)     │  │
+│  │  Trained: 2000 sample│  │  ├── Shell Company Age Detection      │  │
+│  │  Acc: ~92%           │  │  ├── Timing Collusion (60s window)    │  │
+│  │  Serialized: JSON    │  │  ├── Front-Running (estimate match)   │  │
+│  │                      │  │  └── Director PAN Cross-Reference     │  │
+│  └──────────────────────┘  └────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                         DATA LAYER                                      │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────────────┐ │
+│  │  Supabase        │  │  IPFS (Pinata)   │  │  Hyperledger Fabric   │ │
+│  │  (PostgreSQL)    │  │  Document Pins   │  │  4 Orgs, 8 Peers     │ │
+│  │  + RLS           │  │                  │  │  Raft Consensus      │ │
+│  │  + Audit Events  │  │                  │  │  Go Chaincode        │ │
+│  └─────────────────┘  └──────────────────┘  └───────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Dual-Mode Architecture
-
-| Mode | Data Source | Use Case |
-|------|-----------|----------|
-| **Production** | Supabase + Fabric | NIC deployment |
-| **Demo** | Supabase fallback + SHA-256 audit log | Live demos, judge walkthroughs |
-
-Both modes share identical UI — toggle via `FABRIC_LIVE` environment variable.
 
 ---
 
-## 5 Fraud Detectors
+## ✅ What Actually Works (Honest)
 
-These are the genuine core of TenderShield:
-
-| # | Detector | Method | Threshold |
-|---|----------|--------|-----------|
-| 1 | **Bid CV Analysis** | Coefficient of Variation of bid amounts | CV < 5% = suspicious |
-| 2 | **Shell Company** | GSTIN incorporation age at bid time | < 6 months = flagged |
-| 3 | **Timing Collusion** | Bid submission timestamp clustering | All bids within 60s = flagged |
-| 4 | **Cover Bid Detection** | Z-score outlier analysis | Z > 2.5 = likely cover bid |
-| 5 | **Benford's Law** | First-digit distribution chi-square | Deviation > 0.25 = unnatural |
-
-**Risk Levels:** 0-25 MONITOR → 26-50 FLAG → 51-75 FREEZE → 76-100 ESCALATE_CAG
-
-These 5 detectors run locally. No external API call. No Claude dependency. Remove Claude → fraud still detected.
-
----
-
-## ML Model
-
-| Component | Details |
-|-----------|---------|
-| **Gradient Boosting** | 100 trees, depth 4, learning rate 0.1 — pure Python, no sklearn |
-| **Isolation Forest** | 150 trees, max samples 256 — anomaly detection |
-| **Features** | 15 features: bid count, CV, min/max ratio, Benford distance, timing cluster, gap CV, state diversity, incorporation age, shared directors, turnover ratio |
-| **Training Data** | 847 GeM-calibrated records + 5 real CAG cases |
-| **Persistence** | JSON (no pickle — portable, inspectable) |
-| **Integration** | Hybrid scoring: 60% rule-based + 40% ML |
+| Component | Status | Evidence |
+|-----------|:------:|---------|
+| **5 Fraud Detectors** | ✅ Real | CV analysis, Benford's, shell company, timing, director network |
+| **Random Forest ML Model** | ✅ Real | 100-tree ensemble, 15 features, ~92% accuracy |
+| **SHA-256 Bid Commitment** | ✅ Real | Commit-reveal scheme, cross-verified with Go chaincode |
+| **Supabase Data Layer** | ✅ Real | Live PostgreSQL — tenders, bids, audit events |
+| **HMAC-SHA256 Auth** | ✅ Real | Cryptographic session signing, rate-limited |
+| **Zod Input Validation** | ✅ Real | Schema validation on all critical API routes |
+| **Multi-Tenant Lifecycle** | ✅ Real | Concurrent tenders via `Map` + Supabase persistence |
+| **107 Automated Tests** | ✅ Real | Vitest — auth, crypto, ML, e2e flow |
+| **Go Chaincode** | ⚙️ Compiled | 13 functions, `go vet` passes, deployable |
+| **Fabric Network** | ⚙️ Deployable | Config complete — `bash network/start-fabric.sh` |
+| **Aadhaar/GSTIN KYC** | ⚙️ Demo | Labeled `DEMO_MOCK` — real API keys enable live mode |
+| **Docker** | ✅ Ready | Multi-stage, non-root, health check |
 
 ---
 
-## SHA-256 Bid Commitment
+## 🔐 Cryptography
+
+### SHA-256 Bid Commitment (GFR Rule 144)
 
 ```
-Commit Phase:   C = SHA-256(bid_amount || random_nonce)
-Reveal Phase:   Bidder reveals (amount, nonce) → chain recomputes hash
-Verification:   C_stored === SHA-256(amount || nonce) ✓
-Properties:     Hiding (amount invisible until reveal)
-                Binding (cannot change after commit)
+Commit:    C = SHA-256(bid_amount₆ || "||" || random_256bit)
+Reveal:    Bidder reveals (amount, nonce) → server recomputes
+Verify:    C_stored === SHA-256(amount || "||" || nonce)  ✓
+
+Properties:
+  ✓ Hiding:  Amount invisible until reveal phase
+  ✓ Binding: Cannot change committed value
+  ✓ Cross-layer: TypeScript ↔ Go produce identical hashes
 ```
 
-Implements GFR 2017 Rule 144 (sealed bid enforcement).
+### Fiat-Shamir Commitment Proof
+
+```
+Proof:     H = SHA-256(commitment || challenge)
+Challenge: SHA-256(commitment)
+Verify:    Recompute H from commitment → match
+```
 
 ---
 
-## Fabric Network Topology (Deployable)
+## 🤖 ML Model
 
-```
-     ┌──────────────────────────────────────┐
-     │         3 Raft Orderers              │
-     │  orderer0 · orderer1 · orderer2      │
-     └──────────────────────────────────────┘
-               │
-     ┌─────────┼─────────┐─────────┐
-     ▼         ▼         ▼         ▼
- MinistryOrg  BidderOrg  AuditorOrg  NICOrg
- (2 peers)    (2 peers)  (2 peers)   (2 peers)
- + CouchDB    + CouchDB  + CouchDB   + CouchDB
- + CA         + CA       + CA        + CA
-```
+| Property | Value |
+|----------|-------|
+| **Algorithm** | Random Forest (100 trees, max depth 10) |
+| **Features** | 15 engineered features (bid spread, clustering, timing, PAN diversity) |
+| **Training** | 2,000 synthetic samples (GeM-calibrated distributions) |
+| **Accuracy** | ~92% (test set) |
+| **Serialization** | JSON (no pickle — portable, inspectable, ~19KB) |
+| **Inference** | In-process (no GPU, no external service) |
+| **Model Card** | [`docs/ML-MODEL-CARD.md`](docs/ML-MODEL-CARD.md) |
 
-- **TenderChannel**: All 4 orgs — tender lifecycle
-- **AuditChannel**: Ministry + Auditor — confidential CAG investigations
-- **Status**: Config complete. Chaincode compiled. Network starts with `docker-compose up -d`.
+> ⚠️ **Honest limitation:** Trained on synthetic data. Real-world performance requires retraining on actual GeM/CPPP data via `scripts/ingest-real-data.ts`.
 
 ---
 
-## GFR 2017 Compliance
+## 📂 Project Structure
+
+```
+TenderShield/
+├── app/                        # Next.js 14 App Router
+│   ├── api/                    # 40+ API routes
+│   │   ├── auth/               # HMAC-SHA256 session auth
+│   │   ├── procurement-lifecycle/  # Multi-tenant tender lifecycle (CORE)
+│   │   ├── chaincode-invoke/   # Fabric chaincode gateway
+│   │   ├── v1/bids/            # Sealed bid commitment
+│   │   ├── verify/             # PAN, GSTIN, Aadhaar KYC
+│   │   └── ai/                 # ML + Claude analysis
+│   ├── dashboard/              # Role-based dashboards
+│   └── page.tsx                # Login
+├── lib/                        # Shared libraries (46 files)
+│   ├── zkp.ts                  # SHA-256 commitment scheme
+│   ├── ml/                     # Random Forest model + features
+│   ├── validation/             # Zod input schemas
+│   └── store.ts                # Auth state management
+├── chaincode/                  # Go Hyperledger Fabric chaincode
+│   └── tendershield/main.go    # 13 smart contract functions
+├── network/                    # Fabric network (4 orgs, 8 peers)
+│   ├── start-fabric.sh         # One-click boot script
+│   ├── docker-compose.yaml     # Container orchestration
+│   ├── crypto-config.yaml      # MSP certificates
+│   └── configtx.yaml           # Channel configuration
+├── __tests__/                  # 107 tests (Vitest)
+├── scripts/                    # Automation
+│   ├── train-model.ts          # ML model training
+│   ├── ingest-real-data.ts     # Real CSV data ingestion
+│   └── load-test.ts            # Multi-tenant load testing
+├── docs/                       # Professional documentation
+│   ├── ML-MODEL-CARD.md        # Model transparency
+│   ├── BLOCKCHAIN-VALUE-PROPOSITION.md
+│   ├── COMPLIANCE-READINESS.md # STQC + CERT-In readiness
+│   ├── DEPLOYMENT-BUSINESS-MODEL.md
+│   └── ONBOARDING.md           # Developer quick-start
+├── Dockerfile                  # Multi-stage production build
+└── middleware.ts               # Auth + CSP + rate limiting
+```
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Clone & install
+git clone https://github.com/chinmaykhatri/Tender-shield.git
+cd Tender-shield && npm install
+
+# 2. Environment
+cp .env.example .env.local
+# Add: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+
+# 3. Train ML model
+npx tsx scripts/train-model.ts
+
+# 4. Run
+npm run dev    # → http://localhost:3000
+```
+
+### Docker
+
+```bash
+docker build -t tendershield .
+docker run -p 3000:3000 --env-file .env.local tendershield
+```
+
+### Fabric Network (Optional)
+
+```bash
+cd network && bash start-fabric.sh
+# Set FABRIC_LIVE=true in .env.local
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+npx vitest run              # 107 tests — all passing
+npx tsc --noEmit            # Type checking — 0 errors
+npx tsx scripts/load-test.ts  # Multi-tenant load test
+```
+
+---
+
+## 🏛️ GFR 2017 Compliance
 
 | Rule | Implementation |
 |------|---------------|
-| Rule 144 | Sealed bid enforcement via SHA-256 commit-reveal |
-| Rule 149 | Open tender threshold validation (≥₹25 Lakh) |
-| Rule 153 | Bid security auto-calculation (2-5% of estimated value) |
-| Rule 153A | MSME preference scoring |
-| Rule 154 | Bid security clause enforcement |
-| Rule 166 | Documentation requirements checklist |
+| **Rule 144** | Sealed bid enforcement via SHA-256 commit-reveal |
+| **Rule 149** | Open tender threshold validation (≥₹25 Lakh) |
+| **Rule 153** | Bid security auto-calculation (2-5% of estimated value) |
+| **Rule 153A** | MSME preference scoring |
+| **Rule 154** | Bid security clause enforcement |
+| **Rule 166** | Documentation requirements checklist |
 
 ---
 
-## Project Structure
+## 📋 Security
 
-```
-tendershield/
-├── app/                    # Next.js 14 App Router
-│   ├── dashboard/          # Role-based dashboards (Officer/Bidder/Auditor/Admin)
-│   ├── api/                # API routes (blockchain, AI, enforcement)
-│   └── architecture/       # System architecture page
-├── ai_engine/              # Python AI fraud detection
-│   ├── detectors/          # 5 detectors: bid_rigging, shell_company, timing, collusion, cartel
-│   ├── ml/                 # GBM + Isolation Forest (pure Python, no sklearn)
-│   └── data/               # GeM-calibrated training data + CAG cases
-├── backend/                # FastAPI backend (auth, RBAC, Fabric integration)
-├── chaincode/              # Go chaincode for Hyperledger Fabric (13 functions)
-├── network/                # Fabric network configuration (17 containers)
-├── tests/                  # Python test suite
-├── __tests__/              # TypeScript test suite (92 tests)
-└── .github/workflows/      # CI/CD (8 parallel jobs)
-```
+| Control | Implementation |
+|---------|---------------|
+| **Authentication** | HMAC-SHA256 signed cookies (cryptographic, not guess-able) |
+| **Input Validation** | Zod schemas on all POST endpoints |
+| **Rate Limiting** | 5 req/min on auth endpoint |
+| **CSP Headers** | Strict Content-Security-Policy |
+| **Secrets** | Bid values (v, r) never sent to client |
+| **Docker** | Non-root user, health check, minimal attack surface |
 
 ---
 
-## Testing
+## 📄 Documentation
 
-```bash
-# Frontend (92 tests)
-npx vitest run
-
-# Backend (54 tests)
-python -m pytest tests/ -v
-
-# Type checking
-npx tsc --noEmit
-
-# Production build
-npx next build
-```
-
-**146 total tests** across 2 test suites.
+| Document | Purpose |
+|----------|---------|
+| [`docs/ML-MODEL-CARD.md`](docs/ML-MODEL-CARD.md) | Model transparency — features, limitations, retraining |
+| [`docs/BLOCKCHAIN-VALUE-PROPOSITION.md`](docs/BLOCKCHAIN-VALUE-PROPOSITION.md) | Why Fabric, not just Postgres |
+| [`docs/COMPLIANCE-READINESS.md`](docs/COMPLIANCE-READINESS.md) | STQC + CERT-In certification checklist |
+| [`docs/DEPLOYMENT-BUSINESS-MODEL.md`](docs/DEPLOYMENT-BUSINESS-MODEL.md) | Revenue models + deployment options |
+| [`docs/ONBOARDING.md`](docs/ONBOARDING.md) | Developer quick-start guide |
 
 ---
 
-## CI/CD Pipeline
+## 🔍 Honest Limitations
 
-8 parallel GitHub Actions jobs on every push:
-
-| Job | Description |
-|-----|-------------|
-| 🔍 Lint & Type Check | ESLint + TypeScript noEmit |
-| 🧪 Unit Tests | Vitest + Pytest with coverage |
-| 🏗️ Production Build | Next.js build verification |
-| 🐍 Backend | Python Ruff lint + import check |
-| ⛓️ Chaincode | Go build + vet |
-| 🐳 Docker | Compose config validation |
-| 🔒 Security | npm audit + secret scan |
-| 📊 CI Summary | Aggregated status report |
+1. **Fabric not running in demo** — Chaincode compiles and deploys; demo uses SHA-256 audit log with honest labeling
+2. **ML trained on synthetic data** — Real-data ingestion pipeline ready (`scripts/ingest-real-data.ts`)
+3. **KYC is demo mode** — PAN/GSTIN verification returns `DEMO_MOCK` label; set API keys for real mode
+4. **No government pilot** — GovTech procurement cycles are 18-36 months
+5. **No STQC certification** — Readiness checklist at 80%+ (`docs/COMPLIANCE-READINESS.md`)
 
 ---
 
-## Honest Limitations
-
-1. Hyperledger Fabric is deployable but not running in the demo environment
-2. ML model trained on GeM-calibrated synthetic data + 5 real CAG cases (full GeM dataset not publicly available)
-3. Aadhaar/GSTIN verification uses demo mode (production API keys required)
-4. No government pilot deployed (GovTech procurement cycles are 18-36 months)
-5. Adoption requires regulatory mandate — corrupt actors would not voluntarily adopt this system
-
----
-
-## Running Locally
-
-```bash
-# 1. Clone
-git clone https://github.com/chinmaykhatri/Tender-shield.git
-cd Tender-shield
-
-# 2. Install
-npm install
-
-# 3. Environment
-cp .env.example .env.local
-# Fill in: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-
-# 4. Run
-npm run dev
-# → http://localhost:3000
-
-# 5. (Optional) Start backend services
-cd backend && uvicorn main:app --reload --port 8000
-cd ai_engine && uvicorn main:app --reload --port 8001
-
-# 6. (Optional) Start Fabric network (requires Docker)
-cd network && docker-compose up -d
-# Set FABRIC_LIVE=true in .env to connect
-```
-
----
-
-## Competition Context
+## 🏆 Competition Context
 
 Built for: **Blockchain India Challenge 2026** (MeitY + C-DAC)
 
-**Genuine contribution:** 5 statistical fraud detectors + ML pipeline that detect patterns human auditors miss. SHA-256 commit-reveal for cryptographic bid confidentiality. Go chaincode implementing GFR 2017 compliance.
+**Genuine contribution:** 5 statistical fraud detectors + Random Forest ML pipeline that detect patterns human auditors miss. SHA-256 commit-reveal for cryptographic bid confidentiality. Multi-tenant architecture supporting concurrent procurement lifecycles. Go chaincode implementing GFR 2017 compliance.
 
-**Path to real deployment:** NIC integration + GFR 2017 amendment mandate.
+**Path to deployment:** NIC Cloud integration + STQC certification + GFR amendment mandate.
 
 ---
 
-## Team
+## 👤 Team
 
 Built by **Chinmay Khatri** for the Blockchain India Challenge 2026
 
-## License
+## 📜 License
 
 MIT
-
----
-
-*Built with Next.js 14, Hyperledger Fabric 2.5, FastAPI, and Python AI/ML*

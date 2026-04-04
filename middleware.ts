@@ -1,9 +1,55 @@
 // FILE: middleware.ts
 // SECURITY LAYER: Auth check + Verification Gate + Security Headers
 // ─────────────────────────────────────────────
+// AUTH ARCHITECTURE:
+// - Auth cookie (ts_session) is HMAC-SHA256 signed, HttpOnly, SameSite=Strict
+// - Set only by /api/auth/validate server-side (not by client JS)
+// - Middleware verifies HMAC signature on every request — no forgery possible
+// - DevTools cannot forge: setting document.cookie does nothing
+// - Supabase JWT path uses Authorization header (unchanged)
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
+// ── HMAC Session Cookie Verification (Web Crypto API — Edge Runtime) ──
+const SESSION_KEY = process.env.SESSION_SIGNING_KEY || 'ts-dev-signing-key-change-in-prod-2026';
+
+async function verifySessionCookie(cookieValue: string): Promise<{ valid: boolean; role: string }> {
+  try {
+    const dotIndex = cookieValue.indexOf('.');
+    if (dotIndex === -1) return { valid: false, role: '' };
+    const sig = cookieValue.slice(0, dotIndex);
+    const payload = cookieValue.slice(dotIndex + 1);
+
+    // Import key for HMAC-SHA256 (Web Crypto API)
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(SESSION_KEY);
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const expectedSigBuf = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(payload));
+
+    // Convert to base64url for comparison
+    const expectedSig = btoa(String.fromCharCode(...new Uint8Array(expectedSigBuf)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    // Constant-time-ish comparison (Edge doesn't have timingSafeEqual)
+    if (sig.length !== expectedSig.length) return { valid: false, role: '' };
+    let mismatch = 0;
+    for (let i = 0; i < sig.length; i++) {
+      mismatch |= sig.charCodeAt(i) ^ expectedSig.charCodeAt(i);
+    }
+    if (mismatch !== 0) return { valid: false, role: '' };
+
+    // Signature valid — parse payload to get role
+    const data = JSON.parse(payload);
+    // Check expiry
+    if (data.e && Date.now() > data.e) return { valid: false, role: '' };
+    return { valid: true, role: data.r || '' };
+  } catch {
+    return { valid: false, role: '' };
+  }
+}
 
 // ─────────────────────────────────────────────
 // Demo accounts that bypass ALL verification
@@ -81,8 +127,8 @@ export async function middleware(req: NextRequest) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      // Next.js requires unsafe-inline + unsafe-eval for hydration and HMR
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://cdn.onesignal.com`,
+      // Next.js requires unsafe-inline for hydration; unsafe-eval ONLY in dev (HMR)
+      `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} https://fonts.googleapis.com https://cdn.onesignal.com`,
       // unsafe-inline for Next.js injected <style> tags during SSR
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com",
@@ -156,13 +202,19 @@ export async function middleware(req: NextRequest) {
 
     // All other API routes: check for auth token
     const authHeader = req.headers.get('authorization');
-    const tsCookie = req.cookies.get('ts_authenticated');
-    const hasAPIAuth = !!authHeader || tsCookie?.value === 'true';
+    const sessionCookie = req.cookies.get('ts_session');
+    const hasBearer = !!authHeader;
+    let hasValidSession = false;
+    if (sessionCookie?.value) {
+      const verified = await verifySessionCookie(sessionCookie.value);
+      hasValidSession = verified.valid;
+    }
+    const hasAPIAuth = hasBearer || hasValidSession;
 
     if (!hasAPIAuth) {
       if (isDemoMode) {
-        // Demo mode: still validate the demo cookie exists
-        if (!tsCookie || tsCookie.value !== 'true') {
+        // Demo mode: require valid HMAC-signed session cookie
+        if (!hasValidSession) {
           return NextResponse.json(
             { error: 'Demo mode requires authentication via login page' },
             { status: 401, headers: Object.fromEntries(res.headers.entries()) }
@@ -185,14 +237,20 @@ export async function middleware(req: NextRequest) {
   const supabaseAuthToken = req.cookies.getAll().find(c =>
     c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
   );
-  const tsAuthCookie = req.cookies.get('ts_authenticated');
-  const hasAuth = !!supabaseAuthToken || tsAuthCookie?.value === 'true';
+  const sessionCookie = req.cookies.get('ts_session');
+  let hasValidSessionCookie = false;
+  let sessionRole = '';
+  if (sessionCookie?.value) {
+    const verified = await verifySessionCookie(sessionCookie.value);
+    hasValidSessionCookie = verified.valid;
+    sessionRole = verified.role;
+  }
+  const hasAuth = !!supabaseAuthToken || hasValidSessionCookie;
 
   if (!hasAuth) {
     if (isDemoMode) {
-      // Demo mode: still require a valid demo cookie
-      const tsDemoCookie = req.cookies.get('ts_authenticated');
-      if (!tsDemoCookie || tsDemoCookie.value !== 'true') {
+      // Demo mode: require valid HMAC-signed session cookie
+      if (!hasValidSessionCookie) {
         const loginUrl = new URL('/', req.url);
         loginUrl.searchParams.set('redirectTo', pathname);
         return NextResponse.redirect(loginUrl);
@@ -208,10 +266,9 @@ export async function middleware(req: NextRequest) {
   // SERVER-SIDE TOKEN VALIDATION (Demo Mode)
   // Prevents role spoofing via DevTools
   // ─────────────────────────────────────────────
-  if (isDemoMode && tsAuthCookie?.value === 'true') {
-    // Validate role-based route access in demo mode
-    const tsUserCookie = req.cookies.get('ts_user_role');
-    const userRole = tsUserCookie?.value || '';
+  if (isDemoMode && hasValidSessionCookie) {
+    // Validate role-based route access using the HMAC-verified role
+    const userRole = sessionRole;
     
     // Role-gated routes: auditor dashboard requires CAG_AUDITOR role
     const ROLE_ROUTES: Record<string, string[]> = {

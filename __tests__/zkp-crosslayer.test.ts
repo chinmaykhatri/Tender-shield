@@ -173,7 +173,7 @@ describe('Cross-Layer ZKP: TypeScript ↔ Go Chaincode Compatibility', () => {
     });
   });
 
-  describe('Backward Compatibility — Legacy API Surface', () => {
+  describe('Backward Compatibility — Deprecated Aliases (createPedersenCommitment)', () => {
     it('createPedersenCommitment returns correct structure', () => {
       const result = createPedersenCommitment(11850000);
       expect(result.commitment).toMatch(/^0x[0-9a-f]{64}$/);

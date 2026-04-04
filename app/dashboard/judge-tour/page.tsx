@@ -46,13 +46,13 @@ const TOUR_STEPS: TourStep[] = [
     apiEndpoint: '/api/fraud-analyze', status: 'pending',
   },
   {
-    id: 5, category: 'CRYPTO', icon: '🔐', title: 'ZKP — Pedersen Commitment',
-    description: 'Real Pedersen commitment: C = g^v · h^r mod p (1024-bit safe prime). Schnorr-Fiat-Shamir zero-knowledge proof',
+    id: 5, category: 'CRYPTO', icon: '🔐', title: 'Sealed Bid — SHA-256 Commitment',
+    description: 'SHA-256 hash commitment: C = SHA-256(amount || randomness). 256-bit computational hiding, collision-resistant binding. Fiat-Shamir challenge-response proof',
     apiEndpoint: '/api/zkp', status: 'pending',
   },
   {
-    id: 6, category: 'CRYPTO', icon: '✅', title: 'ZKP — External Verification',
-    description: 'Verify the commitment: re-compute g^v · h^r mod p and check C matches. No secrets needed for proof verification',
+    id: 6, category: 'CRYPTO', icon: '✅', title: 'Sealed Bid — External Verification',
+    description: 'Verify the commitment: recompute SHA-256(amount || randomness) and check C matches. No secrets needed for proof verification',
     apiEndpoint: '/api/zkp-verify', status: 'pending',
   },
   {
@@ -153,7 +153,7 @@ async function executeStep(step: TourStep): Promise<{ result: string; proof: Rec
       };
     }
 
-    case 5: { // ZKP Commit
+    case 5: { // Sealed Bid Commit
       const res = await fetch('/api/zkp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -168,13 +168,13 @@ async function executeStep(step: TourStep): Promise<{ result: string; proof: Rec
           commitment: data.commitment?.C?.slice(0, 40) + '...',
           formula: data.commitment?.formula,
           verified: data.verified,
-          proof_type: 'Schnorr-Pedersen + Fiat-Shamir',
+          proof_type: 'SHA-256 Commitment + Fiat-Shamir',
         },
       };
     }
 
-    case 6: { // ZKP Verify
-      if (!zkpSecrets) throw new Error('No ZKP commitment to verify');
+    case 6: { // Sealed Bid Verify
+      if (!zkpSecrets) throw new Error('No sealed bid commitment to verify');
       const res = await fetch('/api/zkp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -550,7 +550,7 @@ export default function JudgeTourPage() {
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', maxWidth: 500, margin: '0 auto' }}>
             {failed === 0
-              ? 'Every component is working with real data. Blockchain consensus, ZKP cryptography, AI fraud detection, and statistical engines are all verified.'
+              ? 'Every component is working with real data. Blockchain consensus, sealed bid cryptography, AI fraud detection, and statistical engines are all verified.'
               : `${failed} test(s) require attention. ${passed} critical systems are operational.`
             }
           </p>
@@ -572,7 +572,7 @@ export default function JudgeTourPage() {
               background: 'rgba(139,92,246,0.15)', color: '#c4b5fd',
               padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
               fontSize: 12, fontWeight: 600,
-            }}>ZKP Bids 🔐</Link>
+            }}>Sealed Bids 🔐</Link>
           </div>
         </div>
       )}

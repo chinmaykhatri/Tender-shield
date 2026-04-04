@@ -103,7 +103,7 @@ export default function BlockchainExplorer() {
           { label: 'Transactions', value: data.stats.totalTransactions, icon: '📝', color: '#3b82f6' },
           { label: 'Chaincode Calls', value: data.stats.chaincodeInvocations, icon: '⚡', color: '#22c55e' },
           { label: 'Frozen by AI', value: data.stats.frozenByAI, icon: '🚨', color: '#ef4444' },
-          { label: 'ZKP Bids', value: data.stats.zkpBids, icon: '🔐', color: '#a855f7' },
+          { label: 'Sealed Bids', value: data.stats.zkpBids, icon: '🔐', color: '#a855f7' },
           { label: 'Policy Violations', value: data.stats.endorsementPolicyViolations, icon: '✅', color: '#10b981' },
         ].map(stat => (
           <div key={stat.label} style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '20px 16px', backdropFilter: 'blur(10px)' }}>

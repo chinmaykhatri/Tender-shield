@@ -28,7 +28,7 @@ function StepPanel({ stepNum, title, children, active, icon }: {
   );
 }
 
-export default function ZKPVerification() {
+export default function CommitmentVerification() {
   const [activeStep, setActiveStep] = useState(0);
   const [bidAmount, setBidAmount] = useState('');
   const [commitment, setCommitment] = useState('');

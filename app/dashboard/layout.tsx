@@ -16,7 +16,7 @@ const navItems = [
   { href: '/dashboard/tenders', icon: '📋', label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TENDERS },
   { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.CREATE_TENDER },
   { href: '/dashboard/procurement', icon: '📦', label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PROCUREMENT },
-  { href: '/dashboard/bids', icon: '🔒', label: 'ZKP Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS },
+  { href: '/dashboard/bids', icon: '🔒', label: 'Sealed Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS },
   { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.BLOCKCHAIN },
   { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR },
   { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
@@ -30,34 +30,35 @@ const navItems = [
 ].filter(item => item.visible);
 
 // Mobile bottom nav shows 5 most important tabs based on role
+// Uses feature flags to hide incomplete features from mobile nav
 const mobileNavConfig: Record<string, { href: string; icon: string; label: string }[]> = {
   OFFICER: [
     { href: '/dashboard', icon: '📊', label: 'Home' },
     { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
     { href: '/dashboard/procurement', icon: '📦', label: 'Procure' },
-    { href: '/dashboard/ai-alerts', icon: '🚨', label: 'Alerts' },
-    { href: '/dashboard/judge-tour', icon: '🏆', label: 'Tour' },
+    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
+    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
   ],
   BIDDER: [
     { href: '/dashboard', icon: '📊', label: 'Home' },
     { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
     { href: '/dashboard/bids', icon: '🔒', label: 'My Bids' },
     { href: '/dashboard/procurement', icon: '📦', label: 'Procure' },
-    { href: '/dashboard/judge-tour', icon: '🏆', label: 'Tour' },
+    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
   ],
   AUDITOR: [
     { href: '/dashboard', icon: '📊', label: 'Home' },
     { href: '/dashboard/auditor', icon: '⚖️', label: 'Audit' },
     { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
-    { href: '/dashboard/ai-alerts', icon: '🚨', label: 'Alerts' },
-    { href: '/dashboard/judge-tour', icon: '🏆', label: 'Tour' },
+    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
+    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
   ],
   NIC_ADMIN: [
     { href: '/dashboard', icon: '📊', label: 'Home' },
     { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
     { href: '/dashboard/auditor', icon: '⚖️', label: 'Audit' },
-    { href: '/dashboard/ai-alerts', icon: '🚨', label: 'Alerts' },
-    { href: '/dashboard/judge-tour', icon: '🏆', label: 'Tour' },
+    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
+    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
   ],
 };
 

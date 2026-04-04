@@ -27,7 +27,7 @@ export default function AuditPage() {
     if (type?.includes('AWARDED')) return '🏆';
     if (type?.includes('COMMITTED')) return '🔒';
     if (type?.includes('REVEALED')) return '🔓';
-    if (type?.includes('ZKP')) return '🔐';
+    if (type?.includes('COMMITMENT')) return '🔐';
     return '📜';
   };
 
@@ -35,10 +35,10 @@ export default function AuditPage() {
   const demoEvents = events.length > 0 ? events : [
     { event_id: '1', event_type: 'TENDER_CREATED', topic: 'tender-events', timestamp_ist: '2025-03-12T10:30:15+05:30', data: { tender_id: 'TDR-MoRTH-2025-000001' } },
     { event_id: '2', event_type: 'TENDER_PUBLISHED', topic: 'tender-events', timestamp_ist: '2025-03-12T10:35:22+05:30', data: { tender_id: 'TDR-MoRTH-2025-000001' } },
-    { event_id: '3', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:30:45+05:30', data: { bid_id: 'BID-001', phase: 'ZKP_COMMIT' } },
-    { event_id: '4', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:31:10+05:30', data: { bid_id: 'BID-002', phase: 'ZKP_COMMIT' } },
+    { event_id: '3', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:30:45+05:30', data: { bid_id: 'BID-001', phase: 'SEALED_COMMIT' } },
+    { event_id: '4', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:31:10+05:30', data: { bid_id: 'BID-002', phase: 'SEALED_COMMIT' } },
     { event_id: '5', event_type: 'TENDER_FROZEN', topic: 'tender-events', timestamp_ist: '2025-03-12T15:00:00+05:30', data: { tender_id: 'TDR-MoH-2025-000001', reason: 'AI fraud detection' } },
-    { event_id: '6', event_type: 'ZKP_VERIFICATION_FAILED', topic: 'audit-events', timestamp_ist: '2025-03-12T15:05:33+05:30', data: { bid_id: 'BID-TAMPERED', risk_level: 'HIGH' } },
+    { event_id: '6', event_type: 'COMMITMENT_VERIFICATION_FAILED', topic: 'audit-events', timestamp_ist: '2025-03-12T15:05:33+05:30', data: { bid_id: 'BID-TAMPERED', risk_level: 'HIGH' } },
   ];
 
   return (

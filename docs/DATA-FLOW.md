@@ -39,19 +39,19 @@ sequenceDiagram
 
 ---
 
-## 2. Bid Submission Flow (ZKP)
+## 2. Bid Submission Flow (Sealed Commitment)
 
 ```mermaid
 sequenceDiagram
     participant B as Bidder
     participant F as Frontend
-    participant ZKP as ZKP Module
+    participant ZKP as Commitment Module
     participant BC as Blockchain
     participant DB as Supabase
 
     B->>F: Enter bid amount
-    F->>ZKP: Generate Pedersen Commitment
-    Note over ZKP: C = g^v · h^r mod p
+    F->>ZKP: Generate SHA-256 Commitment
+    Note over ZKP: C = SHA-256(amount || randomness)
     ZKP-->>F: Commitment + blinding factor
 
     F->>BC: SubmitBid(tender_id, commitment_hash)
@@ -62,7 +62,7 @@ sequenceDiagram
     B->>F: Reveal bid
     F->>ZKP: Generate Schnorr proof
     F->>BC: RevealBid(amount, blinding_factor, proof)
-    BC->>ZKP: Verify: g^z_v · h^z_r = A · C^e
+    BC->>ZKP: Verify: recompute SHA-256(amount || randomness) == C
     ZKP-->>BC: ✅ Proof valid
     BC-->>F: Bid revealed and verified
 ```

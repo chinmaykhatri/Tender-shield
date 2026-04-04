@@ -13,15 +13,16 @@
  * 
  * DEMO FALLBACK:
  *   - If Supabase or Fabric unavailable, uses in-memory store
- *   - ZKP + ML model are ALWAYS real (no mock ever)
+ *   - Sealed bid commitment + ML model are ALWAYS real (no mock ever)
  * 
  * POST { action: 'create' | 'submit-bid' | 'close-bidding' | 'reveal' | 'evaluate' | 'award' | 'reset' }
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createCommitment, generateZKProof, verifyCommitment, verifyZKProof } from '@/lib/zkp';
+import { createCommitment, generateCommitmentProof, verifyCommitment, verifyCommitmentProofFormat } from '@/lib/zkp';
 import { pinTenderDocument } from '@/lib/ipfs';
 import { extractFeatures } from '@/lib/ml/dataset';
+import { lifecycleSchema } from '@/lib/validation/schemas';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -62,18 +63,20 @@ interface LifecycleTender {
   events: { time: string; phase: string; detail: string; icon: string; source: string }[];
 }
 
-// ─── Persistent store (Supabase-first, in-memory fallback) ─────
-let activeTender: LifecycleTender | null = null;
+// ─── Multi-tenant store (Supabase-first, in-memory fallback) ─────
+// Supports multiple concurrent tenders — NOT a single global variable.
+const tenderStore = new Map<string, LifecycleTender>();
+let latestTenderId: string | null = null;
 
-const LIFECYCLE_STATE_KEY = 'LIFECYCLE_ACTIVE_TENDER';
+const LIFECYCLE_STATE_PREFIX = 'LIFECYCLE_TENDER_';
 
-async function persistState(tender: LifecycleTender | null): Promise<void> {
-  activeTender = tender; // always cache in-memory
-  if (!supabase || !tender) return;
+async function persistState(tender: LifecycleTender): Promise<void> {
+  tenderStore.set(tender.id, tender);
+  latestTenderId = tender.id;
+  if (!supabase) return;
   try {
-    // Upsert lifecycle state as a special audit event
     await supabase.from('audit_events').upsert({
-      event_id: LIFECYCLE_STATE_KEY,
+      event_id: `${LIFECYCLE_STATE_PREFIX}${tender.id}`,
       event_type: 'LIFECYCLE_STATE',
       topic: 'procurement.lifecycle.state',
       timestamp_ist: new Date().toISOString(),
@@ -85,22 +88,48 @@ async function persistState(tender: LifecycleTender | null): Promise<void> {
   } catch { /* Supabase unavailable — in-memory still works */ }
 }
 
-async function loadState(): Promise<LifecycleTender | null> {
-  // Return cached if available
-  if (activeTender) return activeTender;
-  if (!supabase) return null;
+async function loadState(tenderId?: string): Promise<LifecycleTender | null> {
+  // 1. If tenderId given, look it up directly
+  const lookupId = tenderId || latestTenderId;
+  if (lookupId && tenderStore.has(lookupId)) return tenderStore.get(lookupId)!;
+  if (!supabase) return lookupId ? null : null;
   try {
-    const { data } = await supabase
-      .from('audit_events')
-      .select('data')
-      .eq('event_id', LIFECYCLE_STATE_KEY)
-      .single();
-    if (data?.data?.state) {
-      activeTender = JSON.parse(data.data.state) as LifecycleTender;
-      return activeTender;
+    if (lookupId) {
+      // Load specific tender
+      const { data } = await supabase
+        .from('audit_events')
+        .select('data')
+        .eq('event_id', `${LIFECYCLE_STATE_PREFIX}${lookupId}`)
+        .single();
+      if (data?.data?.state) {
+        const tender = JSON.parse(data.data.state) as LifecycleTender;
+        tenderStore.set(tender.id, tender);
+        return tender;
+      }
+    } else {
+      // Load most recent tender
+      const { data } = await supabase
+        .from('audit_events')
+        .select('data')
+        .eq('event_type', 'LIFECYCLE_STATE')
+        .order('timestamp_ist', { ascending: false })
+        .limit(1)
+        .single();
+      if (data?.data?.state) {
+        const tender = JSON.parse(data.data.state) as LifecycleTender;
+        tenderStore.set(tender.id, tender);
+        latestTenderId = tender.id;
+        return tender;
+      }
     }
   } catch { /* No persisted state — start fresh */ }
   return null;
+}
+
+/** Resolve which tender to operate on: explicit tender_id > latest */
+async function resolveTender(body: Record<string, unknown>): Promise<LifecycleTender | null> {
+  const tid = (body.tender_id as string) || latestTenderId || undefined;
+  return loadState(tid);
 }
 
 // ─── ML Model Loader ──────────────────────────────────
@@ -167,31 +196,46 @@ function addEvent(tender: LifecycleTender, phase: string, detail: string, icon: 
 
 // ═══════════════════════════════════════════════════════
 // GET — Return current tender state (loads from Supabase)
+// Supports ?tender_id=X query param, or returns most recent.
 // ═══════════════════════════════════════════════════════
-export async function GET() {
-  const tender = await loadState();
+export async function GET(req: NextRequest) {
+  const tenderId = req.nextUrl.searchParams.get('tender_id') || undefined;
+  const tender = await loadState(tenderId);
+  const allIds = Array.from(tenderStore.keys());
   return NextResponse.json({
     tender: tender ? sanitizeTender(tender) : null,
+    activeTenders: allIds.length,
+    tenderIds: allIds,
     mode: supabase ? 'DUAL (Supabase + Persistent)' : 'DEMO (In-Memory only)',
     supabaseConnected: !!supabase,
     persistent: !!supabase,
+    multiTenancy: true,
   });
 }
 
 // ═══════════════════════════════════════════════════════
-// POST — Lifecycle Actions
+// POST — Lifecycle Actions (Multi-tenant)
 // ═══════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action } = body;
+
+    // ── Input Validation (Zod) ─ per-action schema ─────────────
+    const parsed = lifecycleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', issues: parsed.error.issues.map((i: { message: string }) => i.message) },
+        { status: 400 }
+      );
+    }
+    const { action } = parsed.data;
 
     // ─── CREATE TENDER ─────────────────────────────────
     if (action === 'create') {
       const { title, ministry, estimatedValue, category } = body;
       const tenderId = `TDR-${(ministry || 'MoIT').toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
-      activeTender = {
+      const tender: LifecycleTender = {
         id: tenderId,
         title: title || 'Medical Equipment Procurement',
         ministry: ministry || 'MoHFW',
@@ -207,25 +251,25 @@ export async function POST(req: NextRequest) {
       const dbResult = await trySupabase(() =>
         supabase!.from('tenders').insert({
           tender_id: tenderId,
-          title: activeTender!.title,
-          ministry_code: activeTender!.ministry,
-          estimated_value_crore: activeTender!.estimatedValue,
+          title: tender.title,
+          ministry_code: tender.ministry,
+          estimated_value_crore: tender.estimatedValue,
           status: 'BIDDING_OPEN',
           risk_score: 0,
-          category: activeTender!.category,
-          description: `Procurement lifecycle demo — ${activeTender!.title}`,
+          category: tender.category,
+          description: `Procurement lifecycle — ${tender.title}`,
         }).select().single()
       );
 
       if (dbResult.success) {
-        activeTender.supabaseId = dbResult.data?.id;
+        tender.supabaseId = dbResult.data?.id;
       }
 
       // Try real blockchain
       const chain = await tryChaincode(req, 'CreateTender', [
-        tenderId, activeTender.title, activeTender.ministry, String(activeTender.estimatedValue)
+        tenderId, tender.title, tender.ministry, String(tender.estimatedValue)
       ]);
-      activeTender.blockchainTx = chain.txHash;
+      tender.blockchainTx = chain.txHash;
 
       // Record audit event
       await trySupabase(() =>
@@ -240,15 +284,15 @@ export async function POST(req: NextRequest) {
             actor_role: 'MINISTRY_OFFICER',
             blockchain_tx: chain.txHash,
             fabric_source: chain.source,
-            description: `Tender ${tenderId} created — ₹${activeTender!.estimatedValue} Cr`,
+            description: `Tender ${tenderId} created — ₹${tender.estimatedValue} Cr`,
           },
         })
       );
 
-      addEvent(activeTender, 'CREATED',
-        `Tender ${tenderId} created. ₹${activeTender.estimatedValue} Cr.`,
+      addEvent(tender, 'CREATED',
+        `Tender ${tenderId} created. ₹${tender.estimatedValue} Cr.`,
         '📝', chain.source);
-      addEvent(activeTender, 'BIDDING_OPEN',
+      addEvent(tender, 'BIDDING_OPEN',
         `Bidding phase opened. ${dbResult.success ? 'Saved to Supabase ✅' : 'In-memory mode'} | Blockchain: ${chain.source}`,
         '🔓', dbResult.success ? 'SUPABASE' : 'IN_MEMORY');
 
@@ -257,129 +301,132 @@ export async function POST(req: NextRequest) {
       try {
         const ipfsResult = await pinTenderDocument(
           tenderId,
-          activeTender!.title,
-          `Procurement specifications for ${activeTender!.title}`,
-          activeTender!.estimatedValue,
-          activeTender!.ministry
+          tender.title,
+          `Procurement specifications for ${tender.title}`,
+          tender.estimatedValue,
+          tender.ministry
         );
         if (ipfsResult.success) {
           ipfsCid = ipfsResult.cid;
-          addEvent(activeTender, 'IPFS_PINNED',
+          addEvent(tender, 'IPFS_PINNED',
             `Document pinned to IPFS: ${ipfsCid.slice(0, 20)}... via ${ipfsResult.pinned_via}`,
             '📌', ipfsResult.pinned_via.toUpperCase());
         }
       } catch {}
 
-      await persistState(activeTender);
+      await persistState(tender);
 
       return NextResponse.json({
         success: true,
-        tender: sanitizeTender(activeTender),
+        tender: sanitizeTender(tender),
+        tender_id: tenderId,
         storage: dbResult.success ? 'SUPABASE' : 'IN_MEMORY',
         blockchain: chain.source,
         ipfs: ipfsCid || null,
       });
     }
 
-    // ─── SUBMIT BID (Real ZKP) ─────────────────────────
+    // ── Resolve tender for all non-create actions ──────────────
+    const tender = await resolveTender(body);
+
+    // ─── SUBMIT BID (Real Sealed Commitment) ─────────────────────────
     if (action === 'submit-bid') {
-      if (!activeTender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
-      if (activeTender.phase !== 'BIDDING_OPEN') {
-        return NextResponse.json({ error: `Cannot submit bid in ${activeTender.phase} phase.` }, { status: 400 });
+      if (!tender) return NextResponse.json({ error: 'No active tender. Create one first or pass tender_id.' }, { status: 400 });
+      if (tender.phase !== 'BIDDING_OPEN') {
+        return NextResponse.json({ error: `Cannot submit bid in ${tender.phase} phase.` }, { status: 400 });
       }
 
       const { bidder, company, amount } = body;
       const valueCrore = parseFloat(amount);
 
-      // ── REAL ZKP: SHA-256 commitment (matches chaincode) ──
+      // ── REAL CRYPTO: SHA-256 commitment (matches chaincode) ──
       const commitment = createCommitment(valueCrore);
-      const zkProof = generateZKProof(commitment);
+      const sealedProof = generateCommitmentProof(commitment);
 
       const bid: Bid = {
         bidder: bidder || 'Anonymous',
         company: company || 'Unknown Corp',
         commitment: commitment.C,
-        proof: zkProof.proof,
-        zkpValid: zkProof.verified,
+        proof: sealedProof.proof,
+        zkpValid: sealedProof.verified,
         v: commitment.v,
         r: commitment.r,
         submittedAt: new Date().toISOString(),
       };
-      activeTender.bids.push(bid);
+      tender.bids.push(bid);
 
       // Try saving bid to Supabase
       const bidDbResult = await trySupabase(() =>
         supabase!.from('bids').insert({
-          tender_id: activeTender!.id,
+          tender_id: tender!.id,
           bidder_name: company,
           amount: valueCrore,
           commitment_hash: commitment.C.slice(0, 64),
-          zkp_valid: zkProof.verified,
+          zkp_valid: sealedProof.verified,
           status: 'SEALED',
         }).select().single()
       );
 
-      addEvent(activeTender, 'BID_SUBMITTED',
-        `${company} submitted ZKP-sealed bid. Commitment: ${commitment.C.slice(0, 16)}... ZKP: ${zkProof.verified ? '✅ VALID' : '❌'}. ${bidDbResult.success ? 'Saved to DB ✅' : 'In-memory'}`,
-        '🔐', bidDbResult.success ? 'SUPABASE + REAL_ZKP' : 'IN_MEMORY + REAL_ZKP');
+      addEvent(tender, 'BID_SUBMITTED',
+        `${company} submitted sealed bid. Commitment: ${commitment.C.slice(0, 16)}... Proof: ${sealedProof.verified ? '✅ VALID' : '❌'}. ${bidDbResult.success ? 'Saved to DB ✅' : 'In-memory'}`,
+        '🔐', bidDbResult.success ? 'SUPABASE + REAL_COMMITMENT' : 'IN_MEMORY + REAL_COMMITMENT');
 
-      await persistState(activeTender);
+      await persistState(tender);
 
       return NextResponse.json({
         success: true,
-        bidIndex: activeTender.bids.length - 1,
+        bidIndex: tender.bids.length - 1,
         commitment: commitment.C.slice(0, 32) + '...',
-        zkpValid: zkProof.verified,
+        zkpValid: sealedProof.verified,
         algorithm: 'SHA-256 Commitment (matches chaincode/zkp_utils.go)',
         storage: bidDbResult.success ? 'SUPABASE' : 'IN_MEMORY',
         cryptography: 'REAL',
-        tender: sanitizeTender(activeTender),
+        tender: sanitizeTender(tender),
       });
     }
 
     // ─── CLOSE BIDDING ─────────────────────────────────
     if (action === 'close-bidding') {
-      if (!activeTender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
-      if (activeTender.bids.length < 2) {
+      if (!tender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
+      if (tender.bids.length < 2) {
         return NextResponse.json({ error: 'Need at least 2 bids.' }, { status: 400 });
       }
 
-      activeTender.phase = 'REVEAL';
+      tender.phase = 'REVEAL';
 
       // Update Supabase status
       await trySupabase(() =>
         supabase!.from('tenders').update({ status: 'UNDER_EVALUATION' })
-          .eq('tender_id', activeTender!.id)
+          .eq('tender_id', tender!.id)
       );
 
-      addEvent(activeTender, 'BIDDING_CLOSED',
-        `Bidding closed with ${activeTender.bids.length} sealed bids. Entering reveal phase.`,
+      addEvent(tender, 'BIDDING_CLOSED',
+        `Bidding closed with ${tender.bids.length} sealed bids. Entering reveal phase.`,
         '🔒', 'SYSTEM');
 
-      await persistState(activeTender);
+      await persistState(tender);
 
-      return NextResponse.json({ success: true, tender: sanitizeTender(activeTender) });
+      return NextResponse.json({ success: true, tender: sanitizeTender(tender) });
     }
 
     // ─── REVEAL BIDS ───────────────────────────────────
     if (action === 'reveal') {
-      if (!activeTender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
-      if (activeTender.phase !== 'REVEAL') {
-        return NextResponse.json({ error: `Cannot reveal in ${activeTender.phase} phase.` }, { status: 400 });
+      if (!tender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
+      if (tender.phase !== 'REVEAL') {
+        return NextResponse.json({ error: `Cannot reveal in ${tender.phase} phase.` }, { status: 400 });
       }
 
       const reveals: { bidder: string; amount: number; commitmentValid: boolean; zkpValid: boolean }[] = [];
 
-      for (const bid of activeTender.bids) {
+      for (const bid of tender.bids) {
         // ── REAL verification: C = SHA-256(v || "||" || r) ──
         const commitmentValid = verifyCommitment(bid.commitment, bid.v, bid.r);
-        // bid.v is a decimal string (e.g., "118500000") from the unified SHA-256 scheme
         const amount = parseInt(bid.v, 10) / 1_000_000;
         bid.revealedAmount = Math.round(amount * 100) / 100;
         bid.revealValid = commitmentValid;
 
-        // ── REAL ZKP proof verification ──
-        const proofResult = verifyZKProof(bid.commitment, bid.proof);
+        // ── REAL commitment proof verification ──
+        const proofResult = verifyCommitmentProofFormat(bid.commitment, bid.proof);
         bid.zkpValid = proofResult.valid;
 
         reveals.push({
@@ -390,67 +437,67 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      activeTender.phase = 'EVALUATION';
+      tender.phase = 'EVALUATION';
 
       const validCount = reveals.filter(r => r.commitmentValid).length;
       const zkpCount = reveals.filter(r => r.zkpValid).length;
 
-      addEvent(activeTender, 'REVEAL',
-        `All ${reveals.length} bids revealed. Commitments: ${validCount}/${reveals.length} ✅ | ZKP proofs: ${zkpCount}/${reveals.length} ✅`,
+      addEvent(tender, 'REVEAL',
+        `All ${reveals.length} bids revealed. Commitments: ${validCount}/${reveals.length} ✅ | Proofs: ${zkpCount}/${reveals.length} ✅`,
         '🔓', 'REAL_CRYPTO');
 
       // Record audit event
       await trySupabase(() =>
         supabase!.from('audit_events').insert({
-          event_id: `EVT-${activeTender!.id}-REVEAL`,
+          event_id: `EVT-${tender!.id}-REVEAL`,
           event_type: 'BIDS_REVEALED',
           topic: 'procurement.lifecycle',
           timestamp_ist: new Date().toISOString(),
           data: {
-            tender_id: activeTender!.id,
+            tender_id: tender!.id,
             bid_count: reveals.length,
             valid_commitments: validCount,
             valid_zkp: zkpCount,
-            algorithm: 'SHA-256 Commitment + Fiat-Shamir ZKP',
+            algorithm: 'SHA-256 Commitment + Fiat-Shamir Proof',
           },
         })
       );
 
-      await persistState(activeTender);
+      await persistState(tender);
 
       return NextResponse.json({
         success: true,
         reveals,
-        cryptography: 'REAL (SHA-256 commitment + Fiat-Shamir ZKP)',
-        tender: sanitizeTender(activeTender),
+        cryptography: 'REAL (SHA-256 commitment + Fiat-Shamir proof)',
+        tender: sanitizeTender(tender),
       });
     }
 
     // ─── EVALUATE ──────────────────────────────────────
     if (action === 'evaluate') {
-      if (!activeTender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
-      if (activeTender.phase !== 'EVALUATION') {
-        return NextResponse.json({ error: `Cannot evaluate in ${activeTender.phase} phase.` }, { status: 400 });
+      if (!tender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
+      if (tender.phase !== 'EVALUATION') {
+        return NextResponse.json({ error: `Cannot evaluate in ${tender.phase} phase.` }, { status: 400 });
       }
 
       // ── REAL ML MODEL prediction ──
       const model = loadMLModel();
-      const bidAmounts = activeTender.bids.map(b => b.revealedAmount || 0);
-      const est = activeTender.estimatedValue;
+      const bidAmounts = tender.bids.map((b: Bid) => b.revealedAmount || 0);
+      const est = tender.estimatedValue;
 
       const { features } = extractFeatures({
-        tender_id: activeTender.id,
-        ministry: activeTender.ministry,
-        category: activeTender.category,
+        tender_id: tender.id,
+        ministry: tender.ministry,
+        category: tender.category,
         estimated_value_crore: est,
-        num_bidders: activeTender.bids.length,
+        num_bidders: tender.bids.length,
         bid_amounts: bidAmounts,
-        bid_times_hours: activeTender.bids.slice(1).map((b, i) => {
-          const prev = new Date(activeTender!.bids[i].submittedAt).getTime();
+        bid_times_hours: tender.bids.slice(1).map((b: Bid, i: number) => {
+          const prev = new Date(tender!.bids[i].submittedAt).getTime();
           const curr = new Date(b.submittedAt).getTime();
           return Math.max(0.1, (curr - prev) / 3600000);
         }),
-        bidder_pans: activeTender.bids.map(() => 'UNIQUE' + Math.random().toString(36).slice(2, 7)),
+        bidder_pans: tender.bids.map(() => 'UNIQUE' + Math.random().toString(36).slice(2, 7)),
         winning_amount: Math.min(...bidAmounts),
         historical_winner_count: 1,
         is_repeat_winner: false,
@@ -470,10 +517,10 @@ export async function POST(req: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tender_id: activeTender.id,
-            title: activeTender.title,
+            tender_id: tender.id,
+            title: tender.title,
             estimated_value: est * 10_000_000,
-            ministry: activeTender.ministry,
+            ministry: tender.ministry,
           }),
         });
         if (aiResp.ok) {
@@ -482,32 +529,32 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       // Per-bid info
-      for (const bid of activeTender.bids) {
+      for (const bid of tender.bids) {
         bid.mlPrediction = mlResult.prediction;
         bid.mlProbability = mlResult.probability;
       }
 
-      // ZKP proofs verification
-      const proofResults = activeTender.bids.map(bid => {
-        const vr = verifyZKProof(bid.commitment, bid.proof);
+      // Commitment proof verification
+      const proofResults = tender.bids.map((bid: Bid) => {
+        const vr = verifyCommitmentProofFormat(bid.commitment, bid.proof);
         return { bidder: bid.company, zkpValid: vr.valid };
       });
 
       const riskLevel = mlResult.probability > 0.7 ? 'HIGH' : mlResult.probability > 0.3 ? 'MEDIUM' : 'LOW';
 
-      addEvent(activeTender, 'EVALUATION',
-        `ML Model (${mlSource}): ${mlResult.prediction} (${(mlResult.probability * 100).toFixed(0)}%). AI: ${aiResult ? 'Claude analyzed ✅' : 'Fallback engine'}. ZKP: ${proofResults.filter(p => p.zkpValid).length}/${proofResults.length} valid.`,
+      addEvent(tender, 'EVALUATION',
+        `ML Model (${mlSource}): ${mlResult.prediction} (${(mlResult.probability * 100).toFixed(0)}%). AI: ${aiResult ? 'Claude analyzed ✅' : 'Fallback engine'}. Proofs: ${proofResults.filter((p: { zkpValid: boolean }) => p.zkpValid).length}/${proofResults.length} valid.`,
         '🤖', mlSource);
 
       // Record audit
       await trySupabase(() =>
         supabase!.from('audit_events').insert({
-          event_id: `EVT-${activeTender!.id}-EVAL`,
+          event_id: `EVT-${tender!.id}-EVAL`,
           event_type: 'FRAUD_EVALUATION',
           topic: 'procurement.lifecycle',
           timestamp_ist: new Date().toISOString(),
           data: {
-            tender_id: activeTender!.id,
+            tender_id: tender!.id,
             ml_prediction: mlResult.prediction,
             ml_probability: mlResult.probability,
             ml_source: mlSource,
@@ -517,7 +564,7 @@ export async function POST(req: NextRequest) {
         })
       );
 
-      await persistState(activeTender);
+      await persistState(tender);
 
       return NextResponse.json({
         success: true,
@@ -525,85 +572,89 @@ export async function POST(req: NextRequest) {
         aiResult: aiResult || { note: 'Claude unavailable, used ML model only' },
         proofResults,
         riskLevel,
-        tender: sanitizeTender(activeTender),
+        tender: sanitizeTender(tender),
       });
     }
 
     // ─── AWARD ──────────────────────────────────────────
     if (action === 'award') {
-      if (!activeTender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
-      if (activeTender.phase !== 'EVALUATION') {
-        return NextResponse.json({ error: `Cannot award in ${activeTender.phase} phase.` }, { status: 400 });
+      if (!tender) return NextResponse.json({ error: 'No active tender.' }, { status: 400 });
+      if (tender.phase !== 'EVALUATION') {
+        return NextResponse.json({ error: `Cannot award in ${tender.phase} phase.` }, { status: 400 });
       }
 
       // Find lowest valid bid
-      const validBids = activeTender.bids.filter(b => b.revealValid && b.revealedAmount);
+      const validBids = tender.bids.filter((b: Bid) => b.revealValid && b.revealedAmount);
       if (validBids.length === 0) {
         return NextResponse.json({ error: 'No valid bids.' }, { status: 400 });
       }
 
-      const winner = validBids.reduce((min, b) =>
+      const winner = validBids.reduce((min: Bid, b: Bid) =>
         (b.revealedAmount || Infinity) < (min.revealedAmount || Infinity) ? b : min
       );
 
-      activeTender.winner = winner.company;
-      activeTender.winnerAmount = winner.revealedAmount;
-      activeTender.phase = 'AWARDED';
+      tender.winner = winner.company;
+      tender.winnerAmount = winner.revealedAmount;
+      tender.phase = 'AWARDED';
 
       // Real blockchain record
       const chain = await tryChaincode(req, 'AwardTender', [
-        activeTender.id, winner.company, String(winner.revealedAmount),
+        tender.id, winner.company, String(winner.revealedAmount),
       ]);
 
       // Update Supabase
       await trySupabase(() =>
         supabase!.from('tenders').update({
           status: 'AWARDED',
-          risk_score: Math.round((activeTender!.bids[0]?.mlProbability || 0) * 100),
-        }).eq('tender_id', activeTender!.id)
+          risk_score: Math.round((tender!.bids[0]?.mlProbability || 0) * 100),
+        }).eq('tender_id', tender!.id)
       );
 
       // Record audit
       await trySupabase(() =>
         supabase!.from('audit_events').insert({
-          event_id: `EVT-${activeTender!.id}-AWARDED`,
+          event_id: `EVT-${tender!.id}-AWARDED`,
           event_type: 'TENDER_AWARDED',
           topic: 'procurement.lifecycle',
           timestamp_ist: new Date().toISOString(),
           data: {
-            tender_id: activeTender!.id,
+            tender_id: tender!.id,
             winner: winner.company,
             amount_crore: winner.revealedAmount,
-            savings_crore: activeTender!.estimatedValue - (winner.revealedAmount || 0),
+            savings_crore: tender!.estimatedValue - (winner.revealedAmount || 0),
             blockchain_tx: chain.txHash,
             fabric_source: chain.source,
           },
         })
       );
 
-      addEvent(activeTender, 'AWARDED',
+      addEvent(tender, 'AWARDED',
         `🏆 Awarded to ${winner.company} at ₹${winner.revealedAmount} Cr. Blockchain: ${chain.source}. TX: ${chain.txHash.slice(0, 20)}...`,
         '🏆', chain.source);
 
-      await persistState(activeTender);
+      await persistState(tender);
 
       return NextResponse.json({
         success: true,
         winner: winner.company,
         amount: winner.revealedAmount,
         blockchain: { txHash: chain.txHash, source: chain.source },
-        tender: sanitizeTender(activeTender),
+        tender: sanitizeTender(tender),
       });
     }
 
     // ─── RESET ─────────────────────────────────────────
     if (action === 'reset') {
-      activeTender = null;
-      // Also clear persisted state
-      if (supabase) {
-        try { await supabase.from('audit_events').delete().eq('event_id', LIFECYCLE_STATE_KEY); } catch {}
+      const tid = (body.tender_id as string) || latestTenderId;
+      if (tid) {
+        tenderStore.delete(tid);
+        if (latestTenderId === tid) latestTenderId = null;
+        // Also clear persisted state
+        if (supabase) {
+          try { await supabase.from('audit_events').delete().eq('event_id', `${LIFECYCLE_STATE_PREFIX}${tid}`); } catch {}
+        }
       }
-      return NextResponse.json({ success: true, message: 'Lifecycle reset.' });
+      return NextResponse.json({ success: true, message: `Lifecycle reset${tid ? ` for ${tid}` : ''}.` });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -611,7 +662,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: (e instanceof Error ? e.message : String(e)) }, { status: 500 });
   }
 }
-
 // ─── Strip secrets from tender before sending to client ──
 function sanitizeTender(t: LifecycleTender) {
   return {

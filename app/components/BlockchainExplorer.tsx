@@ -70,7 +70,7 @@ const DEMO_BLOCKS: BlockData[] = [
         creator_org: 'BidderOrgMSP',
         endorsers: ['BidderOrgMSP', 'NICOrgMSP'],
         timestamp: '14:25:00 IST',
-        details: { tender_id: 'TDR-MoRTH-2025-000001', commitment: '0x9f8e7d...', zkp: 'Pedersen' },
+        details: { tender_id: 'TDR-MoRTH-2025-000001', commitment: '0x9f8e7d...', zkp: 'SHA-256' },
       },
     ],
   },

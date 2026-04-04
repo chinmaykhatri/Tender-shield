@@ -9,7 +9,7 @@
 ### Opening (2 min)
 - "TenderShield is India's first AI-secured, blockchain-based government procurement system"
 - Problem statement: ₹80,000 Crore annual procurement fraud in India
-- Solution: ZKP-encrypted bidding + AI fraud detection + immutable audit trail
+- Solution: SHA-256 sealed bidding + AI fraud detection + immutable audit trail
 
 ### Live Demo (8 min)
 
@@ -27,9 +27,9 @@ Password: Tender@2025
 - Show GFR Rule 149 compliance check
 - Ministry code: MoRTH, Value: ₹250 Crore
 
-#### Step 3: ZKP Bidding Demo
+#### Step 3: Sealed Bid Demo
 - Login as Bidder: `medtech@medtechsolutions.com` / `Bid@2025`
-- Navigate to ZKP Bids page
+- Navigate to Sealed Bids page
 - Generate commitment for ₹240 Crore
 - Show encrypted hash — "Nobody can see the amount"
 - Explain Phase 1 → Phase 2 → Phase 3
@@ -50,7 +50,7 @@ Password: Tender@2025
 - 4-org Hyperledger Fabric network (Ministry, Bidder, Auditor/CAG, NIC)
 - 13 chaincode functions in Go
 - 5 AI detectors with weighted composite scoring
-- ZKP Pedersen commitment scheme
+- SHA-256 hash commitment scheme (sealed bidding)
 
 ### Impact & Compliance (2 min)
 - GFR 2017 Rules 144/149/153/153A enforced at blockchain level
@@ -75,7 +75,7 @@ Password: Tender@2025
 
 ## 🎯 Competition Differentiators
 
-1. **ZKP Bid Encryption** — Only system using Pedersen commitments for bid secrecy
+1. **Sealed Bid Commitments** — SHA-256 hash commitments ensure bid secrecy until reveal
 2. **5 AI Detectors** — Benford's Law, graph theory, Wald-Wolfowitz runs test
 3. **GFR Chaincode** — Compliance rules enforced at consensus level, not API level
 4. **India-First** — GSTIN/PAN/Aadhaar validators, IST timestamps, ₹ paise precision

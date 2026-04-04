@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
+import { z } from 'zod';
+
+// ── Input Validation ─────────────────────────────────────────────
+const chaincodeInvokeSchema = z.object({
+  function_name: z.string().min(1, 'function_name required').max(64),
+  args: z.array(z.string().max(4096)).max(10).default([]),
+  user_id: z.string().max(128).default('anonymous'),
+  channel: z.string().max(64).optional(),
+});
 
 // ============================================================================
 // TenderShield — Chaincode Invoke API
@@ -15,7 +24,7 @@ import { createHash } from 'crypto';
 //
 // Supported invocations:
 //   CreateTender, PublishTender, SubmitBid, RevealBid,
-//   FreezeTender, AwardTender, EscalateToCAG, VerifyZKP
+//   FreezeTender, AwardTender, EscalateToCAG, VerifyCommitment
 // ============================================================================
 
 const supabase = createClient(
@@ -45,8 +54,6 @@ function generateTxHash(functionName: string, args: any[], userId: string): stri
 
 /**
  * Store the blockchain transaction record in Supabase for fast reads.
- * This is the "write-through cache" — blockchain is source of truth,
- * Supabase is the read cache that powers the dashboard.
  */
 async function storeTransactionInSupabase(
   txHash: string,
@@ -69,7 +76,6 @@ async function storeTransactionInSupabase(
       timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     });
   } catch {
-    // Non-fatal — table might not exist yet, log and continue
     console.warn('[chaincode-invoke] Supabase write skipped (table may not exist)');
   }
 }
@@ -77,19 +83,21 @@ async function storeTransactionInSupabase(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { function_name, args = [], user_id = 'anonymous' } = body;
 
-    if (!function_name) {
+    // ── Input Validation (Zod) ─────────────────────────────────
+    const parsed = chaincodeInvokeSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'function_name is required' },
+        { error: 'Invalid request body', issues: parsed.error.issues.map(i => i.message) },
         { status: 400 }
       );
     }
+    const { function_name, args, user_id } = parsed.data;
 
     // Validate function name against known chaincode functions
     const validFunctions = [
       'CreateTender', 'PublishTender', 'SubmitBid', 'RevealBid',
-      'FreezeTender', 'AwardTender', 'EscalateToCAG', 'VerifyZKP',
+      'FreezeTender', 'AwardTender', 'EscalateToCAG', 'VerifyCommitment',
       'EvaluateBids', 'GetTenderHistory', 'QueryTenderByID',
       'InitLedger', 'GetDashboardStats',
     ];

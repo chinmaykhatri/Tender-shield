@@ -57,11 +57,11 @@ cd ai_engine && uvicorn main:app --reload --port 8001
 
 ---
 
-## Test 4: ZKP Sealed Bids
+## Test 4: Sealed Bid Commitments
 
 | # | Attack Vector | Expected Behavior | ✅/❌ |
 |---|-------------|-------------------|-------|
-| 4.1 | Submit a bid with ZKP commitment | Commitment hash generated | |
+| 4.1 | Submit a bid with SHA-256 commitment | Commitment hash generated | |
 | 4.2 | Reveal the bid | Amount matches, proof verifies | |
 | 4.3 | Try to submit bid with amount = 0 | Rejected (range proof) | |
 | 4.4 | Try to reveal with wrong blinding factor | Verification fails | |
@@ -149,7 +149,7 @@ cd ai_engine && uvicorn main:app --reload --port 8001
 | "How do you prevent bid rigging?" | "5 independent AI detectors analyse every tender. Shell company detection uses PAN/CIN cross-referencing. Cartel rotation tracks win patterns. All scores are logged on-chain." |
 | "What if the AI makes a mistake?" | "TenderShield has a constitutional AI safety layer. Every AI decision is auditable. Human auditors (CAG) make final decisions. Auto-freeze is a safety measure, not punishment." |
 | "Is this GFR 2017 compliant?" | "Yes — we validate Rules 144, 149, 153, 153A, 154, and 166. Compliance is checked both in chaincode (Go) and at the API layer." |
-| "How do ZKPs work here?" | "Real Pedersen commitments on secp256k1. The bid amount is hidden in a cryptographic commitment. When revealed, a Schnorr proof with Fiat-Shamir heuristic verifies integrity." |
+| "How do ZKPs work here?" | "SHA-256 hash commitments. C = SHA-256(amount || randomness). The bid amount is hidden in a cryptographic hash. When revealed, the verifier recomputes the hash and checks it matches. Fiat-Shamir challenge-response binds the proof to the session." |
 | "Can this scale?" | "Docker containerized. Kafka for event streaming. Redis for caching. The architecture supports horizontal scaling of peers and services." |
 | "What about Aadhaar privacy?" | "We follow Section 29 — only store verification hashes, never raw biometric or demographic data." |
 

@@ -4,9 +4,10 @@
  * Server-side auth validation — HARDENED.
  * 1. Rate-limited (5 requests/min per IP)
  * 2. Demo mode: constant-time password comparison
- * 3. Real mode: JWT structure + expiry validation
+ * 3. Real mode: JWT structure + HMAC-SHA256 signature verification
  * 4. Never leaks account list or internal errors
  * 5. Logs all auth attempts for security monitoring
+ * 6. Sets HMAC-signed HttpOnly cookie (not forgeable via DevTools)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,6 +16,35 @@ import { authLimiter } from '@/lib/rateLimit';
 import { verifyDemoPassword, generateSessionToken } from '@/lib/auth/authUtils';
 import { registerSession } from '@/lib/auth/apiAuth';
 import { logSecurityEvent } from '@/lib/security/securityLogger';
+import { createHmac } from 'crypto';
+import { loginSchema } from '@/lib/validation/schemas';
+
+// ── HMAC Session Cookie ──────────────────────────────────────────
+// The cookie value is: base64url(HMAC-SHA256(payload, key)).payload
+// Middleware verifies the signature without a network call.
+const SESSION_KEY = process.env.SESSION_SIGNING_KEY || 'ts-dev-signing-key-change-in-prod-2026';
+const IS_PROD = process.env.NODE_ENV === 'production';
+
+function signSessionCookie(payload: string): string {
+  const sig = createHmac('sha256', SESSION_KEY).update(payload).digest('base64url');
+  return `${sig}.${payload}`;
+}
+
+function makeSessionCookieHeader(value: string, maxAge = 86400): string {
+  const flags = [
+    `ts_session=${value}`,
+    'Path=/',
+    `Max-Age=${maxAge}`,
+    'HttpOnly',
+    'SameSite=Strict',
+    ...(IS_PROD ? ['Secure'] : []),
+  ];
+  return flags.join('; ');
+}
+
+function clearSessionCookieHeader(): string {
+  return 'ts_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict';
+}
 
 const DEMO_ACCOUNTS: Record<string, { role: string; org: string; name: string }> = {
   'officer@morth.gov.in': { role: 'OFFICER', org: 'MinistryOrg', name: 'Rajesh Kumar' },
@@ -38,7 +68,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { token, email, password, role } = body;
+
+    // ── Input Validation (Zod) ─────────────────────────────────
+    const parsed = loginSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { valid: false, error: 'Invalid request body', details: parsed.error.issues.map(i => i.message) },
+        { status: 400 }
+      );
+    }
+    const { token, email, password, role } = parsed.data;
 
     // ── Demo Mode Validation ─────────────────────────────────────
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
@@ -104,16 +143,22 @@ export async function POST(request: NextRequest) {
 
       await logSecurityEvent('AUTH_LOGIN_SUCCESS', ip, { email });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         valid: true,
         user,
         token: session.token,
         expiresAt: session.expiresAt,
         auth_method: 'demo',
       });
+      // Set HMAC-signed HttpOnly cookie — cannot be forged via DevTools
+      const cookiePayload = JSON.stringify({ t: session.token, r: user.role, e: session.expiresAt });
+      response.headers.set('Set-Cookie', makeSessionCookieHeader(signSessionCookie(cookiePayload)));
+      return response;
     }
 
     // ── Real Mode: Validate Supabase JWT ─────────────────────────
+    // CRIT-2 FIX: Actually verify the JWT signature using HMAC-SHA256,
+    // not just decode the payload (which anyone can forge).
     if (!token) {
       return NextResponse.json({ valid: false, error: 'No token provided' }, { status: 401 });
     }
@@ -123,6 +168,28 @@ export async function POST(request: NextRequest) {
       if (parts.length !== 3) {
         await logSecurityEvent('AUTH_TOKEN_INVALID', ip, { message: 'Bad JWT structure' });
         return NextResponse.json({ valid: false, error: 'Invalid token' }, { status: 401 });
+      }
+
+      // ── Signature Verification (HMAC-SHA256) ──────────────────
+      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+      if (jwtSecret) {
+        const { createHmac, timingSafeEqual } = await import('crypto');
+        const signingInput = `${parts[0]}.${parts[1]}`;
+        const expectedSig = createHmac('sha256', jwtSecret)
+          .update(signingInput)
+          .digest('base64url');
+
+        // Constant-time comparison to prevent timing attacks
+        const actualSig = parts[2];
+        const expectedBuf = Buffer.from(expectedSig);
+        const actualBuf = Buffer.from(actualSig);
+        if (expectedBuf.length !== actualBuf.length || !timingSafeEqual(expectedBuf, actualBuf)) {
+          await logSecurityEvent('AUTH_TOKEN_INVALID', ip, { message: 'JWT signature mismatch' });
+          return NextResponse.json({ valid: false, error: 'Invalid token signature' }, { status: 401 });
+        }
+      } else {
+        // SUPABASE_JWT_SECRET not configured — log warning, fall back to structure-only
+        console.warn('[Security] SUPABASE_JWT_SECRET not set — JWT signature NOT verified (structure-only check)');
       }
 
       const payload = JSON.parse(atob(parts[1]));
@@ -135,7 +202,7 @@ export async function POST(request: NextRequest) {
 
       await logSecurityEvent('AUTH_LOGIN_SUCCESS', ip, { email: payload.email });
 
-      return NextResponse.json({
+      const jwtResponse = NextResponse.json({
         valid: true,
         user: {
           id: payload.sub,
@@ -145,6 +212,10 @@ export async function POST(request: NextRequest) {
         expiresAt: (payload.exp || 0) * 1000,
         auth_method: 'supabase',
       });
+      // Set HMAC-signed HttpOnly cookie for Supabase-authenticated users too
+      const jwtCookiePayload = JSON.stringify({ t: token.slice(-16), r: payload.role || 'OFFICER', e: (payload.exp || 0) * 1000 });
+      jwtResponse.headers.set('Set-Cookie', makeSessionCookieHeader(signSessionCookie(jwtCookiePayload)));
+      return jwtResponse;
     } catch {
       await logSecurityEvent('AUTH_TOKEN_INVALID', ip, { message: 'Decode failed' });
       return NextResponse.json({ valid: false, error: 'Invalid token' }, { status: 401 });
@@ -152,4 +223,11 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ valid: false, error: 'Invalid request' }, { status: 400 });
   }
+}
+
+/** DELETE /api/auth/validate — Clear the HMAC-signed session cookie on logout */
+export async function DELETE() {
+  const response = NextResponse.json({ success: true });
+  response.headers.set('Set-Cookie', clearSessionCookieHeader());
+  return response;
 }

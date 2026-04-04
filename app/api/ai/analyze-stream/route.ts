@@ -83,7 +83,7 @@ Use exact numbers. Show your working. Be specific.`;
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
         max_tokens: 1200,
         stream: true,
         system: TENDERSHIELD_CONSTITUTION + '\n\n' + STREAM_SYSTEM_PROMPT,

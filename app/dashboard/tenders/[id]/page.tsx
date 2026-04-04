@@ -228,7 +228,7 @@ export default function TenderDetailPage() {
                       <span style={{ fontWeight: 600, color: 'white', fontSize: '14px' }}>{bid.bidder_name || bid.company_name}</span>
                       {(bid.shell_company || bid.is_shell_company) && <span className="badge badge-danger">⚠️ Shell</span>}
                       {bid.is_winner_candidate && <span className="badge badge-success">👑 L1</span>}
-                      {bid.zkp_verified && <span className="badge badge-info">🔐 ZKP</span>}
+                      {bid.zkp_verified && <span className="badge badge-info">🔐 Sealed</span>}
                     </div>
                     <p style={{ fontSize: '11px', color: '#888' }}>GSTIN: {bid.gstin} · {(bid.submitted_at || '').slice(0, 19)}</p>
                     {bid.shell_evidence && <p style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>⚠️ {bid.shell_evidence}</p>}

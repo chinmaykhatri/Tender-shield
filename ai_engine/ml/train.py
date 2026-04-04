@@ -36,6 +36,49 @@ MODELS_DIR = Path(__file__).parent.parent / "models"
 MODELS_DIR.mkdir(exist_ok=True)
 
 
+def _load_gem_csv(csv_path: str) -> tuple:
+    """
+    Load a GeM-calibrated CSV into (X, y, fraud_types) format.
+    Maps CSV columns to FEATURE_NAMES vector.
+    """
+    import csv as csv_mod
+    X = []
+    y = []
+    fraud_types = []
+
+    with open(csv_path, 'r', encoding='utf-8') as f:
+        reader = csv_mod.DictReader(f)
+        for row in reader:
+            # Map CSV columns → feature vector (same order as FEATURE_NAMES)
+            features = [
+                float(row.get('num_bidders', 5)),
+                float(row.get('bid_cv_pct', 15)),
+                float(row.get('min_bid_time_gap_minutes', 120)),
+                float(row.get('min_company_age_months', 24)),
+                float(row.get('has_shared_director', 0)),
+                float(row.get('winning_bid_pct_of_estimate', 85)),
+                float(row.get('num_shell_companies', 0)),
+                float(row.get('spec_bias_score', 20)),
+                float(row.get('is_split_tender', 0)),
+                float(row.get('tender_value_lakh', 100)),
+                float(row.get('days_to_submission', 14)),
+                float(row.get('amendment_count', 0)),
+                float(row.get('past_fraud_complaints', 0)),
+            ]
+
+            # Pad or trim to match FEATURE_NAMES length
+            while len(features) < len(FEATURE_NAMES):
+                features.append(0.0)
+            features = features[:len(FEATURE_NAMES)]
+
+            X.append(features)
+            y.append(int(float(row.get('is_fraud', 0))))
+            fraud_types.append(row.get('fraud_type', 'unknown'))
+
+    return X, y, fraud_types
+
+
+
 def split_data(X: List[List[float]], y: List[int], test_ratio: float = 0.2, seed: int = 42):
     """Split dataset into train and test sets."""
     import random
@@ -113,20 +156,47 @@ def train_all():
     print("  TenderShield — ML Model Training Pipeline")
     print("=" * 70)
 
-    # ---- Step 1: Generate Dataset ----
-    print("\n📊 Step 1: Generating synthetic training data...")
-    start = time.time()
-    X, y, fraud_types = generate_dataset(
-        n_clean=1400, n_rigged=250, n_shell=200, n_timing=150, seed=42
-    )
-    gen_time = time.time() - start
+    # ---- Step 1: Load Dataset (prefer GeM-calibrated data) ----
+    gem_labeled_path = Path(__file__).parent.parent / "data" / "labeled_dataset.csv"
+    gem_raw_path = Path(__file__).parent.parent / "data" / "gem_real_data.csv"
+
+    if gem_labeled_path.exists():
+        print(f"\n📊 Step 1: Loading GeM-calibrated labeled dataset...")
+        print(f"  Source: {gem_labeled_path}")
+        start = time.time()
+        X, y, fraud_types = _load_gem_csv(str(gem_labeled_path))
+        gen_time = time.time() - start
+        data_source = "GeM-calibrated + CAG ground truth"
+    elif gem_raw_path.exists():
+        print(f"\n📊 Step 1: Found raw GeM data — running labeling pipeline...")
+        start = time.time()
+        # Label the raw data with our 5 detectors
+        try:
+            from ai_engine.data.label_with_detectors import label_dataset
+            labeled_path = label_dataset(str(gem_raw_path), str(gem_labeled_path))
+            X, y, fraud_types = _load_gem_csv(labeled_path)
+            data_source = "GeM-calibrated + detector proxy labels"
+        except Exception as e:
+            print(f"  ⚠️ Labeling failed ({e}), falling back to synthetic...")
+            X, y, fraud_types = generate_dataset(n_clean=1400, n_rigged=250, n_shell=200, n_timing=150, seed=42)
+            data_source = "synthetic"
+        gen_time = time.time() - start
+    else:
+        print("\n📊 Step 1: No GeM data found — generating synthetic training data...")
+        print("  💡 Run `python -m ai_engine.data.fetch_gem_data` for GeM-calibrated data")
+        start = time.time()
+        X, y, fraud_types = generate_dataset(n_clean=1400, n_rigged=250, n_shell=200, n_timing=150, seed=42)
+        gen_time = time.time() - start
+        data_source = "synthetic"
 
     total = len(X)
     fraud_count = sum(y)
+    print(f"  Data source: {data_source}")
     print(f"  Generated {total} samples in {gen_time:.1f}s")
     print(f"  Clean: {total - fraud_count} ({(total - fraud_count)/total*100:.1f}%)")
     print(f"  Fraud: {fraud_count} ({fraud_count/total*100:.1f}%)")
-    print(f"  Features: {len(X[0])} ({', '.join(FEATURE_NAMES)})")
+    if len(X) > 0:
+        print(f"  Features: {len(X[0])} ({', '.join(FEATURE_NAMES[:len(X[0])])})")
 
     # ---- Step 2: Split Data ----
     print("\n✂️  Step 2: Splitting data (80% train / 20% test)...")
@@ -252,7 +322,7 @@ def train_all():
     # ---- Step 5: Save Training Report ----
     print("\n📋 Step 5: Saving training report...")
     report = {
-        "pipeline_version": "1.1.0",
+        "pipeline_version": "2.0.0",
         "dataset": {
             "total_samples": total,
             "clean": total - fraud_count,
@@ -260,6 +330,7 @@ def train_all():
             "fraud_rate": round(fraud_count / total, 4),
             "features": FEATURE_NAMES,
             "generation_time_s": round(gen_time, 2),
+            "data_source": data_source,
         },
         "gradient_boosting": {
             "n_estimators": 50,

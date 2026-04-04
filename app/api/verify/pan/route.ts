@@ -1,12 +1,11 @@
 import { logger } from '@/lib/logger';
 // FILE: app/api/verify/pan/route.ts
 // PURPOSE: PAN verification with duplicate detection
-// DEMO MODE: Uses demo PAN database
+// DEMO MODE: Uses demo PAN database when API_SETU_KEY is not set
 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
-
 
 export async function POST(req: Request) {
   try {
@@ -81,6 +80,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
+      verification_mode: (isDemoMode || !hasApiKey) ? 'DEMO_MOCK' : 'REAL_API_SETU',
       data: {
         ...panData,
         is_duplicate: isDuplicate,

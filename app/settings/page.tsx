@@ -39,7 +39,7 @@ export default function SettingsPage() {
     { id: 'F11', name: 'Cartel Evolution Timeline', api: null, icon: '🕸️' },
     { id: 'F12', name: 'Predictive Fraud Prevention', api: 'anthropic', icon: '🔮' },
     { id: 'F13', name: 'Ministry Scorecard', api: null, icon: '🏛️' },
-    { id: 'F14', name: 'ZKP Verification Portal', api: null, icon: '🔐' },
+    { id: 'F14', name: 'Commitment Verification Portal', api: null, icon: '🔐' },
     { id: 'F15', name: 'RTI Citizen Portal', api: null, icon: '🇮🇳' },
     { id: 'F16', name: 'Mobile PWA', api: null, icon: '📲' },
     { id: 'F17', name: 'Hindi Language Support', api: null, icon: '🗣️' },

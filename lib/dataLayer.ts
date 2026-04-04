@@ -30,26 +30,15 @@ export interface DataResult<T> {
 }
 
 // ─────────────────────────────────────────
-// INTEGRITY HASH — Verifiable blockchain proof
+// INTEGRITY HASH — Real SHA-256 (not FNV-1a)
 // ─────────────────────────────────────────
-// SHA-256 style deterministic hash of tender data
-// Judges can ask "how is this TX hash computed?" → 
-// Answer: "Hash(tender_id | ministry | title | amount)"
+// Each demo tender TX hash is SHA-256(tender_id | ministry | title | amount)
+// This matches the production scheme where Fabric stores SHA-256 hashes.
+import { sha256Hex } from './zkp';
 
 function integrityHash(id: string, ministry: string, title: string, amount: number): string {
   const payload = `${id}|${ministry}|${title}|${amount}`;
-  let h = 0x811c9dc5; // FNV offset basis
-  for (let i = 0; i < payload.length; i++) {
-    h ^= payload.charCodeAt(i);
-    h = Math.imul(h, 0x01000193); // FNV prime
-  }
-  // Expand to 64-char hex (like a real TX hash)
-  let result = '0x';
-  for (let i = 0; i < 8; i++) {
-    const segment = Math.abs(Math.imul(h, 0x45d9f3b + i * 0x1337) >>> 0).toString(16).padStart(8, '0');
-    result += segment;
-  }
-  return result.slice(0, 66);
+  return '0x' + sha256Hex(payload);
 }
 
 // ─────────────────────────────────────────
@@ -394,12 +383,7 @@ const DEMO_AUDIT_TRAIL = [
 // ─────────────────────────────────────────
 
 /**
- * fetchWithFallback — The heart of the smart data layer.
- *
- * Priority order:
- * 1. Try real Supabase data — if rows exist, use them exclusively
-/**
- * Try fetching from the backend proxy first.
+ * fetchFromBackend — Try the backend proxy first.
  * Falls back to null if backend is offline (expected in demo).
  */
 async function fetchFromBackend<T>(path: string): Promise<T[] | null> {
@@ -471,9 +455,7 @@ async function fetchWithFallback<T>(
 // ─────────────────────────────────────────
 
 export async function getTenders(filters?: { status?: string; ministry?: string; limit?: number }) {
-  let query = supabase.from('tenders').select('*').order('created_at', { ascending: false }) as unknown as Promise<{ data: (typeof DEMO_TENDERS[0])[] | null; error: { message: string } | null }>;
-
-  // Apply filters — note: we can't chain .eq() on the typed version, so we use a slightly different pattern
+  // Apply filters
   const runQuery = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q: any = supabase.from('tenders').select('*').order('created_at', { ascending: false });

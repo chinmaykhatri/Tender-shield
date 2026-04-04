@@ -26,7 +26,7 @@ const MOCK_DATA = {
     { message: 'Bid analyzed — NH-44 Highway Expansion', time_ago: '23 seconds ago', type: 'info' },
     { message: 'Shell company flagged — BioMed Corp (GSTIN mismatch)', time_ago: '2 minutes ago', type: 'warning' },
     { message: 'Tender frozen — AIIMS Delhi Equipment (Risk: 94)', time_ago: '47 minutes ago', type: 'danger' },
-    { message: 'ZKP commitment verified — PM SHRI Schools tender', time_ago: '1 hour ago', type: 'success' },
+    { message: 'Sealed bid commitment verified — PM SHRI Schools tender', time_ago: '1 hour ago', type: 'success' },
     { message: 'Cartel rotation detected — 3 companies flagged', time_ago: '2 hours ago', type: 'warning' },
     { message: 'Bid analyzed — Mumbai Metro Phase 4', time_ago: '3 hours ago', type: 'info' },
     { message: 'Blockchain TX confirmed — Block #1337', time_ago: '3 hours ago', type: 'success' },

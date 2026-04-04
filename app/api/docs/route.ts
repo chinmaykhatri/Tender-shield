@@ -34,8 +34,8 @@ export async function GET() {
         { method: 'POST', path: '/api/v1/tenders', auth: true, description: 'Create new tender (OFFICER role)', roles: ['OFFICER'] },
       ],
       bids: [
-        { method: 'POST', path: '/api/v1/bids/commit', auth: true, description: 'Commit encrypted bid (ZKP)' },
-        { method: 'POST', path: '/api/v1/bids/generate-commitment', auth: true, description: 'Generate ZKP commitment hash' },
+        { method: 'POST', path: '/api/v1/bids/commit', auth: true, description: 'Commit sealed bid (SHA-256 commitment)' },
+        { method: 'POST', path: '/api/v1/bids/generate-commitment', auth: true, description: 'Generate SHA-256 bid commitment (client-side)' },
         { method: 'GET', path: '/api/v1/bids/tender/:tenderId', auth: true, description: 'Get bids for tender' },
       ],
       ai: [

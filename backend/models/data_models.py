@@ -435,7 +435,7 @@ class TenderRecord(BaseModel):
 class BidRecord(BaseModel):
     """
     Bid record stored on Hyperledger Fabric ledger.
-    Implements ZKP commit-reveal scheme using Pedersen Commitments.
+    Implements ZKP commit-reveal scheme using SHA-256 Hash Commitments.
 
     Phase 1 (COMMITTED): Only commitment_hash and zkp_proof are stored.
     Phase 2 (REVEALED): revealed_amount_paise is added after deadline.
@@ -473,7 +473,7 @@ class BidRecord(BaseModel):
     )
     commitment_hash: str = Field(
         ...,
-        description="ZKP Phase 1: Pedersen commitment hash of the bid amount"
+        description="ZKP Phase 1: SHA-256 hash commitment of the bid amount"
     )
     zkp_proof: str = Field(
         ...,

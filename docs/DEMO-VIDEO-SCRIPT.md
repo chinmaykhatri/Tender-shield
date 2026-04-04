@@ -50,11 +50,11 @@
 
 ---
 
-## ZKP SEALED BIDS (0:50 — 1:00)
+## SEALED BIDS (0:50 — 1:00)
 
-**[SCREEN: Navigate to ZKP Bids → Show Pedersen commitment → Submit → Verify]**
+**[SCREEN: Navigate to Sealed Bids → Show SHA-256 sealed commitment → Submit → Verify]**
 
-> *"Bidders submit sealed bids using real Pedersen commitments on secp256k1. The commitment hides the amount but binds the bidder. When revealed, the ZKP proof verifies integrity."*
+> *"Bidders submit sealed bids using SHA-256 hash commitments. The commitment hides the amount but binds the bidder. When revealed, the verifier recomputes the hash to prove integrity."*
 
 ---
 
@@ -103,7 +103,7 @@
 | 2 | Dashboard (stats + blockchain feed) | 0:15 |
 | 3 | Create Tender form | 0:25 |
 | 4 | AI Monitor (fraud detection) | 0:35 |
-| 5 | ZKP Bids (Pedersen commitment) | 0:50 |
+| 5 | Sealed Bids (SHA-256 sealed commitment) | 0:50 |
 | 6 | Blockchain Explorer | 1:00 |
 | 7 | CAG Auditor Dashboard | 1:10 |
 | 8 | Architecture page → Logo | 1:20 |

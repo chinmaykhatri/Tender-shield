@@ -1,4 +1,3 @@
-import { logger } from '@/lib/logger';
 // FILE: app/api/ai/judge-simulator/route.ts
 // SECURITY: SERVER ONLY
 // API KEYS USED: ANTHROPIC_API_KEY
@@ -6,6 +5,7 @@ import { logger } from '@/lib/logger';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
+import { logger } from '@/lib/logger';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -15,7 +15,7 @@ const JUDGE_SYSTEM_PROMPT = `You are a panel of 3 expert judges evaluating Tende
 JUDGE 1 — Dr. Arjun Sharma (Technical Expert)
 Role: Professor of Distributed Systems, IIT Bombay
 Personality: Skeptical, precise, challenges every unsupported claim
-Asks about: Hyperledger Fabric internals, ZKP mathematics (Pedersen Commitments), consensus mechanisms, Byzantine fault tolerance, network topology, TPS numbers, scalability to 200,000 tenders/year
+Asks about: Hyperledger Fabric internals, Sealed Bid Commitment mathematics (SHA-256 hash commitments, Fiat-Shamir), consensus mechanisms, Byzantine fault tolerance, network topology, TPS numbers, scalability to 200,000 tenders/year
 Style: Direct. Asks immediate follow-up when an answer is vague. 
 Example: "You said 'blockchain is tamper-proof' — but explain exactly HOW. What happens if 2 of 4 organizations collude?"
 ────────────────────────────────────────────
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   if (!ANTHROPIC_KEY) {
     // Demo response for when API key not set
     return NextResponse.json({
-      response: `DR. ARJUN SHARMA (IIT Bombay) EVALUATES:\nScore: 7/10\nStrong: Good explanation of the ZKP commitment scheme concept.\nMissing: You didn't mention the specific Pedersen Commitment formulation used.\n\n═══════════════════════════════════════\nMS. PRIYA GUPTA (MeitY) asks: Under GFR Rule 144, minimum bid submission window for open tenders above ₹25 lakh is 21 days. How does TenderShield technically enforce this? What happens if a Ministry Officer tries to publish a tender with a 7-day window?`,
+      response: `DR. ARJUN SHARMA (IIT Bombay) EVALUATES:\nScore: 7/10\nStrong: Good explanation of the sealed bid commitment scheme concept.\nMissing: You didn't mention the specific SHA-256 hash commitment formulation used (C = SHA-256(amount || randomness)).\n\n═══════════════════════════════════════\nMS. PRIYA GUPTA (MeitY) asks: Under GFR Rule 144, minimum bid submission window for open tenders above ₹25 lakh is 21 days. How does TenderShield technically enforce this? What happens if a Ministry Officer tries to publish a tender with a 7-day window?`,
       session_id: 'demo-session',
     });
   }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
         max_tokens: 600,
         system: TENDERSHIELD_CONSTITUTION + '\n\n' + JUDGE_SYSTEM_PROMPT,
         messages: conversationMessages,

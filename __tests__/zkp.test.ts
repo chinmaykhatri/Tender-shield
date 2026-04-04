@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-describe('ZKP: Pedersen Commitments', () => {
+describe('ZKP: SHA-256 Commitments', () => {
   it('creates valid commitment and verifies it', async () => {
     const { createPedersenCommitment, verifyPedersenCommitment } = await import('../lib/zkp');
 

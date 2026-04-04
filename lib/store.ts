@@ -2,6 +2,12 @@
  * TenderShield — Auth Store (Zustand) — SECURITY HARDENED
  * Global authentication state with session expiry.
  * Sessions auto-expire after 24 hours.
+ *
+ * AUTH COOKIE ARCHITECTURE:
+ * - HttpOnly + Secure + SameSite=Strict cookie set by /api/auth/validate (server-side)
+ * - Cookie value is HMAC-SHA256 signed — cannot be forged via DevTools
+ * - Middleware verifies HMAC signature on every request
+ * - Client-side stores token in localStorage for API calls only
  */
 
 import { create } from 'zustand';
@@ -46,9 +52,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem('ts_user', JSON.stringify(user));
       const expiry = expiresAt || Date.now() + 24 * 60 * 60 * 1000; // 24h default
       localStorage.setItem('ts_expires', String(expiry));
-      // Set cookies for middleware role validation (server-side can't read localStorage)
-      document.cookie = `ts_authenticated=true;path=/;max-age=86400;SameSite=Lax`;
-      document.cookie = `ts_user_role=${role};path=/;max-age=86400;SameSite=Lax`;
+      // NOTE: Auth cookie (ts_session) is set server-side by /api/auth/validate
+      // via Set-Cookie header (HttpOnly + HMAC-signed). No client-side cookie writes.
       set({ token, user, isAuthenticated: true, authMethod: 'demo', sessionExpiresAt: expiry });
     } else {
       set({ token, isAuthenticated: true });
@@ -65,9 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem('ts_token');
       localStorage.removeItem('ts_user');
       localStorage.removeItem('ts_expires');
-      // Clear auth cookies
-      document.cookie = `ts_authenticated=;path=/;max-age=0`;
-      document.cookie = `ts_user_role=;path=/;max-age=0`;
+      // Clear the server-set HttpOnly cookie via logout API call
+      fetch('/api/auth/validate', { method: 'DELETE' }).catch(() => {});
     }
     set({ token: null, user: null, isAuthenticated: false, serverValidated: false, authMethod: null, sessionExpiresAt: null });
   },

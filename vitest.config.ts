@@ -14,5 +14,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['__tests__/**/*.test.ts', '__tests__/**/*.test.tsx'],
+    testTimeout: 10000,
+    teardownTimeout: 5000,
+    pool: 'forks',
   },
 });

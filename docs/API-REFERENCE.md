@@ -107,10 +107,10 @@ Invoke Hyperledger Fabric chaincode directly.
 
 ---
 
-## 4. ZKP Endpoints
+## 4. Sealed Bid Commitment Endpoints
 
 ### POST `/api/zkp/commit`
-Create a Pedersen commitment for a bid.
+Create a SHA-256 sealed commitment for a bid.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -131,7 +131,7 @@ Create a Pedersen commitment for a bid.
 Reveal a committed bid after deadline.
 
 ### POST `/api/zkp/verify`
-Verify a ZKP proof.
+Verify a sealed bid commitment proof.
 
 ---
 

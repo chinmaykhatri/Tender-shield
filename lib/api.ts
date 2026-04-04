@@ -64,12 +64,19 @@ export async function getTenders(token: string, status?: string) {
 
 // ========== Bids (used by bids page) ==========
 
-export async function generateCommitment(token: string, amountPaise: number) {
-  const res = await fetch(`${API_BASE}/bids/generate-commitment?amount_paise=${amountPaise}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json();
+export async function generateCommitment(_token: string, amountPaise: number) {
+  // Client-side SHA-256 commitment via lib/zkp.ts — no server round-trip needed.
+  // The deleted API route used a toy 64-bit modPow "Pedersen" that contradicted
+  // the real SHA-256 scheme in lib/zkp.ts. Now we use the single honest implementation.
+  const { createBidCommitment } = await import('@/lib/zkp');
+  const result = createBidCommitment(amountPaise);
+  return {
+    commitment: result.commitment,
+    blinding_factor: result.blinding_factor,
+    amount_paise: result.amount_paise,
+    scheme: result.scheme,
+    params: result.params,
+  };
 }
 
 export async function commitBid(token: string, data: Record<string, unknown>) {

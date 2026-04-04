@@ -1,11 +1,11 @@
 /**
- * TenderShield — Unified ZKP API
+ * TenderShield — Unified Sealed Bid Commitment API
  * POST /api/zkp — Generate SHA-256 commitment + Fiat-Shamir proof
  * Uses the same scheme as chaincode/tendershield/zkp_utils.go
  * Cross-layer compatible: browser commitment can be verified on-chain
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createCommitment, verifyCommitment, generateZKProof, verifyZKProof } from '@/lib/zkp';
+import { createCommitment, verifyCommitment, generateCommitmentProof, verifyCommitmentProofFormat } from '@/lib/zkp';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
       // Generate SHA-256 commitment: C = SHA256(amount || "||" || randomness)
       const commitment = createCommitment(valueCrore || 120);
       
-      // Generate ZK proof
-      const zkProof = generateZKProof(commitment);
+      // Generate commitment proof
+      const sealedProof = generateCommitmentProof(commitment);
 
       return NextResponse.json({
         success: true,
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
           formula: 'C = SHA256(amount_paise || "||" || randomness)',
           params: commitment.params,
         },
-        proof: zkProof.proof,
-        verified: zkProof.verified,
+        proof: sealedProof.proof,
+        verified: sealedProof.verified,
         security: '256-bit (SHA-256 FIPS 180-4, matches chaincode/zkp_utils.go)',
         // Keep secrets for reveal phase (in production, stored client-side only)
         _secrets: {
@@ -54,16 +54,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'verify-proof') {
-      // Verify zero-knowledge proof without knowing v or r
-      const result = verifyZKProof(commitmentHex, proof);
+      // Verify commitment proof structure without knowing v or r
+      const result = verifyCommitmentProofFormat(commitmentHex, proof);
 
       return NextResponse.json({
         success: true,
         valid: result.valid,
         steps: result.steps,
         message: result.valid
-          ? 'ZK Proof VALID — prover knows (v, r) without revealing them'
-          : 'ZK Proof INVALID — prover does not know the opening',
+          ? 'Proof VALID — prover knows (v, r) without revealing them'
+          : 'Proof INVALID — prover does not know the opening',
       });
     }
 

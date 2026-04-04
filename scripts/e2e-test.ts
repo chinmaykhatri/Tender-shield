@@ -6,7 +6,7 @@
  *   1. Login → Dashboard
  *   2. Create Tender → Supabase + AI Analysis + Blockchain
  *   3. Statistical Fraud Detection → 5 detectors run
- *   4. ZKP Bid → Pedersen commitment + verification
+ *   4. ZKP Bid → SHA-256 commitment + verification
  *   5. Blockchain Explorer → Real blocks visible
  *   6. Audit Trail → Events recorded
  * 
@@ -125,10 +125,10 @@ async function main() {
   });
 
   // ═══════════════════════════════════════════
-  // Test 4: ZKP — Pedersen Commitment
+  // Test 4: ZKP — SHA-256 Commitment
   // ═══════════════════════════════════════════
   let zkpCommitment: any = null;
-  await runTest('4. ZKP Commit — Pedersen Commitment (C = g^v · h^r mod p)', async () => {
+  await runTest('4. ZKP Commit — SHA-256 Commitment (C = SHA-256(v || r))', async () => {
     const res = await fetch(`${BASE}/api/zkp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

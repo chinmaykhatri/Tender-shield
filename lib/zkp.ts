@@ -107,7 +107,7 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 /** SHA-256 hash of a string — synchronous, no crypto.subtle */
-function sha256Hex(input: string): string {
+export function sha256Hex(input: string): string {
   return bytesToHex(sha256Sync(stringToBytes(input)));
 }
 
@@ -285,11 +285,14 @@ export function generateCommitmentProof(commitment: HashCommitment): CommitmentP
 export const generateZKProof = generateCommitmentProof;
 
 /**
- * Verify a commitment proof without knowing amount or randomness.
- * HONEST: This verifies challenge derivation and format only.
- * Full verification requires the REVEAL phase (verifyCommitment with opened values).
+ * Verify commitment proof STRUCTURE and Fiat-Shamir challenge derivation.
+ * HONEST LIMITATION: This verifies that:
+ *   - The challenge was correctly derived via Fiat-Shamir (e = SHA-256(C || A))
+ *   - The commitment and responses are valid 256-bit hex strings
+ * It does NOT verify knowledge of the opening (amount, randomness).
+ * Full verification requires the REVEAL phase (verifyBidCommitment with opened values).
  */
-export function verifyCommitmentProof(
+export function verifyCommitmentProofFormat(
   commitmentHex: string,
   proof: { A: string; challenge: string; response_v: string; response_r: string }
 ): { valid: boolean; steps: string[] } {
@@ -318,14 +321,16 @@ export function verifyCommitmentProof(
     return { valid: false, steps };
   }
   steps.push('✅ Response format valid');
-  steps.push('✅ Commitment proof VALID — challenge-response verified');
+  steps.push('✅ Proof STRUCTURE valid — challenge-response format verified');
   steps.push('ℹ️  Full knowledge proof completes at REVEAL phase (bidder opens amount + randomness)');
 
   return { valid: true, steps };
 }
 
-/** @deprecated Use verifyCommitmentProof — renamed for accuracy */
-export const verifyZKProof = verifyCommitmentProof;
+/** @deprecated Use verifyCommitmentProofFormat */
+export const verifyCommitmentProof = verifyCommitmentProofFormat;
+/** @deprecated Use verifyCommitmentProofFormat */
+export const verifyZKProof = verifyCommitmentProofFormat;
 
 // ═══════════════════════════════════════════════
 // Consumer APIs — Honest Naming

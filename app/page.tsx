@@ -16,7 +16,7 @@ import NetworkHero from '@/components/NetworkHero';
 
 const DEMO_CREDENTIALS = [
   { role: 'MINISTRY_OFFICER', org: 'MinistryOrg', icon: '🏛️', label: 'Ministry Officer', name: 'Rajesh Kumar Sharma', email: 'officer@morth.gov.in', color: '#6366f1', desc: 'Create & manage tenders' },
-  { role: 'BIDDER', org: 'BidderOrg', icon: '🏢', label: 'Company Bidder', name: 'Priya Sharma', email: 'medtech@medtechsolutions.com', color: '#22c55e', desc: 'Submit encrypted bids' },
+  { role: 'BIDDER', org: 'BidderOrg', icon: '🏢', label: 'Company Bidder', name: 'Priya Sharma', email: 'medtech@medtechsolutions.com', color: '#22c55e', desc: 'Submit sealed bids' },
   { role: 'CAG_AUDITOR', org: 'AuditorOrg', icon: '🔍', label: 'CAG Auditor', name: 'Vikram Singh', email: 'auditor@cag.gov.in', color: '#f59e0b', desc: 'Monitor fraud & audit' },
 ];
 
@@ -29,9 +29,9 @@ interface LiveCounter {
 }
 
 const LIVE_COUNTERS: LiveCounter[] = [
-  { icon: '⛓', target: 1847, label: 'blockchain transactions', suffix: '' },
-  { icon: '₹', target: 238.5, label: 'fraud prevented', suffix: ' Cr', decimal: true },
-  { icon: '📋', target: 47, label: 'active tenders', suffix: '' },
+  { icon: '⛓', target: 1847, label: 'blockchain events (demo)', suffix: '' },
+  { icon: '₹', target: 238.5, label: 'fraud flagged (simulated)', suffix: ' Cr', decimal: true },
+  { icon: '📋', target: 47, label: 'demo tenders loaded', suffix: '' },
 ];
 const DEMO_EMAILS = ['officer@morth.gov.in', 'medtech@medtechsolutions.com', 'auditor@cag.gov.in'];
 
@@ -253,10 +253,10 @@ export default function LoginPage() {
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 1.2s', position: 'relative', zIndex: 2, marginTop: '16px' }}>
           {[
             { icon: '🐳', text: 'Docker Containerized' },
-            { icon: '🧪', text: '9 Test Suites Passing' },
-            { icon: '🔒', text: 'Constitutional AI Safety' },
-            { icon: '📜', text: 'GFR 2017 Compliant' },
-            { icon: '🏗️', text: 'NIC-Ready Architecture' },
+            { icon: '🧪', text: 'Vitest + Pytest Tested' },
+            { icon: '🔒', text: 'SHA-256 Sealed Bids' },
+            { icon: '📜', text: 'GFR 2017 Aligned' },
+            { icon: '🏗️', text: 'Hyperledger Fabric Ready' },
           ].map((badge, i) => (
             <span key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',

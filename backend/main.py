@@ -107,9 +107,9 @@ app = FastAPI(
     title="TenderShield API",
     description=(
         "🏛️ India's First AI-Secured, Blockchain-Based Government Procurement System.\n\n"
-        "**Powered by:** Hyperledger Fabric + ZKP (Pedersen Commitments) + AI Fraud Detection\n\n"
+        "**Powered by:** Hyperledger Fabric + ZKP (SHA-256 Hash Commitments) + AI Fraud Detection\n\n"
         "## Key Features\n"
-        "- **Zero-Knowledge Proof bidding** — bid amounts encrypted until reveal deadline\n"
+        "- **Sealed bid commitments** — bid amounts locked via SHA-256 hash until reveal deadline\n"
         "- **GFR 2017 compliance** — enforced at blockchain chaincode level\n"
         "- **5 AI fraud detectors** — bid rigging, collusion, shell companies, cartels, timing anomalies\n"
         "- **4-org blockchain** — MinistryOrg, BidderOrg, AuditorOrg (CAG), NICOrg\n\n"

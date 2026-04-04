@@ -334,7 +334,7 @@ def run_demo():
     print()
     print(f"  {WHITE}🏗️ Architecture:{RESET}")
     print(f"     Blockchain:   Hyperledger Fabric 2.5 (4 orgs, Raft consensus)")
-    print(f"     Chaincode:    13 Go functions, ZKP Pedersen commitments")
+    print(f"     Chaincode:    13 Go functions, SHA-256 sealed bid commitments")
     print(f"     Backend:      FastAPI (22 endpoints, JWT auth)")
     print(f"     AI Engine:    5 fraud detectors, composite risk scoring")
     print(f"     Frontend:     Next.js 14 (5 dashboard pages)")

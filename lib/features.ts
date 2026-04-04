@@ -13,7 +13,7 @@ const HIDE = process.env.NEXT_PUBLIC_HIDE_INCOMPLETE === 'true';
  * Set NEXT_PUBLIC_HIDE_INCOMPLETE=true in production to show only complete pages.
  */
 export const FEATURES = {
-  // COMPLETE — always visible
+  // COMPLETE — always visible (these 10 pages must be flawless)
   DASHBOARD: true,
   TENDERS: true,
   CREATE_TENDER: true,
@@ -37,6 +37,11 @@ export const FEATURES = {
   FINANCIAL_TRAIL: !HIDE,
   POLICY_PAGE: !HIDE,
   ROADMAP: !HIDE,
+  OFFICERS: !HIDE,
+  SETTINGS: !HIDE,
+  IMPACT: !HIDE,
+  MINISTRY_SCORES: !HIDE,
+  PRACTICE: !HIDE,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

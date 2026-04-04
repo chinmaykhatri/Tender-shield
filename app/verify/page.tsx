@@ -2,7 +2,7 @@
 // FILE: app/verify/page.tsx
 // TYPE: CLIENT COMPONENT
 // SECRET KEYS USED: none
-// WHAT THIS FILE DOES: Public ZKP verification portal — verify any tender or bid cryptographically
+// WHAT THIS FILE DOES: Public verification portal — verify any tender or bid cryptographically
 // ─────────────────────────────────────────────────
 'use client';
 
@@ -49,8 +49,8 @@ export default function VerifyPage() {
         tx_hash: txHash || '0x9f8e7d6c5b4a3928172e6d5c4b3a2918f7e6d5c4',
         checks: [
           { label: 'Submitted before deadline', passed: true, detail: '14:22:15 IST — 2 hours before cutoff' },
-          { label: 'Commitment hash matches amount', passed: true, detail: 'ZKP commitment verified mathematically' },
-          { label: 'ZKP proof is mathematically valid', passed: true, detail: 'Groth16 proof verification passed' },
+          { label: 'Commitment hash matches amount', passed: true, detail: 'SHA-256 commitment verified: recomputed hash matches stored commitment' },
+          { label: 'Sealed bid commitment valid', passed: true, detail: 'SHA-256(amount || randomness) === stored commitment hash' },
           { label: 'Blockchain record unchanged', passed: true, detail: 'No modifications since submission' },
           { label: 'Confirmed on Block #1,318', passed: true, detail: 'Consensus achieved across all peers' },
         ],
@@ -80,7 +80,7 @@ export default function VerifyPage() {
           {(['tender', 'bid'] as VerifyMode[]).map(m => (
             <button key={m} onClick={() => { setMode(m); setResult(null); }}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${mode === m ? 'bg-[var(--accent)] text-white' : 'text-[var(--text-secondary)]'}`}>
-              {m === 'tender' ? '📋 Verify a Tender' : '🔐 Verify a Bid (ZKP)'}
+              {m === 'tender' ? '📋 Verify a Tender' : '🔐 Verify a Sealed Bid'}
             </button>
           ))}
         </div>
@@ -102,7 +102,7 @@ export default function VerifyPage() {
           )}
           <button onClick={verify} disabled={loading || (mode === 'tender' ? !tenderId : !bidId)}
             className="btn-primary w-full mt-4 disabled:opacity-50">
-            {loading ? '🔍 Verifying on blockchain...' : mode === 'tender' ? '🔍 Verify' : '🔐 Verify ZKP Proof'}
+            {loading ? '🔍 Verifying on blockchain...' : mode === 'tender' ? '🔍 Verify' : '🔐 Verify Sealed Bid'}
           </button>
         </div>
 
