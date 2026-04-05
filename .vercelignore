@@ -1,0 +1,52 @@
+# ============================================
+# TenderShield — Vercel Ignore
+# Exclude non-frontend files from Vercel deployment
+# ============================================
+
+# Python backend (deployed separately)
+backend/
+ai_engine/
+*.py
+requirements*.txt
+alembic.ini
+pyrightconfig.json
+pytest.ini
+.venv/
+.pytest_cache/
+__pycache__/
+
+# Docker (not used on Vercel)
+Dockerfile
+Dockerfile.*
+docker-compose*.yml
+docker-data/
+.dockerignore
+deploy-vps.sh
+
+# Hyperledger Fabric network
+network/
+fabric-config/
+fabric-crypto/
+fabric-samples/
+chaincode/
+
+# Monitoring
+monitoring/
+
+# Tests (run in CI, not during Vercel build)
+__tests__/
+tests/
+e2e/
+coverage/
+
+# Documentation
+docs/
+CONTRIBUTING.md
+CHANGELOG.md
+DEMO-SCRIPT.md
+
+# Misc
+*.db
+*.log
+temp_frontend_log.txt
+supabase-migration.sql

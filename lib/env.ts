@@ -80,7 +80,10 @@ export function assertEnvironment(): void {
     ].join('\n');
 
     if (process.env.NODE_ENV === 'production') {
-      throw new Error(message);
+      // Vercel: env vars are injected at runtime, may not be present at build time.
+      // Warn instead of throwing to avoid breaking `next build`.
+      // eslint-disable-next-line no-console
+      console.error(message);
     } else {
       // eslint-disable-next-line no-console
       console.warn(message);

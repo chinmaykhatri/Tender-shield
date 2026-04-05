@@ -108,7 +108,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Check role mismatch (prevent DevTools spoofing)
-      if (role && role !== account.role) {
+      // Normalize role aliases: CAG_AUDITOR → AUDITOR, MINISTRY_OFFICER → OFFICER
+      const normalizedRole = role === 'CAG_AUDITOR' ? 'AUDITOR' : role === 'MINISTRY_OFFICER' ? 'OFFICER' : role;
+      if (normalizedRole && normalizedRole !== account.role) {
         await logSecurityEvent('AUTH_ROLE_MISMATCH', ip, {
           email,
           message: `Claimed ${role}, expected ${account.role}`,

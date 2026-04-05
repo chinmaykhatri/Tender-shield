@@ -117,8 +117,8 @@ export async function middleware(req: NextRequest) {
     'Permissions-Policy',
     'camera=(), microphone=(self), geolocation=()'
   );
-  // Generate CSP nonce for this request
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  // Generate CSP nonce for this request (Edge Runtime — no Buffer available)
+  const nonce = btoa(crypto.randomUUID());
   res.headers.set('X-CSP-Nonce', nonce);
 
   // Only apply strict CSP in production; in dev mode Next.js needs eval for HMR
@@ -303,7 +303,7 @@ export async function middleware(req: NextRequest) {
         let accessToken = '';
         try {
           // Supabase stores an array [access_token, refresh_token] as base64
-          const parsed = JSON.parse(Buffer.from(tokenValue, 'base64').toString());
+          const parsed = JSON.parse(atob(tokenValue));
           accessToken = Array.isArray(parsed) ? parsed[0] : parsed.access_token || parsed;
         } catch {
           // If not base64 encoded, try direct

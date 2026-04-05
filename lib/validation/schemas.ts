@@ -15,10 +15,10 @@ import { z } from 'zod';
 // ── Auth ──────────────────────────────────────────────────────────
 
 export const loginSchema = z.object({
-  email: z.string().email('Invalid email format').max(255),
-  password: z.string().min(1, 'Password required').max(128),
+  email: z.string().max(255).optional().default(''),
+  password: z.string().max(128).optional(),
   token: z.string().optional(),
-  role: z.enum(['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN', 'CAG_AUDITOR']).optional(),
+  role: z.enum(['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN', 'CAG_AUDITOR', 'MINISTRY_OFFICER']).optional(),
 });
 
 // ── Bid Commitment ────────────────────────────────────────────────

@@ -16,6 +16,10 @@ import { extractFeatures } from '@/lib/ml/dataset';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Vercel: force Node.js runtime (not Edge) — this route uses fs
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Load TS Random Forest model + metrics at startup
 let modelData: any = null;
 let metricsData: any = null;
