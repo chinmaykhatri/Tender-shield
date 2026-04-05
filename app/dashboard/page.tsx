@@ -169,12 +169,12 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Ministry Breakdown</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {stats.ministry_breakdown.map((m: MinistryBreakdown, i: number) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <div key={i} style={{ minHeight: '28px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                       <span style={{ fontSize: '13px', color: '#ccc' }}>{m.ministry}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: m.color }}>₹{m.value_crore} Cr</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: m.color, whiteSpace: 'nowrap' }}>₹{m.value_crore} Cr</span>
                     </div>
                     <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.04)' }}>
                       <div style={{ height: '100%', borderRadius: '2px', width: `${(m.value_crore / 500) * 100}%`, background: m.ministry === 'MoH' ? '#ef4444' : '#FF9933', transition: 'width 1s ease' }} />
@@ -186,11 +186,11 @@ export default function DashboardPage() {
 
             <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Risk Distribution</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {(stats.risk_distribution || []).map((r: RiskDistribution, i: number) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '13px', color: '#ccc' }}>{r.level}</span>
+                  <div key={i} style={{ minHeight: '32px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '13px', color: '#ccc', fontWeight: 500 }}>{r.level}</span>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: r.color }}>{r.count}</span>
                     </div>
                     <div className="risk-meter"><div className="risk-meter-fill" style={{ width: `${(r.count / 47) * 100}%`, background: r.color }} /></div>

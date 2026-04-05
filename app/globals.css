@@ -210,11 +210,12 @@ body {
 
 /* ========= Risk Meter ========= */
 .risk-meter {
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   background: var(--bg-secondary);
   overflow: hidden;
   position: relative;
+  flex-shrink: 0;
 }
 .risk-meter-fill {
   height: 100%;
