@@ -199,7 +199,7 @@
     "numFeatures": 4,
     "trainingSize": 1600,
     "oobScore": 0.999375,
-    "trainedAt": "2026-03-27T21:49:26.454Z",
+    "trainedAt": "2026-04-07T21:17:33.531Z",
     "datasetInfo": {
       "totalSamples": 2000,
       "trainSamples": 1600,

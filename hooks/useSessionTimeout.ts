@@ -17,11 +17,17 @@ export function useSessionTimeout() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const warningRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Stable refs — prevent re-render loops from router/logout identity changes
+  const routerRef = useRef(router);
+  const logoutRef = useRef(logout);
+  useEffect(() => { routerRef.current = router; }, [router]);
+  useEffect(() => { logoutRef.current = logout; }, [logout]);
+
   const handleLogout = useCallback((reason: string) => {
     // Session ended — silent logout
-    logout();
-    router.push('/?reason=' + encodeURIComponent(reason));
-  }, [logout, router]);
+    logoutRef.current();
+    routerRef.current.push('/?reason=' + encodeURIComponent(reason));
+  }, []);
 
   const resetTimer = useCallback(() => {
     clearTimeout(timeoutRef.current);

@@ -272,7 +272,7 @@ export async function middleware(req: NextRequest) {
     
     // Role-gated routes: auditor dashboard requires CAG_AUDITOR role
     const ROLE_ROUTES: Record<string, string[]> = {
-      '/dashboard/auditor': ['CAG_AUDITOR'],
+      '/dashboard/auditor': ['CAG_AUDITOR', 'AUDITOR'],
       '/dashboard/admin': ['ADMIN'],
     };
     

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
@@ -70,29 +70,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Stable refs to avoid re-render loops
+  const routerRef = useRef(router);
+  const checkSessionRef = useRef(checkSessionExpiry);
+  useEffect(() => { routerRef.current = router; }, [router]);
+  useEffect(() => { checkSessionRef.current = checkSessionExpiry; }, [checkSessionExpiry]);
+
   useEffect(() => { setMounted(true); }, []);
 
   // ────────────────────────────────────────────────
   // AUTH GUARD: Wait for hydration, then check auth
-  // This prevents the black-screen redirect loop
+  // Uses refs to avoid dependency-triggered infinite loops
   // ────────────────────────────────────────────────
   useEffect(() => {
     if (!mounted) return;
     // Check session expiry
-    checkSessionExpiry();
+    checkSessionRef.current();
     // If not authenticated after hydration, redirect to login
     if (!isAuthenticated) {
-      router.push('/?message=login_required');
+      routerRef.current.push('/?message=login_required');
     }
-  }, [mounted, isAuthenticated, router, checkSessionExpiry]);
+  }, [mounted, isAuthenticated]);
 
   // Close sidebar on navigation (must be before early return — Rules of Hooks)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
-    router.push('/');
-  };
+    routerRef.current.push('/');
+  }, [logout]);
 
   // Show loading skeleton while waiting for hydration
   // IMPORTANT: This must come AFTER all hook calls (Rules of Hooks)
@@ -261,7 +268,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content — responsive padding */}
-      <main className="main-content-desktop flex-1 ml-0 md:ml-64 p-3 md:p-6 pt-16 md:pt-6 pb-20 md:pb-6">
+      <main className="main-content-desktop flex-1 ml-0 md:ml-64 p-3 md:p-6 pt-16 md:pt-6 pb-20 md:pb-6 relative z-[1]">
         {children}
       </main>
 

@@ -155,7 +155,12 @@ export default function MLModelPage() {
   useEffect(() => {
     fetch('/api/ml-predict')
       .then(r => r.json())
-      .then(d => { setMetrics(d); setLoading(false); })
+      .then(d => {
+        // API returns { success, models: [{...metrics}] } — extract the TS model metrics
+        const tsModel = d.models?.find((m: any) => m.location === 'frontend') || d.models?.[0];
+        setMetrics(tsModel || d);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -173,7 +178,21 @@ export default function MLModelPage() {
         }),
       });
       const data = await res.json();
-      setPrediction(data);
+      // Map the API response to the PredictionResult shape the UI expects
+      const tsRF = data.ts_random_forest;
+      setPrediction({
+        prediction: data.prediction,
+        probability: data.probability,
+        confidence: data.confidence,
+        votes: tsRF?.votes || data.votes || { fraud: 0, clean: 0 },
+        features: tsRF?.features || [],
+        model: {
+          algorithm: tsRF?.model || 'Random Forest',
+          trees: tsRF?.trees || 100,
+          accuracy: tsRF?.accuracy || 0,
+          f1Score: tsRF?.f1Score || 0,
+        },
+      });
     } catch (e) {
       console.error(e);
     }

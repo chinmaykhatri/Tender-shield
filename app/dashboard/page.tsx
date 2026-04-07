@@ -101,14 +101,15 @@ export default function DashboardPage() {
         </div>
 
         {/* Critical Alert Banner (AIIMS) */}
-        <div
-          onClick={() => router.push('/dashboard/tenders/TDR-MoH-2025-000003')}
+        <Link
+          href="/dashboard/tenders/TDR-MoH-2025-000003"
           style={{
             padding: '16px 24px', borderRadius: '14px', cursor: 'pointer',
             background: 'rgba(204,51,0,0.06)',
             border: '1px solid rgba(204,51,0,0.15)',
             display: 'flex', alignItems: 'center', gap: '14px',
             transition: 'all 200ms',
+            textDecoration: 'none',
           }}
         >
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
@@ -121,7 +122,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <span style={{ fontSize: '12px', color: '#ff6600', fontWeight: 600, whiteSpace: 'nowrap' }}>View →</span>
-        </div>
+        </Link>
 
         {/* 4 Stat Cards — 3D Tilt with Neon Glow */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -166,25 +167,30 @@ export default function DashboardPage() {
 
         {/* Ministry Breakdown + Risk Distribution */}
         {stats?.ministry_breakdown && stats.ministry_breakdown.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ alignItems: 'start' }}>
             <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', minWidth: 0 }}>
               <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Ministry Breakdown</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {stats.ministry_breakdown.map((m: MinistryBreakdown, i: number) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '320px', overflowY: 'auto' }}>
+                {stats.ministry_breakdown.slice(0, 8).map((m: MinistryBreakdown, i: number) => (
                   <div key={i} style={{ minHeight: '28px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', color: '#ccc' }}>{m.ministry}</span>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: m.color, whiteSpace: 'nowrap' }}>₹{m.value_crore} Cr</span>
+                      <span style={{ fontSize: '13px', color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{m.ministry}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: m.color, whiteSpace: 'nowrap', marginLeft: '8px' }}>₹{m.value_crore} Cr</span>
                     </div>
                     <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min((m.value_crore / (stats.ministry_breakdown[0]?.value_crore || 1)) * 100, 100)}%`, background: m.ministry === 'MoH' ? '#ef4444' : '#FF9933', transition: 'width 1s ease' }} />
                     </div>
                   </div>
                 ))}
+                {stats.ministry_breakdown.length > 8 && (
+                  <p style={{ fontSize: '11px', color: '#666', textAlign: 'center', paddingTop: '4px' }}>
+                    +{stats.ministry_breakdown.length - 8} more ministries
+                  </p>
+                )}
               </div>
             </div>
 
-            <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', alignSelf: 'start' }}>
               <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Risk Distribution</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {(stats.risk_distribution || []).map((r: RiskDistribution, i: number) => (

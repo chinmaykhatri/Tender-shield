@@ -14,6 +14,12 @@ export default function SessionWarning() {
   const { logout } = useAuthStore();
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
+  // Stable refs — prevent re-render loops from router/logout identity changes
+  const routerRef = useRef(router);
+  const logoutRef = useRef(logout);
+  useEffect(() => { routerRef.current = router; }, [router]);
+  useEffect(() => { logoutRef.current = logout; }, [logout]);
+
   const handleStayLoggedIn = useCallback(() => {
     setVisible(false);
     setSecondsLeft(300);
@@ -25,9 +31,9 @@ export default function SessionWarning() {
   const handleLogoutNow = useCallback(() => {
     setVisible(false);
     clearInterval(intervalRef.current);
-    logout();
-    router.push('/');
-  }, [logout, router]);
+    logoutRef.current();
+    routerRef.current.push('/');
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
