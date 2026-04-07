@@ -170,8 +170,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                 return (
-                  <a key={item.href} href={item.href}
-                    onClick={(e) => { e.preventDefault(); router.push(item.href); setSidebarOpen(false); }}
+                  <Link key={item.href} href={item.href}
+                    onClick={() => { setSidebarOpen(false); }}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
@@ -179,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     }`}>
                     <span className="text-base">{item.icon}</span>
                     {item.label}
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -215,12 +215,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Nav Links */}
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
-              <a key={item.href} href={item.href}
-                onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+              <Link key={item.href} href={item.href}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
@@ -228,7 +227,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }`}>
                 <span className="text-base">{item.icon}</span>
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -271,12 +270,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {mobileNav.map(item => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
           return (
-            <a key={item.href} href={item.href}
-              onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+            <Link key={item.href} href={item.href}
               className={isActive ? 'active' : ''}>
               <span className="nav-icon">{item.icon}</span>
               <span>{item.label}</span>
-            </a>
+            </Link>
           );
         })}
       </nav>

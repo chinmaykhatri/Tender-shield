@@ -66,7 +66,7 @@ export default function DashboardPage() {
   const eventColor = (type: string) => type === 'danger' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6366f1';
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden' }}>
+    <div style={{ position: 'relative' }}>
       {/* Aurora Background */}
       <div className="aurora-bg" />
       {/* Floating Orbs */}
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         {/* Ministry Breakdown + Risk Distribution */}
         {stats?.ministry_breakdown && stats.ministry_breakdown.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', minWidth: 0 }}>
               <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Ministry Breakdown</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {stats.ministry_breakdown.map((m: MinistryBreakdown, i: number) => (
@@ -176,8 +176,8 @@ export default function DashboardPage() {
                       <span style={{ fontSize: '13px', color: '#ccc' }}>{m.ministry}</span>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: m.color, whiteSpace: 'nowrap' }}>₹{m.value_crore} Cr</span>
                     </div>
-                    <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.04)' }}>
-                      <div style={{ height: '100%', borderRadius: '2px', width: `${(m.value_crore / 500) * 100}%`, background: m.ministry === 'MoH' ? '#ef4444' : '#FF9933', transition: 'width 1s ease' }} />
+                    <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min((m.value_crore / (stats.ministry_breakdown[0]?.value_crore || 1)) * 100, 100)}%`, background: m.ministry === 'MoH' ? '#ef4444' : '#FF9933', transition: 'width 1s ease' }} />
                     </div>
                   </div>
                 ))}
