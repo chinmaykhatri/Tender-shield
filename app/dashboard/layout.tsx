@@ -170,15 +170,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                 return (
-                  <Link key={item.href} href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                  <a key={item.href} href={item.href}
+                    onClick={(e) => { e.preventDefault(); router.push(item.href); setSidebarOpen(false); }}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
                     }`}>
                     <span className="text-base">{item.icon}</span>
                     {item.label}
-                  </Link>
+                  </a>
                 );
               })}
             </nav>
@@ -193,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="sidebar-desktop w-64 fixed left-0 top-7 bottom-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex-col z-30 overflow-y-auto hidden md:flex">
+      <aside className="sidebar-desktop w-64 fixed left-0 top-7 bottom-0 bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] flex-col z-[45] overflow-y-auto hidden md:flex">
         {/* Logo */}
         <div className="p-5 border-b border-[var(--border-subtle)]">
           <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -218,15 +219,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              <a key={item.href} href={item.href}
+                onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
                 }`}>
                 <span className="text-base">{item.icon}</span>
                 {item.label}
-              </Link>
+              </a>
             );
           })}
         </nav>
@@ -269,10 +271,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {mobileNav.map(item => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
           return (
-            <Link key={item.href} href={item.href} className={isActive ? 'active' : ''}>
+            <a key={item.href} href={item.href}
+              onClick={(e) => { e.preventDefault(); router.push(item.href); }}
+              className={isActive ? 'active' : ''}>
               <span className="nav-icon">{item.icon}</span>
               <span>{item.label}</span>
-            </Link>
+            </a>
           );
         })}
       </nav>

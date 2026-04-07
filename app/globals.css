@@ -287,18 +287,18 @@ html.light .tricolor-bar {
 }
 
 /* ========= Page Transitions ========= */
+/* NOTE: Do NOT use transform here — even translateY(0) creates a stacking  
+   context that traps position:fixed elements (sidebar) and breaks z-index */
 .page-transition {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .page-transition-enter {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .page-transition-exit {
   opacity: 0;
-  transform: translateY(8px);
 }
 
 /* ========= Theme Toggle Button ========= */

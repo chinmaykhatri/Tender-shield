@@ -146,11 +146,10 @@ export default function LoginPage() {
 
     if (DEMO_MODE) {
       const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
-      setTimeout(async () => {
-        storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
-        await validateWithServer(cred.email);
-        router.push('/dashboard');
-      }, 600);
+      storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
+      // Fire-and-forget: set HMAC cookie in background, don't block navigation
+      validateWithServer(cred.email).catch(() => {});
+      router.push('/dashboard');
       return;
     }
 
