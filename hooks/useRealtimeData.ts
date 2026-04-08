@@ -84,19 +84,15 @@ export function useLiveStats(initialStats: DashboardStats | null) {
   const [stats, setStats] = useState<DashboardStats | null>(initialStats);
 
   useEffect(() => {
-    setStats(initialStats);
+    if (!initialStats) return;
+    // Sync local state when parent provides new data.
+    // In demo mode, force tps to 0 (no Fabric peers running).
+    if (DEMO_MODE) {
+      setStats({ ...initialStats, tps: 0 });
+    } else {
+      setStats(initialStats);
+    }
   }, [initialStats]);
-
-  useEffect(() => {
-    if (!DEMO_MODE || !stats) return;
-    // HONEST: In simulation mode, stats are static.
-    // No fake counter increments. TPS = 0 (no Fabric peers).
-    // Real-time updates only happen in Supabase/Fabric-live mode.
-    setStats((prev: DashboardStats | null) => prev ? ({
-      ...prev,
-      tps: 0,  // No Fabric peers running
-    }) : null);
-  }, [stats]);
 
   return stats;
 }
