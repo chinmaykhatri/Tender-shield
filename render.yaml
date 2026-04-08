@@ -1,0 +1,23 @@
+# ============================================
+# TenderShield — Render.com Deployment Config
+# ============================================
+services:
+  - type: web
+    name: tendershield-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: singapore  # Closest to India
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: "https://tendershield.vercel.app,http://localhost:3000"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: FABRIC_LIVE
+        value: "false"
+    healthCheckPath: /api/v1/dashboard/health

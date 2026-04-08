@@ -1,5 +1,5 @@
 # ============================================
-# TenderShield — Backend Dockerfile (Cloud Run)
+# TenderShield — Backend Dockerfile
 # ============================================
 FROM python:3.12-slim
 
@@ -27,18 +27,17 @@ RUN pip install --no-cache-dir \
     loguru==0.7.2 \
     orjson==3.9.10 \
     redis==5.0.1 \
-    aiosqlite==0.19.0 \
-    asyncpg==0.29.0
+    aiosqlite==0.19.0
 
-# Copy application code as a package
+# Copy application code as a Python package
 COPY . ./backend/
 
-# Expose port (Cloud Run overrides via PORT env var)
+# Expose port
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:{__import__(\"os\").getenv(\"PORT\", \"8000\")}/api/v1/dashboard/health')" || exit 1
+    CMD python -c "import urllib.request,os; urllib.request.urlopen(f'http://localhost:{os.getenv(\"PORT\",\"8000\")}/api/v1/dashboard/health')" || exit 1
 
-# Run — uses PORT env var from Cloud Run, default 8000
+# Run — respects PORT env var from Render/Cloud Run, defaults to 8000
 CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
