@@ -1,3 +1,5 @@
+/// <reference types="vitest/globals" />
+
 /**
  * TenderShield — Core Test Suite
  * Tests: RBAC navigation, GFR compliance, Fraud detection scoring
@@ -56,7 +58,7 @@ describe('RBAC Navigation', () => {
 // ═══════════════════════════════════════════
 
 describe('GFR 2017 Compliance', () => {
-  function validateGFR(tender) {
+  function validateGFR(tender: { estimatedValue: number; tenderType: string; bidSecurity: number; biddingDays: number }) {
     const issues = [];
 
     if (tender.estimatedValue > 25 && tender.tenderType !== 'OPEN') {
@@ -125,7 +127,7 @@ describe('GFR 2017 Compliance', () => {
 // ═══════════════════════════════════════════
 
 describe('Fraud Detection Scoring', () => {
-  function scoreFraudDetectors(bids) {
+  function scoreFraudDetectors(bids: { amount: number; submittedAt: number }[]) {
     const amounts = bids.map(b => b.amount);
     const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
     const stdDev = Math.sqrt(amounts.reduce((s, a) => s + Math.pow(a - mean, 2), 0) / amounts.length);
