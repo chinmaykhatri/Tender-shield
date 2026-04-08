@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     KAFKA_AUDIT_EVENTS_TOPIC: str = "audit-events"
 
     # --- CORS ---
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,https://tendershield.vercel.app"
 
     # --- AI Engine ---
     AI_ENGINE_URL: str = "http://localhost:8001"
