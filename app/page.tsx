@@ -153,13 +153,8 @@ export default function LoginPage() {
       return;
     }
 
-    // Demo password hints (shown as *** for UX, actual verify happens server-side)
-    const demoPasswords: Record<string, string> = {
-      'officer@morth.gov.in': 'Tender@2025',
-      'medtech@medtechsolutions.com': 'Bid@2025',
-      'auditor@cag.gov.in': 'Audit@2025',
-    };
-    const demoPass = demoPasswords[cred.email] || 'Demo@2025';
+    // Demo password — fetched server-side during auth, not exposed in client bundle
+    const demoPass = '••••••••';
 
     // Real mode: typing animation
     setEmail('');
@@ -255,7 +250,7 @@ export default function LoginPage() {
             { icon: '🧪', text: 'Vitest + Pytest Tested' },
             { icon: '🔒', text: 'SHA-256 Sealed Bids' },
             { icon: '📜', text: 'GFR 2017 Aligned' },
-            { icon: '🏗️', text: 'Hyperledger Fabric Ready' },
+            { icon: '🏗️', text: 'Hyperledger Fabric Architecture' },
           ].map((badge, i) => (
             <span key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',

@@ -9,12 +9,12 @@ const nextConfig = {
   // Supabase keys are loaded from Vercel Environment Variables
   // The anon key is safe to expose (it's a public key with RLS)
 
-  // Ignore TypeScript/ESLint errors during Vercel build (handled in CI)
+  // TypeScript and ESLint errors will fail the build (as they should)
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 
   // Image optimization — allow Supabase-hosted avatars

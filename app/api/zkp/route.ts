@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         valid: isValid,
-        formula: `g^${value?.slice(0, 8)}... · h^${blindingFactor?.slice(0, 8)}... mod p`,
+        formula: `SHA-256(${value?.slice(0, 8)}... || ${blindingFactor?.slice(0, 8)}...)`,
         message: isValid
           ? 'Commitment VALID — bid amount matches the original sealed commitment'
           : 'Commitment INVALID — bid amount does NOT match',
@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
         valid: result.valid,
         steps: result.steps,
         message: result.valid
-          ? 'Proof VALID — prover knows (v, r) without revealing them'
-          : 'Proof INVALID — prover does not know the opening',
+          ? 'Proof structure VALID — commitment chain is cryptographically consistent (SHA-256)'
+          : 'Proof structure INVALID — commitment verification failed',
       });
     }
 

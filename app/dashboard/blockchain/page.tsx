@@ -33,7 +33,7 @@ interface Peer {
 }
 
 interface NetworkData {
-  network: { name: string; channel: string; chaincode: { name: string; version: string; language: string; functions: number; endorsementPolicy: string }; consensus: string; stateDb: string };
+  network: { name: string; channel: string; chaincode: { name: string; version: string; language: string; functions: number; endorsementPolicy: string }; consensus: string; stateDb: string; blockchainMode?: string; dataSource?: string; hashAlgorithm?: string };
   channel: { name: string; height: number; currentBlockHash: string; previousBlockHash: string };
   peers: Peer[];
   orderers: { name: string; mspId: string; type: string; status: string }[];
@@ -96,6 +96,22 @@ export default function BlockchainExplorer() {
         </p>
       </div>
 
+      {/* Simulation Mode Banner */}
+      {data.network.blockchainMode === 'DEMO_SHA256' && (
+        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '12px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>📡</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Simulation Mode — SHA-256 Block Construction</div>
+            <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
+              Blocks are constructed from Supabase audit events using real SHA-256 hashing. Hash chains are independently verifiable, but no Hyperledger Fabric peers are connected.
+            </p>
+            <p style={{ fontSize: 10, color: '#64748b', marginTop: 4, fontFamily: 'monospace', margin: '4px 0 0' }}>
+              Data source: {data.network.dataSource} • Hash algorithm: {data.network.hashAlgorithm}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats Bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
@@ -126,7 +142,7 @@ export default function BlockchainExplorer() {
                   <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{peer.name}</div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>{peer.mspId} • {peer.role}</div>
                 </div>
-                <span style={{ background: peer.status === 'RUNNING' ? '#22c55e' : '#f59e0b', color: '#fff', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                <span style={{ background: peer.status === 'RUNNING' ? '#22c55e' : peer.status === 'SIMULATED' ? '#f59e0b' : '#ef4444', color: '#fff', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
                   {peer.status}
                 </span>
               </div>
