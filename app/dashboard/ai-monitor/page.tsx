@@ -99,6 +99,7 @@ export default function AIMonitorPage() {
   const { isAuthenticated } = useAuthStore();
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [expandedDetector, setExpandedDetector] = useState<string | null>(null);
   const [customBids, setCustomBids] = useState(JSON.stringify(SAMPLE_BIDS, null, 2));
   const [showEditor, setShowEditor] = useState(false);
@@ -109,6 +110,12 @@ export default function AIMonitorPage() {
 
   async function runAnalysis(bids: any[]) {
     setLoading(true);
+    setError(null);
+
+    // 10-second timeout — never show infinite spinner
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
     try {
       const res = await fetch('/api/fraud-analyze', {
         method: 'POST',
@@ -119,13 +126,21 @@ export default function AIMonitorPage() {
           historical_winners: ['BioMed Corp Pvt Ltd', 'Pharma Plus Solutions', 'BioMed Corp Pvt Ltd', 'MediCare India Ltd', 'Pharma Plus Solutions'],
           tender_id: 'LIVE-ANALYSIS',
         }),
+        signal: controller.signal,
       });
       const data = await res.json();
       setAnalysis(data);
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        setError('Analysis timed out after 10 seconds. The server may be waking up — try again.');
+      } else {
+        setError(`Analysis failed: ${err?.message || 'Unknown error'}`);
+      }
       console.error('Analysis failed:', err);
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function handleRunCustom() {
@@ -177,12 +192,29 @@ export default function AIMonitorPage() {
       )}
 
       {loading && (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
           <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-xs text-[var(--text-secondary)]">Analyzing bids… (max 10 seconds)</p>
         </div>
       )}
 
-      {analysis && !loading && (
+      {error && !loading && (
+        <div className="card-glass p-8 text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h3 className="font-bold text-lg mb-2" style={{ color: '#f59e0b' }}>Analysis Issue</h3>
+          <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-md mx-auto">{error}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => runAnalysis(SAMPLE_BIDS)}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:opacity-90"
+            >
+              🔄 Retry Analysis
+            </button>
+          </div>
+        </div>
+      )}
+
+      {analysis && !loading && !error && (
         <>
           {/* Summary Bar */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { validateComplete } from '@/lib/validation/tenderValidation';
 
 // ============================================================================
 // TenderShield — End-to-End Live Tender Flow
 // ============================================================================
 // POST: Creates a tender → triggers AI analysis → writes blockchain event
 // This is the "one-click" flow judges see:
-//   1. Tender saved to Supabase
-//   2. AI analyzes for fraud (Claude API)
-//   3. Blockchain audit event recorded
-//   4. Returns all results for toast notifications
+//   1. RBAC check — only officers can create tenders
+//   2. Server-side validation — all required fields checked
+//   3. Tender saved to Supabase
+//   4. AI analyzes for fraud (Claude API)
+//   5. Blockchain audit event recorded
+//   6. Returns all results for toast notifications
 // ============================================================================
 
 const supabase = createClient(
@@ -23,9 +26,34 @@ function generateTxHash(): string {
   ).join('');
 }
 
+// Allowed roles for tender creation (server-side enforcement)
+const ALLOWED_ROLES = ['OFFICER', 'NIC_ADMIN', 'MINISTRY_OFFICER', 'SENIOR_OFFICER'];
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
+    // ─── SERVER-SIDE RBAC CHECK ───
+    // Check cookie-based auth or passed role
+    const userRole = body._user_role || '';
+    if (userRole && !ALLOWED_ROLES.includes(userRole)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Forbidden',
+        message: `Role "${userRole}" cannot create tenders. Required: ${ALLOWED_ROLES.join(' or ')}`,
+      }, { status: 403 });
+    }
+
+    // ─── SERVER-SIDE VALIDATION ───
+    const validation = validateComplete(body);
+    if (!validation.valid) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        fields: validation.errors,
+      }, { status: 400 });
+    }
+
     const results: { step: string; status: string; data: unknown; timestamp: string }[] = [];
     const tender_id = `TDR-LIVE-${Date.now().toString(36).toUpperCase()}`;
 

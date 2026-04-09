@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { useToast } from '@/components/ToastSystem';
+import { validateStep1, validateStep2, validateStep3, validateComplete, type ValidationResult } from '@/lib/validation/tenderValidation';
+
+const ALLOWED_ROLES = ['OFFICER', 'NIC_ADMIN', 'MINISTRY_OFFICER', 'SENIOR_OFFICER'];
 
 const STEPS = ['Basic Info', 'Financial Details', 'Compliance', 'Documents', 'Review & Submit'];
 
@@ -22,12 +25,38 @@ const GFR_RULES = ['GFR Rule 144', 'GFR Rule 149', 'GFR Rule 153', 'GFR Rule 153
 
 export default function CreateTenderPage() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const { addToast } = useToast();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  // ── RBAC GUARD ──────────────────────────────────────────────
+  const userRole = user?.role ?? '';
+  const isAllowed = ALLOWED_ROLES.includes(userRole);
+
+  useEffect(() => {
+    if (user && !isAllowed) {
+      router.replace('/dashboard/tenders?error=unauthorized');
+    }
+  }, [user, isAllowed, router]);
+
+  // Show Access Denied while redirecting
+  if (user && !isAllowed) {
+    return (
+      <div className="max-w-lg mx-auto py-20 text-center animate-fade-in">
+        <div className="card-glass p-10">
+          <div className="text-5xl mb-4">🚫</div>
+          <h2 className="text-2xl font-display font-bold mb-2" style={{ color: '#cc3300' }}>Access Denied</h2>
+          <p className="text-sm text-[var(--text-secondary)] mb-2">Only Ministry Officers and NIC Admins can create tenders.</p>
+          <p className="text-xs text-[var(--text-secondary)] mb-6">Your role: <strong>{userRole || 'Unknown'}</strong></p>
+          <a href="/dashboard/tenders" className="btn-primary">← Browse Active Tenders</a>
+        </div>
+      </div>
+    );
+  }
+  // ── END RBAC GUARD ──────────────────────────────────────────
 
   const [form, setForm] = useState({
     ministry_code: '', ministry: '', department: '', title: '', description: '',
@@ -35,6 +64,7 @@ export default function CreateTenderPage() {
     procurement_method: 'OPEN_TENDER', gfr_reference: 'GFR Rule 149',
     gem_category: '', gem_id: '', deadline: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const update = (field: string, value: string) => {
     const updated = { ...form, [field]: value };
@@ -45,7 +75,31 @@ export default function CreateTenderPage() {
       const val = parseFloat(value) || 0;
       updated.bid_security_crore = (val * 0.02).toFixed(1);
     }
+    // Clear error for the field being edited
+    if (errors[field]) {
+      setErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+    }
     setForm(updated);
+  };
+
+  // ── STEP VALIDATION ─────────────────────────────────────────
+  const handleNext = () => {
+    let result: ValidationResult;
+    if (step === 0) result = validateStep1(form);
+    else if (step === 1) result = validateStep2(form);
+    else if (step === 2) result = validateStep3(form);
+    else result = { valid: true, errors: {} };
+
+    if (!result.valid) {
+      setErrors(result.errors);
+      // Scroll to first error
+      const firstErrorField = Object.keys(result.errors)[0];
+      document.getElementById(`field-${firstErrorField}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return; // DO NOT advance
+    }
+
+    setErrors({});
+    setStep(step + 1);
   };
 
   const handleSubmit = async () => {
@@ -210,24 +264,27 @@ export default function CreateTenderPage() {
         {step === 0 && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg mb-4">📋 Basic Information</h3>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Ministry</label>
-              <select className="input-field" value={form.ministry_code} onChange={e => update('ministry_code', e.target.value)}>
+            <div id="field-ministry_code">
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Ministry *</label>
+              <select className="input-field" value={form.ministry_code} onChange={e => update('ministry_code', e.target.value)} style={{ borderColor: errors.ministry_code ? '#cc3300' : undefined }}>
                 <option value="">Select Ministry</option>
                 {MINISTRIES.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}
               </select>
+              {errors.ministry_code && <span style={{ color: '#cc3300', fontSize: 12, marginTop: 4, display: 'block' }}>{errors.ministry_code}</span>}
             </div>
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Department</label>
               <input className="input-field" value={form.department} onChange={e => update('department', e.target.value)} placeholder="e.g. National Highways Authority" />
             </div>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Tender Title</label>
-              <input className="input-field" value={form.title} onChange={e => update('title', e.target.value)} placeholder="e.g. NH-44 Highway Expansion Phase 3" />
+            <div id="field-title">
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Tender Title *</label>
+              <input className="input-field" value={form.title} onChange={e => update('title', e.target.value)} placeholder="e.g. NH-44 Highway Expansion Phase 3" style={{ borderColor: errors.title ? '#cc3300' : undefined }} />
+              {errors.title && <span style={{ color: '#cc3300', fontSize: 12, marginTop: 4, display: 'block' }}>{errors.title}</span>}
             </div>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Description</label>
-              <textarea className="input-field" rows={4} value={form.description} onChange={e => update('description', e.target.value)} placeholder="Detailed description of the procurement..." />
+            <div id="field-description">
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Description *</label>
+              <textarea className="input-field" rows={4} value={form.description} onChange={e => update('description', e.target.value)} placeholder="Detailed description of the procurement..." style={{ borderColor: errors.description ? '#cc3300' : undefined }} />
+              {errors.description && <span style={{ color: '#cc3300', fontSize: 12, marginTop: 4, display: 'block' }}>{errors.description}</span>}
             </div>
           </div>
         )}
@@ -236,9 +293,10 @@ export default function CreateTenderPage() {
         {step === 1 && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg mb-4">💰 Financial Details</h3>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Estimated Value (₹ Crore)</label>
-              <input type="number" className="input-field" value={form.estimated_value_crore} onChange={e => update('estimated_value_crore', e.target.value)} placeholder="e.g. 450" />
+            <div id="field-estimated_value_crore">
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Estimated Value (₹ Crore) *</label>
+              <input type="number" className="input-field" value={form.estimated_value_crore} onChange={e => update('estimated_value_crore', e.target.value)} placeholder="e.g. 450" style={{ borderColor: errors.estimated_value_crore ? '#cc3300' : undefined }} />
+              {errors.estimated_value_crore && <span style={{ color: '#cc3300', fontSize: 12, marginTop: 4, display: 'block' }}>{errors.estimated_value_crore}</span>}
             </div>
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Bid Security (₹ Crore) — Auto: 2% of value</label>
@@ -260,9 +318,10 @@ export default function CreateTenderPage() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Deadline</label>
-              <input type="datetime-local" className="input-field" value={form.deadline} onChange={e => update('deadline', e.target.value)} />
+            <div id="field-deadline">
+              <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Deadline *</label>
+              <input type="datetime-local" className="input-field" value={form.deadline} onChange={e => update('deadline', e.target.value)} style={{ borderColor: errors.deadline ? '#cc3300' : undefined }} />
+              {errors.deadline && <span style={{ color: '#cc3300', fontSize: 12, marginTop: 4, display: 'block' }}>{errors.deadline}</span>}
             </div>
             {parseFloat(form.estimated_value_crore) > 0 && form.procurement_method !== 'OPEN_TENDER' && parseFloat(form.estimated_value_crore) * 100 > 25 && (
               <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
@@ -349,7 +408,7 @@ export default function CreateTenderPage() {
         <div className="flex justify-between mt-8">
           <button onClick={() => setStep(Math.max(0, step - 1))} className="btn-primary" style={{ background: step === 0 ? 'var(--bg-secondary)' : undefined, opacity: step === 0 ? 0.5 : 1 }} disabled={step === 0}>← Back</button>
           {step < 4 ? (
-            <button onClick={() => setStep(step + 1)} className="btn-primary">Next →</button>
+            <button onClick={handleNext} className="btn-primary">Next →</button>
           ) : (
             <button onClick={handleSubmit} className="btn-primary" disabled={submitting}>
               {submitting ? '⏳ Publishing...' : '🚀 Submit to Blockchain'}

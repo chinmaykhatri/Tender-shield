@@ -1,19 +1,3 @@
-"""
-============================================================================
-TenderShield — JWT Authentication Handler
-============================================================================
-JWT-based authentication with RS256/HS256 signing.
-Supports role-based access control for MinistryOrg, BidderOrg,
-AuditorOrg, and NICOrg identities.
-
-India-Specific:
-  - Aadhaar eKYC bridge for identity verification
-  - DSC (Digital Signature Certificate) validation support
-  - Session tracking in IST (Indian Standard Time)
-============================================================================
-"""
-
-import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
@@ -23,21 +7,45 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
+try:
+    import bcrypt
+except ImportError:
+    # Fallback: if bcrypt not installed, provide clear error
+    raise ImportError(
+        "bcrypt is required for password hashing. "
+        "Install with: pip install bcrypt"
+    )
+
 from backend.config import settings
 
 logger = logging.getLogger("tendershield.auth")
 security = HTTPBearer()
 
-# Simple password hashing for demo (production would use bcrypt/argon2)
-_SALT = "tendershield-demo-salt-2025"
+
+# ============================================================================
+# Password Hashing — bcrypt (GPU-resistant, per-password salt)
+# ============================================================================
+# Replaces SHA-256 + static salt which was crackable in seconds.
+# bcrypt work factor 12 = ~250ms per hash on modern hardware.
+
+def hash_password(password: str) -> str:
+    """Hash password with bcrypt. Automatic unique salt, work factor 12."""
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
-def _hash_password(password: str) -> str:
-    return hashlib.sha256(f"{_SALT}{password}".encode()).hexdigest()
-
-
-def _verify_password(password: str, hashed: str) -> bool:
-    return _hash_password(password) == hashed
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against bcrypt hash. Constant-time comparison."""
+    try:
+        return bcrypt.checkpw(
+            password.encode('utf-8'),
+            hashed.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 
 # ============================================================================
@@ -67,15 +75,14 @@ class UserLogin(BaseModel):
     """Login request schema."""
     email: str
     password: str
-
-
 # ============================================================================
 # Demo Users (Competition Demo — hardcoded for judges)
 # ============================================================================
+# bcrypt hashes computed at module load. Each hash has a unique salt.
 
 DEMO_USERS: Dict[str, Dict[str, Any]] = {
     "officer@morth.gov.in": {
-        "password_hash": _hash_password("Tender@2025"),
+        "password_hash": hash_password("Tender@2025"),
         "did": "did:tendershield:ministryorgmsp:officer.morth",
         "role": "OFFICER",
         "org": "MinistryOrgMSP",
@@ -83,7 +90,7 @@ DEMO_USERS: Dict[str, Dict[str, Any]] = {
         "ministry_code": "MoRTH",
     },
     "officer@moe.gov.in": {
-        "password_hash": _hash_password("Tender@2025"),
+        "password_hash": hash_password("Tender@2025"),
         "did": "did:tendershield:ministryorgmsp:officer.moe",
         "role": "OFFICER",
         "org": "MinistryOrgMSP",
@@ -91,7 +98,7 @@ DEMO_USERS: Dict[str, Dict[str, Any]] = {
         "ministry_code": "MoE",
     },
     "medtech@medtechsolutions.com": {
-        "password_hash": _hash_password("Bid@2025"),
+        "password_hash": hash_password("Bid@2025"),
         "did": "did:tendershield:bidderorgmsp:medtech",
         "role": "BIDDER",
         "org": "BidderOrgMSP",
@@ -99,7 +106,7 @@ DEMO_USERS: Dict[str, Dict[str, Any]] = {
         "gstin": "27AABCM1234F1Z5",
     },
     "admin@biomedicorp.com": {
-        "password_hash": _hash_password("Bid@2025"),
+        "password_hash": hash_password("Bid@2025"),
         "did": "did:tendershield:bidderorgmsp:biomedicorp",
         "role": "BIDDER",
         "org": "BidderOrgMSP",
@@ -107,7 +114,7 @@ DEMO_USERS: Dict[str, Dict[str, Any]] = {
         "gstin": "07AABCB5678G1Z3",
     },
     "infra@roadbuildersltd.com": {
-        "password_hash": _hash_password("Bid@2025"),
+        "password_hash": hash_password("Bid@2025"),
         "did": "did:tendershield:bidderorgmsp:roadbuilders",
         "role": "BIDDER",
         "org": "BidderOrgMSP",
@@ -115,14 +122,14 @@ DEMO_USERS: Dict[str, Dict[str, Any]] = {
         "gstin": "09AABCR9012H1Z1",
     },
     "auditor@cag.gov.in": {
-        "password_hash": _hash_password("Audit@2025"),
+        "password_hash": hash_password("Audit@2025"),
         "did": "did:tendershield:auditororgmsp:cag.auditor1",
         "role": "AUDITOR",
         "org": "AuditorOrgMSP",
         "name": "CAG Auditor (Comptroller & Auditor General)",
     },
     "admin@nic.in": {
-        "password_hash": _hash_password("Admin@2025"),
+        "password_hash": hash_password("Admin@2025"),
         "did": "did:tendershield:nicorgmsp:admin",
         "role": "NIC_ADMIN",
         "org": "NICOrgMSP",
@@ -251,10 +258,10 @@ async def require_nic_admin(current_user: TokenData = Depends(get_current_user))
 # ============================================================================
 
 def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
-    """Authenticate user against demo credentials."""
+    """Authenticate user against demo credentials using bcrypt."""
     user = DEMO_USERS.get(email)
     if not user:
         return None
-    if not _verify_password(password, user["password_hash"]):
+    if not verify_password(password, user["password_hash"]):
         return None
     return user

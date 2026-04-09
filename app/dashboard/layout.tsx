@@ -79,6 +79,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => { setMounted(true); }, []);
 
+  // ── BACKEND WARMUP: Wake Render free-tier on dashboard load ──
+  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'waking' | 'offline'>('unknown');
+  useEffect(() => {
+    const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
+    if (!BACKEND_URL) return;
+    setBackendStatus('waking');
+    fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(15_000) })
+      .then(r => { if (r.ok) setBackendStatus('online'); else setBackendStatus('offline'); })
+      .catch(() => setBackendStatus('offline'));
+  }, []);
+
   // ────────────────────────────────────────────────
   // AUTH GUARD: Wait for hydration, then check auth
   // Uses refs to avoid dependency-triggered infinite loops
@@ -258,6 +269,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="text-[8px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
               Production: Supabase JWT + RLS + Fabric CA
             </p>
+          </div>
+
+          {/* Backend Status Indicator */}
+          <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2 justify-center"
+            style={{
+              background: backendStatus === 'online' ? 'rgba(34,197,94,0.08)' : backendStatus === 'waking' ? 'rgba(234,179,8,0.08)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${backendStatus === 'online' ? 'rgba(34,197,94,0.15)' : backendStatus === 'waking' ? 'rgba(234,179,8,0.15)' : 'rgba(239,68,68,0.15)'}`,
+            }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
+              animation: backendStatus === 'waking' ? 'pulse 1.5s infinite' : undefined,
+            }} />
+            <span className="text-[9px] font-medium" style={{
+              color: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
+            }}>
+              {backendStatus === 'online' ? 'Backend Online' : backendStatus === 'waking' ? 'Backend Waking…' : backendStatus === 'offline' ? 'Backend Offline' : ''}
+            </span>
           </div>
 
           <button onClick={handleLogout}

@@ -2,74 +2,109 @@
 // FILE: components/DataSourceBadge.tsx
 // TYPE: CLIENT COMPONENT
 // SECRET KEYS USED: none
-// WHAT THIS FILE DOES: Shows a live/demo badge so users know which data source is active
+// WHAT THIS FILE DOES: Shows an honest badge indicating the current data source
 // ─────────────────────────────────────────────────
 'use client';
 
 import { useState } from 'react';
 
+type DataSource = 'supabase' | 'demo' | 'backend_offline' | 'fallback';
+
 interface DataSourceBadgeProps {
+  /** Whether the current view is showing real (non-demo) data */
   usingRealData: boolean;
+  /** Number of real records loaded */
   recordCount?: number;
+  /** Explicit data source override */
+  source?: DataSource;
 }
 
-export default function DataSourceBadge({ usingRealData, recordCount }: DataSourceBadgeProps) {
+const BADGE_CONFIG: Record<DataSource, {
+  bg: string; text: string; borderColor: string; dotColor: string;
+  label: string; animate: boolean; tooltip: string;
+}> = {
+  supabase: {
+    bg: 'rgba(34,197,94,0.12)', text: '#4ade80', borderColor: 'rgba(34,197,94,0.25)',
+    dotColor: '#4ade80', label: 'Live Data', animate: true,
+    tooltip: 'Data is live from Supabase. All records are real and verified.',
+  },
+  demo: {
+    bg: 'rgba(234,179,8,0.12)', text: '#facc15', borderColor: 'rgba(234,179,8,0.25)',
+    dotColor: '#facc15', label: 'Demo Data', animate: false,
+    tooltip: 'Pre-scripted demo data for evaluation. Create a real tender to see live data.',
+  },
+  backend_offline: {
+    bg: 'rgba(249,115,22,0.12)', text: '#fb923c', borderColor: 'rgba(249,115,22,0.25)',
+    dotColor: '#fb923c', label: 'Backend Waking', animate: true,
+    tooltip: 'The FastAPI backend is waking up from sleep (~30s). Showing cached data.',
+  },
+  fallback: {
+    bg: 'rgba(239,68,68,0.12)', text: '#f87171', borderColor: 'rgba(239,68,68,0.25)',
+    dotColor: '#f87171', label: 'Fallback Data', animate: false,
+    tooltip: 'Could not reach any data source. Showing hardcoded fallback numbers.',
+  },
+};
+
+export default function DataSourceBadge({ usingRealData, recordCount, source }: DataSourceBadgeProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-  // If real data is showing → green badge
-  if (usingRealData) {
-    return (
-      <div className="relative inline-flex items-center">
-        <button
-          onClick={() => setShowTooltip(!showTooltip)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/20 transition-all"
-        >
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          Live Data
-          {recordCount !== undefined && (
-            <span className="text-green-300/70">({recordCount})</span>
-          )}
-        </button>
-        {showTooltip && (
-          <div className="absolute bottom-full left-0 mb-2 w-64 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-xl z-50 text-left">
-            <p className="text-xs font-semibold text-green-400 mb-1">✅ Showing Real Data</p>
-            <p className="text-[11px] text-[var(--text-secondary)]">
-              Data is live from your Supabase database.
-              {recordCount !== undefined && ` ${recordCount} records found.`}
-            </p>
-          </div>
-        )}
-      </div>
-    );
+  // Determine which badge to show
+  let effectiveSource: DataSource;
+  if (source) {
+    effectiveSource = source;
+  } else if (usingRealData) {
+    effectiveSource = 'supabase';
+  } else if (isDemoMode) {
+    effectiveSource = 'demo';
+  } else {
+    return null; // No badge if not demo mode and no data
   }
 
-  // If demo data AND demo mode → yellow badge
-  if (isDemoMode) {
-    return (
-      <div className="relative inline-flex items-center">
-        <button
-          onClick={() => setShowTooltip(!showTooltip)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/20 transition-all"
-        >
-          <span className="w-2 h-2 rounded-full bg-yellow-400" />
-          Demo Data
-        </button>
-        {showTooltip && (
-          <div className="absolute bottom-full left-0 mb-2 w-72 p-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-xl z-50 text-left">
-            <p className="text-xs font-semibold text-yellow-400 mb-1">📌 Showing Demo Data</p>
-            <p className="text-[11px] text-[var(--text-secondary)] mb-2">
-              Your Supabase database is empty. Pre-scripted demo tenders are shown so judges can evaluate the system.
-            </p>
-            <p className="text-[11px] text-[var(--text-secondary)]">
-              Create a real tender and it will appear here instantly, replacing this demo data.
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const config = BADGE_CONFIG[effectiveSource];
 
-  // Not demo mode + no data → show nothing (empty state)
-  return null;
+  return (
+    <div className="relative inline-flex items-center">
+      <button
+        onClick={() => setShowTooltip(!showTooltip)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 500,
+          background: config.bg, color: config.text,
+          border: `1px solid ${config.borderColor}`,
+          cursor: 'pointer', transition: 'all 0.2s',
+        }}
+      >
+        <span
+          style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: config.dotColor,
+            animation: config.animate ? 'pulse 2s infinite' : undefined,
+          }}
+        />
+        {config.label}
+        {recordCount !== undefined && recordCount > 0 && (
+          <span style={{ opacity: 0.7 }}>({recordCount})</span>
+        )}
+      </button>
+      {showTooltip && (
+        <div
+          style={{
+            position: 'absolute', bottom: '100%', left: 0, marginBottom: 8,
+            width: 260, padding: 12, borderRadius: 12,
+            background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 50, textAlign: 'left',
+          }}
+        >
+          <p style={{ fontSize: 11, fontWeight: 600, color: config.text, marginBottom: 4 }}>
+            {config.label}
+          </p>
+          <p style={{ fontSize: 10, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            {config.tooltip}
+            {recordCount !== undefined && recordCount > 0 && ` ${recordCount} records loaded.`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }

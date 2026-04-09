@@ -50,7 +50,14 @@ export default function TendersPage() {
           </div>
           <p className="text-sm text-[var(--text-secondary)]">{tenders.length} tenders found</p>
         </div>
-        <Link href="/dashboard/tenders/create" className="btn-primary">➕ Create Tender</Link>
+        {/* RBAC: Only officers and admins can create tenders */}
+        {(['OFFICER', 'NIC_ADMIN', 'MINISTRY_OFFICER', 'SENIOR_OFFICER'].includes(useAuthStore.getState().user?.role ?? '')) ? (
+          <Link href="/dashboard/tenders/create" className="btn-primary">➕ Create Tender</Link>
+        ) : (
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 200, textAlign: 'right', lineHeight: 1.4 }}>
+            Bidders cannot create tenders. Browse active tenders to submit bids.
+          </span>
+        )}
       </div>
 
       {/* Filters */}

@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     APP_PORT: int = 8000
 
     # --- JWT Authentication ---
-    JWT_SECRET_KEY: str = "your-256-bit-secret-key-change-in-production"
+    # SECURITY: No hardcoded default in production. Set JWT_SECRET_KEY in environment.
+    # Generate with: python -c "import secrets; print(secrets.token_hex(64))"
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -80,3 +82,20 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# ── SECURITY: Validate JWT secret at startup ──────────────────────
+_DEV_SECRET = "tendershield-dev-only-secret-not-for-production-use"
+if not settings.JWT_SECRET_KEY or len(settings.JWT_SECRET_KEY) < 16:
+    if settings.APP_ENV in ("development", "test"):
+        import warnings
+        warnings.warn(
+            "JWT_SECRET_KEY not set — using dev-only fallback. "
+            "Generate a real one with: python -c \"import secrets; print(secrets.token_hex(64))\"",
+            stacklevel=1,
+        )
+        settings.JWT_SECRET_KEY = _DEV_SECRET
+    else:
+        raise RuntimeError(
+            "FATAL: JWT_SECRET_KEY environment variable not set or too short. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(64))\""
+        )
