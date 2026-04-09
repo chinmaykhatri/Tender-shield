@@ -21,7 +21,7 @@ from backend.auth.jwt_handler import (
     TokenData, UserLogin, TokenResponse,
     authenticate_user, create_access_token,
     get_current_user, DEMO_USERS,
-    _hash_password,
+    hash_password, verify_password,
 )
 from backend.services.fabric_service import fabric_service
 from backend.services.event_bus import event_bus
@@ -70,7 +70,7 @@ async def login(request: UserLogin):
     # Then check registered users
     if not user and request.email in REGISTERED_USERS:
         reg = REGISTERED_USERS[request.email]
-        if reg["password_hash"] == _hash_password(request.password):
+        if verify_password(request.password, reg["password_hash"]):
             user = reg
 
     if not user:
@@ -140,7 +140,7 @@ async def register_user(request: RegisterRequest):
         "did": did,
         "email": request.email,
         "name": request.name,
-        "password_hash": _hash_password(request.password),
+        "password_hash": hash_password(request.password),
         "role": request.role,
         "org": role_org_map[request.role],
         "gstin": request.gstin,
