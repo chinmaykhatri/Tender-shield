@@ -84,8 +84,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tendershield-api.onrender.com';
     setBackendStatus('waking');
+    // Try /health first, fall back to root endpoint
     fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(15_000) })
-      .then(r => { if (r.ok) setBackendStatus('online'); else setBackendStatus('offline'); })
+      .then(r => { if (r.ok) setBackendStatus('online'); else return fetch(BACKEND_URL, { signal: AbortSignal.timeout(10_000) }); })
+      .then(r => { if (r && r.ok) setBackendStatus('online'); })
       .catch(() => setBackendStatus('offline'));
   }, []);
 
