@@ -133,7 +133,7 @@ export async function middleware(req: NextRequest) {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://onesignal.com${isDev ? ' ws://localhost:* http://localhost:*' : ''}`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.onrender.com https://api.anthropic.com https://onesignal.com${isDev ? ' ws://localhost:* http://localhost:*' : ''}`,
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
