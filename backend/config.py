@@ -95,7 +95,16 @@ if not settings.JWT_SECRET_KEY or len(settings.JWT_SECRET_KEY) < 16:
         )
         settings.JWT_SECRET_KEY = _DEV_SECRET
     else:
-        raise RuntimeError(
-            "FATAL: JWT_SECRET_KEY environment variable not set or too short. "
-            "Generate one with: python -c \"import secrets; print(secrets.token_hex(64))\""
+        # Production: auto-generate a secret to prevent crash, but warn loudly
+        import secrets as _secrets
+        import warnings as _warnings
+        _auto_secret = _secrets.token_hex(64)
+        _warnings.warn(
+            "⚠️  CRITICAL: JWT_SECRET_KEY not set in production! "
+            "Auto-generated a temporary secret. Sessions will NOT persist across restarts. "
+            "Set JWT_SECRET_KEY env var with: python -c \"import secrets; print(secrets.token_hex(64))\"",
+            RuntimeWarning,
+            stacklevel=1,
         )
+        settings.JWT_SECRET_KEY = _auto_secret
+
