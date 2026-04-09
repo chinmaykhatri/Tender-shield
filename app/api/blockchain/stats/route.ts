@@ -77,6 +77,7 @@ export async function GET() {
         peers_active: 0,         // HONEST: no Fabric peers running
         orgs_connected: 0,       // HONEST: no orgs connected
         integrity_status: 'NO_DATA',
+        data_status: 'FALLBACK', // Explicit status for frontend honesty
         events_by_type: {},
         tps: 0,                  // HONEST: no measured TPS
         source: 'DEMO_FALLBACK — Supabase unreachable, no live data',
@@ -106,6 +107,7 @@ export async function GET() {
       peers_active: 0,                       // HONEST: 0 in simulation
       orgs_connected: 0,                     // HONEST: 0 in simulation
       integrity_status: events.length > 0 ? 'VERIFIED' : 'NO_DATA',
+      data_status: events.length > 0 ? 'LIVE_DATA' : 'NO_DATA', // Explicit status for frontend
       events_by_type: eventTypes,
       tps: 0,                                // HONEST: no measured TPS
       tps_note: 'TPS is 0 in simulation mode. Fabric 2.5 benchmarks at ~3000 TPS (IBM).',

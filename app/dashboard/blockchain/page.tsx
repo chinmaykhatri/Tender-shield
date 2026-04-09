@@ -82,6 +82,7 @@ export default function BlockchainExplorer() {
   const [lastRefresh, setLastRefresh] = useState<string>('');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showArchitecture, setShowArchitecture] = useState(false);
+  const [blockVerification, setBlockVerification] = useState<{ blockNumber: number; valid: boolean; computed: string; expected: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -118,6 +119,24 @@ export default function BlockchainExplorer() {
       setVerification({ verified: false, timestamp: new Date().toISOString(), verificationTimeMs: 0, totalBlocks: 0, totalAuditEvents: 0, latestBlockHash: '', genesisHash: '', brokenAtBlock: null, hashAlgorithm: '', method: '', _howToVerify: [] });
     }
     setVerifying(false);
+  }
+
+  // Client-side block chain-link verification
+  function verifyBlockClientSide(block: Block) {
+    // Verify the hash chain link: does this block's previousHash match the prior block?
+    const blocks = data?.blocks || [];
+    // Blocks are newest-first, so prior block in chain is the one with blockNumber - 1
+    const priorBlock = blocks.find((b: Block) => b.blockNumber === block.blockNumber - 1);
+    const chainLinkValid = priorBlock
+      ? block.previousHash === priorBlock.blockHash
+      : block.blockNumber === 0; // Genesis block has no prior
+
+    setBlockVerification({
+      blockNumber: block.blockNumber,
+      valid: chainLinkValid,
+      computed: block.blockHash,
+      expected: block.previousHash,
+    });
   }
 
   const fnColors: Record<string, string> = {
@@ -362,6 +381,29 @@ export default function BlockchainExplorer() {
                   <div style={{ fontSize: 10, color: '#64748b', marginTop: 6 }}>
                     <span>Previous Hash: </span>
                     <span style={{ fontFamily: 'monospace', color: '#f59e0b', wordBreak: 'break-all' }}>{block.previousHash}</span>
+                  </div>
+                  {/* Client-side chain link verification */}
+                  <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => verifyBlockClientSide(block)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                        background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
+                        color: '#4ade80', cursor: 'pointer',
+                      }}
+                    >
+                      🔍 Verify Chain Link
+                    </button>
+                    {blockVerification?.blockNumber === block.blockNumber && (
+                      <span style={{
+                        fontSize: 11, padding: '6px 12px', borderRadius: 8,
+                        background: blockVerification.valid ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                        color: blockVerification.valid ? '#4ade80' : '#ef4444',
+                        border: `1px solid ${blockVerification.valid ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                      }}>
+                        {blockVerification.valid ? '✅ Chain link valid — previousHash matches prior block' : '❌ Chain link BROKEN'}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,7 +1,10 @@
 // FILE: components/BlockchainQRCode.tsx
-// FEATURE: Feature 2 — Real Hyperledger on Oracle Cloud
-// DEMO MODE: QR links to /verify page with TX hash
-// REAL MODE: QR links to live Hyperledger block explorer
+// ============================================================================
+// Blockchain Verification QR Code — Per-Tender
+// ============================================================================
+// Generates a QR code that links to the REAL verification portal.
+// When scanned, it auto-verifies the tender via /api/verify/tender.
+// ============================================================================
 
 'use client';
 
@@ -11,18 +14,19 @@ interface BlockchainQRCodeProps {
   txHash: string;
   blockNumber: number;
   label: string;
+  tenderId?: string;  // Include tender ID for real verification
   channel?: string;
 }
 
-export default function BlockchainQRCode({ txHash, blockNumber, label, channel = 'tenderchannel' }: BlockchainQRCodeProps) {
+export default function BlockchainQRCode({ txHash, blockNumber, label, tenderId, channel = 'tenderchannel' }: BlockchainQRCodeProps) {
   const [copied, setCopied] = useState(false);
 
-  // Build verification URL
+  // Build REAL verification URL with tender ID
   const verifyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/verify?tx=${txHash}`
-    : `/verify?tx=${txHash}`;
+    ? `${window.location.origin}/verify?tender=${encodeURIComponent(tenderId || '')}&hash=${encodeURIComponent(txHash)}&source=qr`
+    : `/verify?tender=${encodeURIComponent(tenderId || '')}&hash=${encodeURIComponent(txHash)}&source=qr`;
 
-  // Generate QR code using a lightweight approach (Google Charts API)
+  // Generate QR code
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}&bgcolor=0a0a1a&color=4ade80`;
 
   function copyHash() {
@@ -51,19 +55,26 @@ export default function BlockchainQRCode({ txHash, blockNumber, label, channel =
         <img src={qrUrl} alt="Blockchain verification QR code" width={160} height={160} style={{ borderRadius: '8px' }} />
       </div>
 
-      <p style={{ color: '#888', fontSize: '11px', marginBottom: '8px' }}>
-        Scan to verify on Hyperledger Fabric
+      <p style={{ color: '#888', fontSize: '11px', marginBottom: '4px' }}>
+        Scan to verify on TenderShield
+      </p>
+      <p style={{ color: '#555', fontSize: '9px', marginBottom: '8px' }}>
+        Real SHA-256 chain verification — no login required
       </p>
 
+      {/* Tender ID */}
+      {tenderId && (
+        <div style={{ padding: '4px 10px', background: 'rgba(99,102,241,0.08)', borderRadius: '6px', marginBottom: '8px', display: 'inline-block' }}>
+          <p style={{ fontSize: '9px', color: '#a5b4fc', fontFamily: "'JetBrains Mono', monospace" }}>{tenderId}</p>
+        </div>
+      )}
+
       {/* TX Hash */}
-      <div
-        onClick={copyHash}
-        style={{
-          padding: '8px 12px', background: 'rgba(255,255,255,0.04)',
-          borderRadius: '8px', cursor: 'pointer', transition: 'background 200ms',
-          fontFamily: "'JetBrains Mono', monospace",
-        }}
-      >
+      <div onClick={copyHash} style={{
+        padding: '8px 12px', background: 'rgba(255,255,255,0.04)',
+        borderRadius: '8px', cursor: 'pointer', transition: 'background 200ms',
+        fontFamily: "'JetBrains Mono', monospace",
+      }}>
         <p style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>TX HASH</p>
         <p style={{ fontSize: '11px', color: '#a5b4fc', wordBreak: 'break-all' }}>
           {txHash.slice(0, 20)}...{txHash.slice(-8)}

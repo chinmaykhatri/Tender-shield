@@ -357,6 +357,7 @@ export default function TenderDetailPage() {
                 txHash={tender.blockchain_tx}
                 blockNumber={tender.block_number || 1289}
                 label="Tender Creation — Scan to Verify"
+                tenderId={tender.id || tender.tender_id}
               />
             </div>
           )}
@@ -398,6 +399,7 @@ export default function TenderDetailPage() {
                 txHash={tender.freeze_tx || '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f'}
                 blockNumber={1345}
                 label="AI Freeze Action — Immutable Record"
+                tenderId={tender.id || tender.tender_id}
               />
             </div>
           )}

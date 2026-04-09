@@ -26,7 +26,8 @@ export default function DashboardPage() {
   const [tenderCount, setTenderCount] = useState<number | undefined>(undefined);
   const [istTime, setIstTime] = useState('');
   const blockchainFeed = useBlockchainFeed();
-  const [chainStats, setChainStats] = useState<{ chain_height: number; merkle_root: string; integrity_status: string; total_transactions: number; tps: number; source: string } | null>(null);
+  const [chainStats, setChainStats] = useState<{ chain_height: number; merkle_root: string; integrity_status: string; data_status: string; total_transactions: number; tps: number; peers_active: number; source: string } | null>(null);
+  const [chainError, setChainError] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -40,7 +41,10 @@ export default function DashboardPage() {
     };
     load();
     // Fetch live blockchain stats
-    fetch('/api/blockchain/stats').then(r => r.json()).then(d => setChainStats(d)).catch(() => {});
+    fetch('/api/blockchain/stats')
+      .then(r => { if (!r.ok) throw new Error('API failed'); return r.json(); })
+      .then(d => { setChainStats(d); setChainError(false); })
+      .catch(() => { setChainError(true); });
   }, []);
 
   // IST Clock
@@ -254,21 +258,30 @@ export default function DashboardPage() {
               Blockchain Verification
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {/* Live Chain Stats */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', background: 'rgba(74,222,128,0.04)', border: '1px solid rgba(74,222,128,0.1)' }}>
+              {/* Live Chain Stats — HONEST state */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px',
+                background: chainError ? 'rgba(239,68,68,0.04)' : chainStats?.data_status === 'LIVE_DATA' ? 'rgba(74,222,128,0.04)' : 'rgba(245,158,11,0.04)',
+                border: `1px solid ${chainError ? 'rgba(239,68,68,0.1)' : chainStats?.data_status === 'LIVE_DATA' ? 'rgba(74,222,128,0.1)' : 'rgba(245,158,11,0.1)'}` }}>
                 <div>
                   <p style={{ fontSize: '12px', fontWeight: 500, color: '#ccc' }}>Chain Integrity</p>
-                  <p style={{ fontSize: '10px', color: '#666' }}>Merkle Root Verified</p>
+                  <p style={{ fontSize: '10px', color: '#666' }}>
+                    {chainError ? 'Cannot reach verification API' : chainStats?.data_status === 'LIVE_DATA' ? 'Merkle Root Verified' : 'No audit data available'}
+                  </p>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px rgba(74,222,128,0.5)', animation: 'pulse 2s infinite' }} />
-                  {chainStats?.integrity_status || 'VERIFIED'}
+                <span style={{ fontSize: '11px', fontWeight: 600,
+                  color: chainError ? '#ef4444' : chainStats?.data_status === 'LIVE_DATA' ? '#4ade80' : '#f59e0b',
+                  display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%',
+                    background: chainError ? '#ef4444' : chainStats?.data_status === 'LIVE_DATA' ? '#4ade80' : '#f59e0b',
+                    display: 'inline-block',
+                    boxShadow: chainError ? '0 0 6px rgba(239,68,68,0.5)' : chainStats?.data_status === 'LIVE_DATA' ? '0 0 6px rgba(74,222,128,0.5)' : 'none' }} />
+                  {chainError ? 'ERROR' : chainStats?.integrity_status || 'NO_DATA'}
                 </span>
               </div>
               {[
-                { label: 'Chain Height', status: `#${chainStats?.chain_height || stats?.last_block || 1421}`, sub: `${chainStats?.total_transactions || 847} transactions` },
-                { label: 'Throughput', status: `${chainStats?.tps || stats?.tps || 0} TPS`, sub: stats?.tps === 0 ? 'N/A in simulation' : 'Transactions/sec' },
-                { label: 'Network', status: stats?.peers_online ? '🟢 Online' : '🟡 Simulation', sub: `${stats?.peers_online || 0} peers · ${stats?.orgs_online || 4} orgs` },
+                { label: 'Chain Height', status: chainError ? '—' : `#${chainStats?.chain_height || 0}`, sub: chainError ? 'API unreachable' : `${chainStats?.total_transactions || 0} transactions` },
+                { label: 'Throughput', status: `${chainStats?.tps || 0} TPS`, sub: 'No measured TPS (simulation mode)' },
+                { label: 'Network', status: (chainStats?.peers_active ?? 0) > 0 ? '🟢 Online' : '🟡 Local Only', sub: `${chainStats?.peers_active || 0} peers · 0 orgs (no Fabric deployed)` },
               ].map((svc, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)' }}>
                   <div>
