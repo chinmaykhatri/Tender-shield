@@ -200,6 +200,17 @@ app.include_router(blockchain_router)
 # Root Endpoint
 # ============================================================================
 
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Simple health check — used by Render health checks and frontend warmup."""
+    return {
+        "status": "healthy",
+        "service": "TenderShield API",
+        "version": settings.APP_VERSION,
+        "timestamp_ist": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
+    }
+
+
 @app.get("/", tags=["Root"])
 async def root():
     """API root — returns system information."""
@@ -208,7 +219,7 @@ async def root():
         "version": settings.APP_VERSION,
         "description": "India's First AI-Secured, Blockchain-Based Government Procurement System",
         "documentation": "/docs",
-        "health": "/api/v1/dashboard/health",
+        "health": "/health",
         "demo_users": "/api/v1/auth/demo-users",
         "timestamp_ist": datetime.now(IST).strftime("%Y-%m-%dT%H:%M:%S+05:30"),
     }
