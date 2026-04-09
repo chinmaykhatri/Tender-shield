@@ -20,4 +20,4 @@ services:
         generateValue: true
       - key: FABRIC_LIVE
         value: "false"
-    healthCheckPath: /api/v1/dashboard/health
+    healthCheckPath: /health

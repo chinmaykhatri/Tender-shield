@@ -82,8 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // ── BACKEND WARMUP: Wake Render free-tier on dashboard load ──
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'waking' | 'offline'>('unknown');
   useEffect(() => {
-    const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
-    if (!BACKEND_URL) return;
+    const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tendershield-api.onrender.com';
     setBackendStatus('waking');
     fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(15_000) })
       .then(r => { if (r.ok) setBackendStatus('online'); else setBackendStatus('offline'); })
