@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Block {
   blockNumber: number;
@@ -7,6 +7,8 @@ interface Block {
   previousHash: string;
   timestamp: string;
   txCount: number;
+  dataHash: string;
+  description?: string;
   transactions: Transaction[];
 }
 
@@ -20,56 +22,127 @@ interface Transaction {
   endorsers: string[];
   timestamp: string;
   status: string;
+  rawEventType?: string;
+  rawEventId?: string;
 }
 
-interface Peer {
-  name: string;
-  mspId: string;
-  role: string;
-  status: string;
-  ledgerHeight: number;
-  chaincodes: string[];
-  stateDb: string;
-}
-
-interface NetworkData {
-  network: { name: string; channel: string; chaincode: { name: string; version: string; language: string; functions: number; endorsementPolicy: string }; consensus: string; stateDb: string; blockchainMode?: string; dataSource?: string; hashAlgorithm?: string };
-  channel: { name: string; height: number; currentBlockHash: string; previousBlockHash: string };
-  peers: Peer[];
-  orderers: { name: string; mspId: string; type: string; status: string }[];
-  organizations: { name: string; mspId: string; domain: string; role: string; peers: number }[];
+interface BlockchainData {
+  dataIntegrity: {
+    chainValid: boolean;
+    totalBlocks: number;
+    hashAlgorithm: string;
+    dataSource: string;
+    verificationMethod: string;
+    lastVerified: string;
+  };
+  channel: {
+    name: string;
+    height: number;
+    currentBlockHash: string;
+    previousBlockHash: string;
+  };
   blocks: Block[];
-  stats: { totalBlocks: number; totalTransactions: number; chaincodeInvocations: number; frozenByAI: number; zkpBids: number; endorsementPolicyViolations: number };
+  stats: {
+    totalBlocks: number;
+    totalTransactions: number;
+    chaincodeInvocations: number;
+    frozenByAI: number;
+    zkpBids: number;
+    chainIntegrity: string;
+  };
+  architecture: {
+    _note: string;
+    designedOrganizations: { name: string; role: string; peers: number }[];
+    designedConsensus: string;
+    designedEndorsementPolicy: string;
+  };
+}
+
+interface VerificationResult {
+  verified: boolean;
+  timestamp: string;
+  verificationTimeMs: number;
+  totalBlocks: number;
+  totalAuditEvents: number;
+  latestBlockHash: string;
+  genesisHash: string;
+  brokenAtBlock: number | null;
+  hashAlgorithm: string;
+  method: string;
+  _howToVerify: string[];
 }
 
 export default function BlockchainExplorer() {
-  const [data, setData] = useState<NetworkData | null>(null);
+  const [data, setData] = useState<BlockchainData | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [verification, setVerification] = useState<VerificationResult | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<string>('');
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showArchitecture, setShowArchitecture] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/blockchain')
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/blockchain', { signal: AbortSignal.timeout(15_000) });
+      const d = await res.json();
+      setData(d);
+      setLastRefresh(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }));
+      setError(null);
+    } catch (e: any) {
+      setError(e?.name === 'AbortError' ? 'Request timed out' : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Auto-refresh every 10 seconds when enabled
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchData, 10_000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchData]);
+
+  // Live verification — hits the verify API
+  async function runVerification() {
+    setVerifying(true);
+    setVerification(null);
+    try {
+      const res = await fetch('/api/blockchain/verify', { signal: AbortSignal.timeout(10_000) });
+      const result = await res.json();
+      setVerification(result);
+    } catch {
+      setVerification({ verified: false, timestamp: new Date().toISOString(), verificationTimeMs: 0, totalBlocks: 0, totalAuditEvents: 0, latestBlockHash: '', genesisHash: '', brokenAtBlock: null, hashAlgorithm: '', method: '', _howToVerify: [] });
+    }
+    setVerifying(false);
+  }
+
+  const fnColors: Record<string, string> = {
+    CreateTender: '#22c55e', PublishTender: '#3b82f6', FreezeTender: '#ef4444',
+    SubmitBid: '#a855f7', RevealBid: '#f59e0b', EvaluateBids: '#06b6d4',
+    AwardTender: '#10b981', GenesisBlock: '#6b7280', AnalyzeTender: '#f97316',
+    LifecycleState: '#8b5cf6', FraudEvaluation: '#ef4444', NotifyCAG: '#dc2626',
+    VerifyCommitment: '#14b8a6',
+  };
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: 48, height: 48, border: '4px solid rgba(99,102,241,0.3)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-        <p style={{ color: '#94a3b8' }}>Connecting to Fabric Network...</p>
+        <p style={{ color: '#94a3b8' }}>Loading audit ledger...</p>
       </div>
     </div>
   );
 
-  if (!data) return <div style={{ padding: 40, color: '#ef4444' }}>Failed to connect to blockchain network</div>;
-
-  const fnColors: Record<string, string> = {
-    CreateTender: '#22c55e', PublishTender: '#3b82f6', FreezeTender: '#ef4444',
-    SubmitBid: '#a855f7', RevealBid: '#f59e0b', EvaluateBids: '#06b6d4',
-    AwardTender: '#10b981', JoinChain: '#6b7280',
-  };
+  if (error || !data) return (
+    <div style={{ padding: 40, textAlign: 'center' }}>
+      <p style={{ color: '#ef4444', fontSize: 18, marginBottom: 12 }}>⚠️ {error || 'Failed to load'}</p>
+      <button onClick={fetchData} style={{ padding: '8px 20px', borderRadius: 12, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}>Retry</button>
+    </div>
+  );
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: 1400, margin: '0 auto' }}>
@@ -77,113 +150,159 @@ export default function BlockchainExplorer() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
         .block-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important; }
-        .tx-row:hover { background: rgba(99,102,241,0.1) !important; }
       `}</style>
 
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 28 }}>⛓️</span>
-          <h1 style={{ fontSize: 28, fontWeight: 800, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Blockchain Explorer
+          <h1 style={{ fontSize: 28, fontWeight: 800, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
+            Audit Ledger Explorer
           </h1>
-          <span style={{ background: '#22c55e', color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, animation: 'pulse 2s infinite' }}>
-            🟢 LIVE
+          <span style={{
+            background: data.stats.chainIntegrity === 'VERIFIED' ? '#22c55e' : '#ef4444',
+            color: '#fff', padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+          }}>
+            {data.stats.chainIntegrity === 'VERIFIED' ? '✅ Chain Intact' : '❌ Chain Broken'}
           </span>
         </div>
-        <p style={{ color: '#94a3b8', fontSize: 14 }}>
-          Hyperledger Fabric v2.5 • Channel: <strong>{data.channel.name}</strong> • Consensus: {data.network.consensus} • State DB: {data.network.stateDb}
+        <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>
+          Real SHA-256 hash chain from <strong style={{ color: '#22c55e' }}>live Supabase audit_events</strong> • {data.stats.totalBlocks} blocks • Updated: {lastRefresh}
         </p>
       </div>
 
-      {/* Simulation Mode Banner */}
-      {data.network.blockchainMode === 'DEMO_SHA256' && (
-        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '12px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ fontSize: 20, flexShrink: 0 }}>📡</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>Simulation Mode — SHA-256 Block Construction</div>
-            <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-              Blocks are constructed from Supabase audit events using real SHA-256 hashing. Hash chains are independently verifiable, but no Hyperledger Fabric peers are connected.
-            </p>
-            <p style={{ fontSize: 10, color: '#64748b', marginTop: 4, fontFamily: 'monospace', margin: '4px 0 0' }}>
-              Data source: {data.network.dataSource} • Hash algorithm: {data.network.hashAlgorithm}
-            </p>
+      {/* Action Bar */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={runVerification} disabled={verifying}
+          style={{
+            padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none',
+            background: verifying ? '#334155' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+          {verifying ? (<><div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> Verifying...</>) : '🔍 Verify Chain Now'}
+        </button>
+        <button onClick={fetchData}
+          style={{ padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: '#a5b4fc' }}>
+          🔄 Refresh
+        </button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>
+          <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} style={{ accentColor: '#6366f1' }} />
+          Auto-refresh (10s)
+        </label>
+        <button onClick={() => setShowArchitecture(!showArchitecture)}
+          style={{ padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', marginLeft: 'auto' }}>
+          🏗️ {showArchitecture ? 'Hide' : 'Show'} Designed Architecture
+        </button>
+      </div>
+
+      {/* Verification Result */}
+      {verification && (
+        <div style={{
+          background: verification.verified ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+          border: `1px solid ${verification.verified ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+          borderRadius: 16, padding: 20, marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <span style={{ fontSize: 32 }}>{verification.verified ? '✅' : '❌'}</span>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: verification.verified ? '#22c55e' : '#ef4444' }}>
+                {verification.verified ? 'Chain Integrity VERIFIED' : 'Chain Integrity BROKEN'}
+              </div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                Verified {verification.totalBlocks} blocks in {verification.verificationTimeMs}ms at {new Date(verification.timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+              </div>
+            </div>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.5)' }}>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Algorithm</div>
+              <div style={{ fontSize: 12, color: '#e2e8f0', fontFamily: 'monospace' }}>{verification.hashAlgorithm}</div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.5)' }}>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Method</div>
+              <div style={{ fontSize: 12, color: '#e2e8f0' }}>{verification.method}</div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.5)' }}>
+              <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Latest Block Hash</div>
+              <div style={{ fontSize: 11, color: '#22c55e', fontFamily: 'monospace', wordBreak: 'break-all' }}>{verification.latestBlockHash?.slice(0, 32)}...</div>
+            </div>
+          </div>
+          {verification._howToVerify && verification._howToVerify.length > 0 && (
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 6 }}>🔬 How to independently verify:</div>
+              {verification._howToVerify.map((step, i) => (
+                <div key={i} style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace', lineHeight: 1.8 }}>{step}</div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Stats Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Block Height', value: data.channel.height, icon: '📦', color: '#6366f1' },
-          { label: 'Transactions', value: data.stats.totalTransactions, icon: '📝', color: '#3b82f6' },
-          { label: 'Chaincode Calls', value: data.stats.chaincodeInvocations, icon: '⚡', color: '#22c55e' },
+          { label: 'Audit Events', value: data.stats.totalTransactions, icon: '📝', color: '#3b82f6' },
           { label: 'Frozen by AI', value: data.stats.frozenByAI, icon: '🚨', color: '#ef4444' },
           { label: 'Sealed Bids', value: data.stats.zkpBids, icon: '🔐', color: '#a855f7' },
-          { label: 'Policy Violations', value: data.stats.endorsementPolicyViolations, icon: '✅', color: '#10b981' },
+          { label: 'Chain Status', value: data.stats.chainIntegrity, icon: '🔗', color: data.stats.chainIntegrity === 'VERIFIED' ? '#22c55e' : '#ef4444' },
         ].map(stat => (
-          <div key={stat.label} style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '20px 16px', backdropFilter: 'blur(10px)' }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{stat.icon}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: stat.color }}>{stat.value}</div>
-            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>{stat.label}</div>
+          <div key={stat.label} style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: '16px 14px', backdropFilter: 'blur(10px)' }}>
+            <div style={{ fontSize: 20, marginBottom: 6 }}>{stat.icon}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Network Topology */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
-        {/* Peers */}
-        <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>🖥️ Peer Nodes</h2>
-          {data.peers.map(peer => (
-            <div key={peer.name} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', marginBottom: 8, border: '1px solid rgba(34,197,94,0.3)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{peer.name}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{peer.mspId} • {peer.role}</div>
-                </div>
-                <span style={{ background: peer.status === 'RUNNING' ? '#22c55e' : peer.status === 'SIMULATED' ? '#f59e0b' : '#ef4444', color: '#fff', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                  {peer.status}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: '#64748b' }}>
-                <span>Height: {peer.ledgerHeight}</span>
-                <span>CC: {peer.chaincodes[0]}</span>
-              </div>
-            </div>
-          ))}
+      {/* Channel Info — Real Data */}
+      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 20, marginBottom: 24, backdropFilter: 'blur(10px)' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#e2e8f0', margin: '0 0 12px' }}>🔗 Hash Chain State (Live)</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+          <div>
+            <span style={{ color: '#64748b', fontSize: 11 }}>Current Block Hash</span>
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#22c55e', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.currentBlockHash}</div>
+          </div>
+          <div>
+            <span style={{ color: '#64748b', fontSize: 11 }}>Previous Block Hash</span>
+            <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#f59e0b', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.previousBlockHash}</div>
+          </div>
         </div>
-
-        {/* Organizations */}
-        <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>🏛️ Organizations</h2>
-          {data.organizations.map(org => (
-            <div key={org.name} style={{ padding: 12, borderRadius: 12, background: 'rgba(15,23,42,0.5)', marginBottom: 8, border: '1px solid rgba(99,102,241,0.2)' }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{org.name}</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{org.mspId} • {org.domain}</div>
-              <div style={{ fontSize: 11, color: '#6366f1', marginTop: 4 }}>{org.role}</div>
-            </div>
-          ))}
+        <div style={{ marginTop: 10, padding: '6px 12px', background: 'rgba(34,197,94,0.08)', borderRadius: 8, fontSize: 11, color: '#94a3b8' }}>
+          <strong style={{ color: '#22c55e' }}>Data source:</strong> {data.dataIntegrity.dataSource} • <strong>{data.dataIntegrity.hashAlgorithm}</strong>
         </div>
       </div>
 
-      {/* Channel Info */}
-      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, marginBottom: 32, backdropFilter: 'blur(10px)' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>📋 Channel: {data.channel.name}</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-          <div><span style={{ color: '#64748b', fontSize: 12 }}>Current Block Hash</span><div style={{ fontFamily: 'monospace', fontSize: 12, color: '#22c55e', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.currentBlockHash}</div></div>
-          <div><span style={{ color: '#64748b', fontSize: 12 }}>Previous Block Hash</span><div style={{ fontFamily: 'monospace', fontSize: 12, color: '#f59e0b', marginTop: 4, wordBreak: 'break-all' }}>{data.channel.previousBlockHash}</div></div>
+      {/* Architecture Section (toggled) */}
+      {showArchitecture && (
+        <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>🏗️</span>
+            <h2 style={{ fontSize: 16, fontWeight: 700, color: '#c4b5fd', margin: 0 }}>Designed Fabric Architecture</h2>
+            <span style={{ background: 'rgba(139,92,246,0.2)', color: '#a78bfa', padding: '2px 10px', borderRadius: 12, fontSize: 10, fontWeight: 600 }}>DESIGN SPEC</span>
+          </div>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.6 }}>
+            {data.architecture._note}
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            {data.architecture.designedOrganizations.map(org => (
+              <div key={org.name} style={{ padding: 12, borderRadius: 10, background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0' }}>{org.name}</div>
+                <div style={{ fontSize: 11, color: '#a78bfa', marginTop: 4 }}>{org.role}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#94a3b8' }}>
+            <strong>Consensus:</strong> {data.architecture.designedConsensus} • <strong>Endorsement:</strong> <code style={{ color: '#a78bfa' }}>{data.architecture.designedEndorsementPolicy}</code>
+          </div>
         </div>
-        <div style={{ marginTop: 12, padding: '8px 16px', background: 'rgba(99,102,241,0.1)', borderRadius: 8, fontSize: 12, color: '#a5b4fc' }}>
-          <strong>Endorsement Policy:</strong> {data.network.chaincode.endorsementPolicy}
-          <br />
-          <strong>Chaincode:</strong> {data.network.chaincode.name} v{data.network.chaincode.version} ({data.network.chaincode.language}) — {data.network.chaincode.functions} functions
-        </div>
-      </div>
+      )}
 
       {/* Block List */}
-      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 24, backdropFilter: 'blur(10px)' }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: '#e2e8f0' }}>📦 Blocks</h2>
+      <div style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 16, padding: 20, backdropFilter: 'blur(10px)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>📦 Blocks ({data.blocks.length})</h2>
+          <span style={{ fontSize: 11, color: '#64748b' }}>Click a block to expand transaction details</span>
+        </div>
         <div style={{ display: 'grid', gap: 8 }}>
           {data.blocks.map(block => (
             <div
@@ -191,56 +310,58 @@ export default function BlockchainExplorer() {
               className="block-card"
               onClick={() => setSelectedBlock(selectedBlock?.blockNumber === block.blockNumber ? null : block)}
               style={{
-                padding: 16, borderRadius: 12,
+                padding: 14, borderRadius: 12,
                 background: selectedBlock?.blockNumber === block.blockNumber ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.5)',
                 border: `1px solid ${selectedBlock?.blockNumber === block.blockNumber ? 'rgba(99,102,241,0.5)' : 'rgba(51,65,85,0.5)'}`,
                 cursor: 'pointer', transition: 'all 0.2s',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: '#fff', flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: '#fff', flexShrink: 0 }}>
                   #{block.blockNumber}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {block.transactions.map(tx => (
-                      <span key={tx.txId} style={{ background: `${fnColors[tx.function] || '#6b7280'}22`, color: fnColors[tx.function] || '#6b7280', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid ${fnColors[tx.function] || '#6b7280'}44` }}>
-                        {tx.function}({tx.args[0] ? tx.args[0].slice(0, 25) : ''})
+                      <span key={tx.txId} style={{
+                        background: `${fnColors[tx.function] || '#6b7280'}22`,
+                        color: fnColors[tx.function] || '#6b7280',
+                        padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                        border: `1px solid ${fnColors[tx.function] || '#6b7280'}44`,
+                      }}>
+                        {tx.function}({tx.args[0] ? tx.args[0].slice(0, 22) : ''})
                       </span>
                     ))}
                   </div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4, display: 'flex', gap: 16 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 4, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                     <span>🕐 {new Date(block.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
-                    <span>TX: {block.txCount}</span>
                     <span style={{ fontFamily: 'monospace' }}>Hash: {block.blockHash.slice(0, 16)}...</span>
                   </div>
                 </div>
               </div>
 
-              {/* Expanded Transaction Details */}
+              {/* Expanded Details */}
               {selectedBlock?.blockNumber === block.blockNumber && (
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(99,102,241,0.2)' }}>
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(99,102,241,0.2)' }}>
                   {block.transactions.map(tx => (
-                    <div key={tx.txId} className="tx-row" style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.8)', marginBottom: 8 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px 16px', fontSize: 12 }}>
-                        <span style={{ color: '#64748b' }}>TX ID</span>
+                    <div key={tx.txId} style={{ padding: 12, borderRadius: 8, background: 'rgba(15,23,42,0.8)', marginBottom: 6 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '3px 14px', fontSize: 11 }}>
+                        <span style={{ color: '#64748b' }}>TX Hash</span>
                         <span style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all' }}>{tx.txId}</span>
-                        <span style={{ color: '#64748b' }}>Type</span>
-                        <span style={{ color: '#e2e8f0' }}>{tx.type}</span>
-                        <span style={{ color: '#64748b' }}>Chaincode</span>
-                        <span style={{ color: '#22c55e' }}>{tx.chaincode}::{tx.function}</span>
-                        <span style={{ color: '#64748b' }}>Creator</span>
-                        <span style={{ color: '#f59e0b' }}>{tx.creator.mspId} ({tx.creator.org})</span>
-                        <span style={{ color: '#64748b' }}>Endorsers</span>
-                        <span style={{ color: '#a855f7' }}>{tx.endorsers.join(', ')}</span>
+                        <span style={{ color: '#64748b' }}>Function</span>
+                        <span style={{ color: '#22c55e', fontWeight: 600 }}>{tx.chaincode}::{tx.function}</span>
+                        <span style={{ color: '#64748b' }}>Actor</span>
+                        <span style={{ color: '#f59e0b' }}>{tx.creator.org} ({tx.creator.mspId})</span>
+                        <span style={{ color: '#64748b' }}>Data Hash</span>
+                        <span style={{ fontFamily: 'monospace', color: '#94a3b8', wordBreak: 'break-all' }}>{block.dataHash}</span>
                         <span style={{ color: '#64748b' }}>Status</span>
                         <span style={{ color: tx.status === 'VALID' ? '#22c55e' : '#ef4444', fontWeight: 700 }}>{tx.status}</span>
                       </div>
                     </div>
                   ))}
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 6 }}>
                     <span>Previous Hash: </span>
-                    <span style={{ fontFamily: 'monospace', color: '#f59e0b' }}>{block.previousHash.slice(0, 32)}...</span>
+                    <span style={{ fontFamily: 'monospace', color: '#f59e0b', wordBreak: 'break-all' }}>{block.previousHash}</span>
                   </div>
                 </div>
               )}

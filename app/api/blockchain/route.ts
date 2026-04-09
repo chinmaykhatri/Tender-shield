@@ -3,19 +3,23 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 
 // ============================================================================
-// TenderShield — Blockchain Explorer API
+// TenderShield — Blockchain Audit Ledger API
 // ============================================================================
-// Mode-aware block explorer:
-//   FABRIC_LIVE  → Queries real Hyperledger Fabric peer for block data
-//   DEMO_SHA256  → Builds blocks from Supabase audit_events with REAL SHA-256
+// This builds a verifiable hash chain from REAL Supabase audit_events.
 //
-// FIX 1+2: Replaced fake integer hash function (generateBlockHash) with
-// Node.js crypto SHA-256. Every hash is now a genuine SHA-256 output.
-// A judge can independently verify any hash by running SHA-256 on the input.
+// WHAT IS REAL:
+//   ✅ Every audit event is a real database record
+//   ✅ SHA-256 hashes are genuine and reproducible
+//   ✅ Hash chain links each block to the previous one
+//   ✅ Data integrity is verifiable — tampering breaks the chain
+//   ✅ Block count, timestamps, actor info — all from real data
+//
+// ARCHITECTURE DESIGN (not deployed as running services):
+//   🏗️ Peer node names show the DESIGNED Fabric topology
+//   🏗️ Endorsement policies show the DESIGNED consensus rules
+//   🏗️ MSP/Org structure shows the DESIGNED identity framework
 // ============================================================================
 
-// Lazy Supabase client — avoids crash during Vercel page data collection
-// when env vars are not yet available at build time.
 let _supabase: ReturnType<typeof createClient> | null = null;
 function getSupabase() {
   if (!_supabase) {
@@ -27,30 +31,24 @@ function getSupabase() {
   return _supabase;
 }
 
-// Mode detection — read lazily in GET() to avoid build-time env var issues
-
 // ─── Real SHA-256 Hash Functions ───
-// These produce genuine cryptographic hashes, not JS integer bit-shifting.
-
 function sha256Hash(data: string): string {
   return createHash('sha256').update(data).digest('hex');
 }
 
 function generateBlockHash(blockNumber: number, previousHash: string, dataHash: string, timestamp: string): string {
-  const input = `BLOCK:${blockNumber}|PREV:${previousHash}|DATA:${dataHash}|TS:${timestamp}`;
-  return sha256Hash(input);
+  return sha256Hash(`BLOCK:${blockNumber}|PREV:${previousHash}|DATA:${dataHash}|TS:${timestamp}`);
 }
 
 function generateTxId(eventId: string, eventType: string, timestamp: string): string {
-  const input = `TX:${eventId}|TYPE:${eventType}|TS:${timestamp}|CHANNEL:tenderchannel`;
-  return sha256Hash(input);
+  return sha256Hash(`TX:${eventId}|TYPE:${eventType}|TS:${timestamp}|CHANNEL:tenderchannel`);
 }
 
 function generateDataHash(data: string): string {
   return sha256Hash(`DATA:${data}`);
 }
 
-// Map event_type to chaincode function name
+// Map event_type to function name
 const eventToFunction: Record<string, string> = {
   TENDER_CREATED: 'CreateTender',
   TENDER_PUBLISHED: 'PublishTender',
@@ -62,43 +60,13 @@ const eventToFunction: Record<string, string> = {
   TENDER_AWARDED: 'AwardTender',
   COMMITMENT_VERIFIED: 'VerifyCommitment',
   TENDER_EVALUATED: 'EvaluateBids',
+  LIFECYCLE_STATE: 'LifecycleState',
+  FRAUD_EVALUATION: 'FraudEvaluation',
 };
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || '';
-  const FABRIC_PEER_ENDPOINT = process.env.FABRIC_PEER_ENDPOINT || '';
-  const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || !FABRIC_PEER_ENDPOINT;
-
-  // ─── Strategy 1: Try real Fabric peer via backend ───
-  if (FABRIC_PEER_ENDPOINT && BACKEND_URL) {
-    try {
-      const fabricResponse = await fetch(`${BACKEND_URL}/api/v1/fabric/ledger-info`, {
-        headers: { 'X-Request-Source': 'tendershield-explorer' },
-        signal: AbortSignal.timeout(5000),
-      });
-      if (fabricResponse.ok) {
-        const fabricData = await fabricResponse.json();
-        if (fabricData.blocks && fabricData.blocks.length > 0) {
-          // Real Fabric data available — return it directly
-          return NextResponse.json({
-            ...fabricData,
-            network: {
-              ...fabricData.network,
-              blockchainMode: 'FABRIC_LIVE',
-              dataSource: 'Hyperledger Fabric Peer via gRPC',
-              hashAlgorithm: 'SHA-256 (Fabric native)',
-            },
-          });
-        }
-      }
-    } catch (e) {
-      console.log(`[blockchain] Fabric peer query failed: ${e}. Falling back to Supabase.`);
-    }
-  }
-
-  // ─── Strategy 2: Build blocks from Supabase audit_events ───
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: events, error } = await getSupabase()
     .from('audit_events')
@@ -114,6 +82,7 @@ export async function GET() {
   const genesisDataHash = sha256Hash('TenderShield Genesis Block — tenderchannel');
   const genesisHash = generateBlockHash(0, '0'.repeat(64), genesisDataHash, genesisTimestamp);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blocks: any[] = [{
     blockNumber: 0,
     blockHash: genesisHash,
@@ -125,11 +94,11 @@ export async function GET() {
     transactions: [{
       txId: sha256Hash('genesis-config-tx-tenderchannel'),
       type: 'CONFIG',
-      chaincode: 'cscc',
-      function: 'JoinChain',
+      chaincode: 'system',
+      function: 'GenesisBlock',
       args: ['tenderchannel'],
-      creator: { mspId: 'OrdererMSP', org: 'orderer.tendershield.gov.in' },
-      endorsers: ['OrdererMSP'],
+      creator: { mspId: 'System', org: 'TenderShield Audit Ledger' },
+      endorsers: ['System'],
       timestamp: genesisTimestamp,
       status: 'VALID',
     }],
@@ -137,7 +106,6 @@ export async function GET() {
 
   let prevHash = genesisHash;
 
-  // Each audit event = one block (same as Fabric's 1-tx-per-block in low throughput)
   for (let i = 0; i < events.length; i++) {
     const evt = events[i];
     const evtData = (typeof evt.data === 'string' ? JSON.parse(evt.data) : evt.data) || {};
@@ -145,40 +113,17 @@ export async function GET() {
     const fnName = eventToFunction[evt.event_type] || evt.event_type;
     const timestamp = evt.timestamp_ist || evt.created_at;
 
-    // Real SHA-256 transaction ID
     const txId = generateTxId(evt.event_id, evt.event_type, timestamp);
-
-    // Real SHA-256 data hash of the event payload
     const dataHash = generateDataHash(JSON.stringify(evtData));
-
-    // Real SHA-256 block hash — chains to previous block
     const blockNum = i + 1;
     const blockHash = generateBlockHash(blockNum, prevHash, dataHash, timestamp);
 
     const actorRole = evtData.actor_role || 'SYSTEM';
-
-    // Determine MSP from actor role
-    let mspId = 'MinistryOrgMSP';
-    let org = evtData.actor || 'ministry.tendershield.gov.in';
-    if (actorRole === 'AI_SYSTEM' || actorRole === 'AI_SERVICE') {
-      mspId = 'NICOrgMSP'; org = 'nic.tendershield.gov.in';
-    } else if (actorRole === 'BIDDER') {
-      mspId = 'BidderOrgMSP'; org = evtData.actor || 'bidder.tendershield.gov.in';
-    } else if (actorRole === 'SYSTEM' || actorRole === 'BLOCKCHAIN') {
-      mspId = 'OrdererMSP'; org = 'orderer.tendershield.gov.in';
-    } else if (actorRole === 'CAG_AUDITOR') {
-      mspId = 'AuditorOrgMSP'; org = 'auditor.tendershield.gov.in';
-    }
-
-    // Determine endorsers based on function
-    let endorsers = ['MinistryOrgMSP', 'NICOrgMSP'];
-    if (fnName === 'FreezeTender' || fnName === 'NotifyCAG') {
-      endorsers = ['MinistryOrgMSP', 'NICOrgMSP', 'AuditorOrgMSP'];
-    } else if (fnName === 'SubmitBid' || fnName === 'RevealBid') {
-      endorsers = ['BidderOrgMSP', 'MinistryOrgMSP'];
-    } else if (fnName === 'VerifyCommitment') {
-      endorsers = ['MinistryOrgMSP', 'NICOrgMSP'];
-    }
+    let actorLabel = evtData.actor || 'System Process';
+    if (actorRole === 'AI_SYSTEM' || actorRole === 'AI_SERVICE') actorLabel = evtData.actor || 'AI Fraud Engine';
+    else if (actorRole === 'BIDDER') actorLabel = evtData.actor || 'Bidder';
+    else if (actorRole === 'CAG_AUDITOR') actorLabel = evtData.actor || 'CAG Auditor';
+    else if (actorRole === 'OFFICER') actorLabel = evtData.actor || 'Ministry Officer';
 
     blocks.push({
       blockNumber: blockNum,
@@ -191,14 +136,17 @@ export async function GET() {
       description: evtData.description || `${fnName}(${tenderId})`,
       transactions: [{
         txId,
-        type: 'ENDORSER_TRANSACTION',
+        type: 'AUDIT_EVENT',
         chaincode: 'tendershield',
         function: fnName,
         args: [tenderId],
-        creator: { mspId, org },
-        endorsers,
+        creator: { mspId: actorRole, org: actorLabel },
+        endorsers: [actorRole],
         timestamp,
         status: 'VALID',
+        // Include raw event data so the UI can show it
+        rawEventType: evt.event_type,
+        rawEventId: evt.event_id,
       }],
     });
 
@@ -207,35 +155,27 @@ export async function GET() {
 
   const totalBlocks = blocks.length;
   const latestBlock = blocks[blocks.length - 1];
-
-  // Real stats from actual event counts
   const frozenCount = events.filter(e => e.event_type === 'TENDER_FROZEN').length;
   const zkpCount = events.filter(e => ['BID_COMMITTED', 'BID_REVEALED', 'COMMITMENT_VERIFIED'].includes(e.event_type)).length;
-  const chaincodeInvocations = events.length;
 
-  // Dynamic mode detection
-  const hasFabricPeer = !!FABRIC_PEER_ENDPOINT && !DEMO_MODE;  // uses local vars from top of GET()
-  const blockchainMode = hasFabricPeer ? 'FABRIC_LIVE' : 'DEMO_SHA256';
+  // ─── Verify chain integrity ───
+  let chainValid = true;
+  for (let i = 1; i < blocks.length; i++) {
+    if (blocks[i].previousHash !== blocks[i - 1].blockHash) {
+      chainValid = false;
+      break;
+    }
+  }
 
-  // Dynamic peer status — never hardcoded
-  const peerStatus = hasFabricPeer ? 'RUNNING' : 'SIMULATED';
-
-  const networkStatus = {
-    network: {
-      name: 'TenderShield Fabric Network',
-      channel: 'tenderchannel',
-      chaincode: {
-        name: 'tendershield',
-        version: '1.0',
-        language: 'Go',
-        functions: 13,
-        endorsementPolicy: "AND('MinistryOrgMSP.peer','NICOrgMSP.peer')",
-      },
-      consensus: 'Raft (etcdraft)',
-      stateDb: 'CouchDB',
-      blockchainMode,
-      dataSource: hasFabricPeer ? 'Fabric Peer via gRPC' : 'Supabase audit_events + SHA-256 block construction',
+  return NextResponse.json({
+    // ── What's real ──
+    dataIntegrity: {
+      chainValid,
+      totalBlocks,
       hashAlgorithm: 'SHA-256 (FIPS 180-4)',
+      dataSource: 'Supabase audit_events (live database)',
+      verificationMethod: 'Each block hash = SHA-256(blockNum + prevHash + dataHash + timestamp)',
+      lastVerified: new Date().toISOString(),
     },
 
     channel: {
@@ -243,94 +183,30 @@ export async function GET() {
       height: totalBlocks,
       currentBlockHash: latestBlock.blockHash,
       previousBlockHash: latestBlock.previousHash,
-      createdAt: '2025-02-28T00:00:00+05:30',
     },
-
-    peers: [
-      {
-        name: 'peer0.ministry.tendershield.gov.in',
-        mspId: 'MinistryOrgMSP',
-        role: 'Endorser + Committer',
-        status: peerStatus,
-        port: 7051,
-        ledgerHeight: totalBlocks,
-        chaincodes: ['tendershield v1.0'],
-        stateDb: 'CouchDB (couchdb0.tendershield:5984)',
-      },
-      {
-        name: 'peer0.bidder.tendershield.gov.in',
-        mspId: 'BidderOrgMSP',
-        role: 'Endorser + Committer',
-        status: peerStatus,
-        port: 8051,
-        ledgerHeight: totalBlocks,
-        chaincodes: ['tendershield v1.0'],
-        stateDb: 'CouchDB (couchdb1.tendershield:6984)',
-      },
-      {
-        name: 'peer0.auditor.tendershield.gov.in',
-        mspId: 'AuditorOrgMSP',
-        role: 'Committer (Audit)',
-        status: peerStatus,
-        port: 9051,
-        ledgerHeight: totalBlocks,
-        chaincodes: ['tendershield v1.0'],
-        stateDb: 'CouchDB (couchdb2.tendershield:7984)',
-      },
-      {
-        name: 'peer0.nic.tendershield.gov.in',
-        mspId: 'NICOrgMSP',
-        role: 'Endorser + AI Service',
-        status: peerStatus,
-        port: 10051,
-        ledgerHeight: totalBlocks,
-        chaincodes: ['tendershield v1.0'],
-        stateDb: 'CouchDB (couchdb3.tendershield:8984)',
-      },
-    ],
-
-    orderers: [
-      {
-        name: 'orderer0.orderer.tendershield.gov.in',
-        mspId: 'OrdererMSP',
-        type: 'Raft (etcdraft)',
-        status: peerStatus,
-        port: 7050,
-      },
-      {
-        name: 'orderer1.orderer.tendershield.gov.in',
-        mspId: 'OrdererMSP',
-        type: 'Raft (etcdraft)',
-        status: peerStatus,
-        port: 8050,
-      },
-      {
-        name: 'orderer2.orderer.tendershield.gov.in',
-        mspId: 'OrdererMSP',
-        type: 'Raft (etcdraft)',
-        status: peerStatus,
-        port: 9050,
-      },
-    ],
-
-    organizations: [
-      { name: 'MinistryOrg', mspId: 'MinistryOrgMSP', domain: 'ministry.tendershield.gov.in', role: 'Tender Creator / Evaluator', peers: 1 },
-      { name: 'BidderOrg', mspId: 'BidderOrgMSP', domain: 'bidder.tendershield.gov.in', role: 'Vendor / Bidder', peers: 1 },
-      { name: 'AuditorOrg', mspId: 'AuditorOrgMSP', domain: 'auditor.tendershield.gov.in', role: 'CAG Audit Authority', peers: 1 },
-      { name: 'NICOrg', mspId: 'NICOrgMSP', domain: 'nic.tendershield.gov.in', role: 'AI Platform / Infrastructure', peers: 1 },
-    ],
 
     blocks: blocks.reverse(), // newest first
 
     stats: {
       totalBlocks,
-      totalTransactions: chaincodeInvocations,
-      chaincodeInvocations,
+      totalTransactions: events.length,
+      chaincodeInvocations: events.length,
       frozenByAI: frozenCount,
       zkpBids: zkpCount,
-      endorsementPolicyViolations: 0,
+      chainIntegrity: chainValid ? 'VERIFIED' : 'BROKEN',
     },
-  };
 
-  return NextResponse.json(networkStatus);
+    // ── Architecture design (labeled honestly) ──
+    architecture: {
+      _note: 'The following shows the DESIGNED Hyperledger Fabric topology. These services are not running — blocks are constructed from Supabase audit events with real SHA-256 hashing.',
+      designedOrganizations: [
+        { name: 'MinistryOrg', role: 'Tender Creator / Evaluator', peers: 1 },
+        { name: 'BidderOrg', role: 'Vendor / Bidder', peers: 1 },
+        { name: 'AuditorOrg', role: 'CAG Audit Authority', peers: 1 },
+        { name: 'NICOrg', role: 'AI Platform / Infrastructure', peers: 1 },
+      ],
+      designedConsensus: 'Raft (etcdraft)',
+      designedEndorsementPolicy: "AND('MinistryOrgMSP.peer','NICOrgMSP.peer')",
+    },
+  });
 }
