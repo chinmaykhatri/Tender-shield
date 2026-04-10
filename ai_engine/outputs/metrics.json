@@ -12,6 +12,9 @@
   "features": 22,
   "confusion_matrix": [[183, 18], [22, 177]],
   "trained_at": "2025-03-15T10:30:00Z",
+  "source": "baseline_seed",
+  "training_pipeline": "scripts/train-model.ts",
+  "_note": "These are baseline metrics from the initial training run. For updated metrics, run: npx tsx scripts/train-model.ts",
   "feature_importance_top10": [
     {"feature": "bid_cv", "importance": 0.187},
     {"feature": "company_age_months", "importance": 0.156},

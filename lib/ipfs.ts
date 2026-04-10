@@ -35,7 +35,7 @@ export interface IPFSPinResult {
   success: boolean;
   cid: string;                   // Content Identifier (e.g., QmXyz...)
   size: number;                  // File size in bytes
-  pinned_via: 'pinata' | 'local-ipfs' | 'sha256-fallback';
+  pinned_via: 'pinata' | 'local-ipfs' | 'sha256-local-hash';
   url: string;                   // Gateway URL to access the file
   timestamp: string;
   error?: string;
@@ -170,10 +170,11 @@ function pinViaSHA256Fallback(content: string, filename: string): IPFSPinResult 
     success: true,
     cid,
     size: content.length,
-    pinned_via: 'sha256-fallback',
-    url: `ipfs://${cid}`, // Not accessible via HTTP, but structurally valid
+    pinned_via: 'sha256-local-hash',
+    url: `ipfs://${cid}`, // Content-addressed hash, not pinned to IPFS network
     timestamp: new Date().toISOString(),
-  };
+    _note: 'Content hash computed locally via SHA-256. Document is NOT stored on the IPFS network. Set PINATA_JWT to enable real IPFS pinning.',
+  } as IPFSPinResult;
 }
 
 // ─── Public API ───

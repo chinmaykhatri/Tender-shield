@@ -68,5 +68,16 @@ export async function GET() {
     trained_at: (metrics?.trained_at as string) ?? '2025-03-15T10:30:00Z',
     model_card_exists: modelCardExists,
     metrics_source: metrics ? 'ai_engine/outputs/metrics.json' : 'default values (train model to update)',
+    _source: (metrics?.source as string) === 'baseline_seed'
+      ? 'BASELINE_SEED'
+      : metrics ? 'TRAINED_MODEL' : 'HARDCODED_DEFAULTS',
+    _note: (metrics?.source as string) === 'baseline_seed'
+      ? 'These metrics are from the initial baseline seed, not a live training run. Run `npx tsx scripts/train-model.ts` for real training.'
+      : metrics ? 'Metrics loaded from trained model output.'
+      : 'No metrics.json found. Using hardcoded default values.',
+
+    // Live inference engine details
+    inference_engine: 'TenderShield Statistical Engine v3.0 — 5 independent detectors (Benford, CV, Shell, Timing, Cartel)',
+    inference_mode: 'Real-time statistical analysis (no ML model weights loaded at runtime)',
   });
 }

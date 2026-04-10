@@ -11,6 +11,7 @@ export default function BidsPage() {
   const [verification, setVerification] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [chainTx, setChainTx] = useState<any>(null);
 
   // ─── Generate SHA-256 Commitment ───
   const handleGenerateCommitment = async () => {
@@ -29,6 +30,29 @@ export default function BidsPage() {
       if (data.success) {
         setCommitment(data);
         setMessage('');
+
+        // Submit commitment to blockchain via chaincode-invoke
+        try {
+          const chainRes = await fetch('/api/chaincode-invoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              function_name: 'SubmitBid',
+              args: [
+                `BID-${Date.now()}`,
+                data.commitment.C,
+                user?.did || 'anonymous',
+              ],
+              user_id: user?.did || 'anonymous',
+            }),
+          });
+          const chainData = await chainRes.json();
+          if (chainData.success) {
+            setChainTx(chainData);
+          }
+        } catch {
+          // Chaincode submission failed — commitment still valid locally
+        }
       } else {
         setMessage('❌ ' + (data.error || 'Failed to generate commitment'));
       }
@@ -160,10 +184,18 @@ export default function BidsPage() {
                 {commitment && (
                   <div style={{ marginTop: '8px' }}>
                     <BlockchainProof
-                      txHash={commitment.commitment?.C ? '0x' + commitment.commitment.C.slice(0, 64) : undefined}
-                      blockNumber={Math.floor(Date.now() / 10000) % 9999}
+                      txHash={chainTx?.tx_hash || ('0x' + commitment.commitment.C.slice(0, 64))}
+                      blockNumber={chainTx?.block_number || 0}
                       showVerify={true}
                     />
+                    {chainTx && (
+                      <div className="mt-2 p-2 rounded-lg bg-[var(--bg-secondary)]">
+                        <p className="text-[10px] text-[var(--text-secondary)]">
+                          Mode: <span className="font-mono text-[var(--accent)]">{chainTx.blockchain_mode}</span>
+                          {chainTx._note && <> · {chainTx._note.slice(0, 80)}...</>}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

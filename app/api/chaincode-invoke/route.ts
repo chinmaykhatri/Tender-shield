@@ -155,11 +155,22 @@ export async function POST(req: Request) {
     }
 
     // ─── Strategy 2: Local SHA-256 fallback ───
-    // Even without a Fabric peer, we generate a real SHA-256 hash
-    // so the system is cryptographically honest.
+    // Without a Fabric peer, we generate a real SHA-256 hash of the
+    // invocation payload. This is cryptographically honest but NOT
+    // a distributed ledger write — it's a local audit record.
     const txHash = generateTxHash(function_name, args, user_id);
-    const blockNumber = Math.floor(Date.now() / 1000) % 100000 + 1200;
     const mode = 'LOCAL_SHA256_FALLBACK';
+
+    // Get real chain height from audit_events count
+    let blockNumber = 0;
+    try {
+      const { count } = await supabase
+        .from('audit_events')
+        .select('*', { count: 'exact', head: true });
+      blockNumber = (count || 0) + 1;
+    } catch {
+      blockNumber = 0;
+    }
 
     // Write-through to Supabase
     await storeTransactionInSupabase(txHash, blockNumber, function_name, args, mode, user_id);
@@ -172,9 +183,9 @@ export async function POST(req: Request) {
       channel: FABRIC_CHANNEL,
       chaincode: FABRIC_CHAINCODE,
       function_name,
-      can_verify: true,
-      verify_url: `/api/blockchain?tx=${txHash}`,
-      notice: 'Fabric peer not connected — TX hash is real SHA-256 of invocation payload',
+      can_verify: false,
+      verify_url: `/api/blockchain/verify`,
+      _note: 'Fabric peer not connected. TX hash is a real SHA-256 of the invocation payload, stored in Supabase audit trail. This is NOT a distributed ledger write — it is a local cryptographic record.',
     });
   } catch (err) {
     console.error('[chaincode-invoke] Error:', err);

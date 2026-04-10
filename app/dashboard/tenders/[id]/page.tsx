@@ -146,8 +146,8 @@ export default function TenderDetailPage() {
               <p style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#5eead4' }}>{ipfsData.cid}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span className="badge badge-info" style={{ fontSize: '9px' }}>{ipfsData.pinned_via === 'sha256-fallback' ? 'content-hash' : ipfsData.pinned_via}</span>
-              {ipfsData.pinned_via !== 'sha256-fallback' && (
+              <span className="badge badge-info" style={{ fontSize: '9px' }}>{ipfsData.pinned_via === 'sha256-local-hash' ? 'content-hash' : ipfsData.pinned_via}</span>
+              {ipfsData.pinned_via !== 'sha256-local-hash' && (
                 <a href={ipfsData.gateway_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', color: '#14b8a6', textDecoration: 'none' }}>View →</a>
               )}
             </div>

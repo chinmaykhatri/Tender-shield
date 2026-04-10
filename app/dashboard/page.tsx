@@ -162,7 +162,7 @@ export default function DashboardPage() {
             <div className="card-3d-inner glass-layer-1">
               <p style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>🛡️ Fraud Prevented</p>
               <p className="number-pop" style={{ fontSize: '40px', fontWeight: 700, fontFamily: "'Rajdhani', sans-serif", background: 'linear-gradient(135deg, #22c55e, #4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                ₹{(stats?.fraud_prevented_value_crore || 238.5).toFixed(1)} Cr
+                ₹{(stats?.fraud_prevented_value_crore || 0).toFixed(1)} Cr
               </p>
               <div className="accent-line-animated" style={{ marginTop: '12px', background: 'linear-gradient(90deg, #22c55e, transparent)' }} />
             </div>

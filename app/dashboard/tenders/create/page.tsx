@@ -8,6 +8,98 @@ import { validateStep1, validateStep2, validateStep3, validateComplete, type Val
 
 const ALLOWED_ROLES = ['OFFICER', 'NIC_ADMIN', 'MINISTRY_OFFICER', 'SENIOR_OFFICER'];
 
+// ── Document Upload with real /api/ipfs pinning ──
+function DocumentUpload({ title, description, ministry }: { title: string; description: string; ministry: string }) {
+  const [pinning, setPinning] = useState(false);
+  const [ipfsResult, setIpfsResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const handlePin = async () => {
+    setPinning(true);
+    setError('');
+    try {
+      // Pin the tender specification as a JSON document
+      const tenderDoc = JSON.stringify({
+        title,
+        description,
+        ministry,
+        created_at: new Date().toISOString(),
+        document_type: 'TENDER_SPECIFICATION',
+      });
+
+      const res = await fetch('/api/ipfs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pin', content: tenderDoc, name: `tender-${title.replace(/\s+/g, '-').slice(0, 40)}` }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIpfsResult(data);
+      } else {
+        setError(data.error || 'Pinning failed');
+      }
+    } catch (e: any) {
+      setError(e.message);
+    }
+    setPinning(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-8 text-center">
+        <p className="text-4xl mb-3">📄</p>
+        <p className="text-sm text-[var(--text-secondary)]">Tender documents will be hashed for immutability</p>
+        <p className="text-xs text-[var(--text-secondary)] mt-2">
+          Content hash is computed via SHA-256 and pinned to IPFS (if configured) or stored as a verifiable content-addressed hash.
+        </p>
+        <button
+          onClick={handlePin}
+          disabled={pinning || !title}
+          className="btn-primary mt-4 text-sm"
+        >
+          {pinning ? '⏳ Computing Hash...' : '📌 Pin Document to IPFS'}
+        </button>
+      </div>
+
+      {ipfsResult && (
+        <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+          <p className="text-xs font-semibold text-green-400 mb-2">✅ Document Hashed & Pinned</p>
+          <div className="space-y-1 text-xs font-mono">
+            <div>
+              <span className="text-[var(--text-secondary)]">CID:</span>
+              <span className="ml-2 text-green-400 break-all">{ipfsResult.cid}</span>
+            </div>
+            <div>
+              <span className="text-[var(--text-secondary)]">Pinned Via:</span>
+              <span className="ml-2">{ipfsResult.pinned_via}</span>
+            </div>
+            <div>
+              <span className="text-[var(--text-secondary)]">Size:</span>
+              <span className="ml-2">{ipfsResult.size} bytes</span>
+            </div>
+            {ipfsResult.gateway_url && (
+              <div>
+                <span className="text-[var(--text-secondary)]">Gateway:</span>
+                <a href={ipfsResult.gateway_url} target="_blank" rel="noopener noreferrer"
+                  className="ml-2 text-[var(--accent)] underline">{ipfsResult.gateway_url.slice(0, 60)}...</a>
+              </div>
+            )}
+          </div>
+          {ipfsResult.pinned_via === 'sha256-local-hash' && (
+            <p className="text-[10px] text-yellow-400 mt-2">
+              ℹ️ Content hash computed locally via SHA-256. For IPFS pinning, set PINATA_JWT in environment variables.
+            </p>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/10 text-red-400 text-xs">{error}</div>
+      )}
+    </div>
+  );
+}
+
 const STEPS = ['Basic Info', 'Financial Details', 'Compliance', 'Documents', 'Review & Submit'];
 
 const MINISTRIES = [
@@ -365,12 +457,7 @@ export default function CreateTenderPage() {
         {step === 3 && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg mb-4">📎 Documents</h3>
-            <div className="border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-10 text-center">
-              <p className="text-4xl mb-3">📄</p>
-              <p className="text-sm text-[var(--text-secondary)]">Drag & drop tender notice PDF here</p>
-              <p className="text-xs text-[var(--text-secondary)] mt-2">Documents will be stored on IPFS for immutability</p>
-              <p className="text-xs font-mono text-[var(--text-secondary)] mt-4">IPFS Hash: QmX9vK2mN8pL3qR7sT4uW6yZ1aB5cD0eF (mock)</p>
-            </div>
+            <DocumentUpload title={form.title} description={form.description} ministry={form.ministry_code} />
           </div>
         )}
 

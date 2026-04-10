@@ -207,7 +207,7 @@ test.describe('TenderShield — Blockchain API Flow', () => {
     expect(data.cid).toBeDefined();
     expect(data.cid.length).toBeGreaterThan(10);
     expect(data.pinned_via).toBeDefined();
-    expect(['pinata', 'local-ipfs', 'sha256-fallback']).toContain(data.pinned_via);
+    expect(['pinata', 'local-ipfs', 'sha256-local-hash']).toContain(data.pinned_via);
     expect(data.blockchain_field).toBe('Tender.DocumentsIPFSHash');
 
     console.log(`  ✅ CID: ${data.cid}`);

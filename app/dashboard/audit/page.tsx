@@ -9,12 +9,19 @@ export default function AuditPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dataSource, setDataSource] = useState<'live' | 'error'>('live');
 
   useEffect(() => {
     if (!token) return;
     getRecentEvents(token, filter || undefined)
-      .then(res => setEvents(res.events || []))
-      .catch(console.error)
+      .then(res => {
+        setEvents(res.events || []);
+        setDataSource('live');
+      })
+      .catch(() => {
+        setEvents([]);
+        setDataSource('error');
+      })
       .finally(() => setLoading(false));
   }, [token, filter]);
 
@@ -31,21 +38,11 @@ export default function AuditPage() {
     return '📜';
   };
 
-  // Demo audit data when no events exist
-  const demoEvents = events.length > 0 ? events : [
-    { event_id: '1', event_type: 'TENDER_CREATED', topic: 'tender-events', timestamp_ist: '2025-03-12T10:30:15+05:30', data: { tender_id: 'TDR-MoRTH-2025-000001' } },
-    { event_id: '2', event_type: 'TENDER_PUBLISHED', topic: 'tender-events', timestamp_ist: '2025-03-12T10:35:22+05:30', data: { tender_id: 'TDR-MoRTH-2025-000001' } },
-    { event_id: '3', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:30:45+05:30', data: { bid_id: 'BID-001', phase: 'SEALED_COMMIT' } },
-    { event_id: '4', event_type: 'BID_COMMITTED', topic: 'bid-events', timestamp_ist: '2025-03-12T14:31:10+05:30', data: { bid_id: 'BID-002', phase: 'SEALED_COMMIT' } },
-    { event_id: '5', event_type: 'TENDER_FROZEN', topic: 'tender-events', timestamp_ist: '2025-03-12T15:00:00+05:30', data: { tender_id: 'TDR-MoH-2025-000001', reason: 'AI fraud detection' } },
-    { event_id: '6', event_type: 'COMMITMENT_VERIFICATION_FAILED', topic: 'audit-events', timestamp_ist: '2025-03-12T15:05:33+05:30', data: { bid_id: 'BID-TAMPERED', risk_level: 'HIGH' } },
-  ];
-
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-display font-bold">Audit Trail</h1>
-        <p className="text-sm text-[var(--text-secondary)]">Immutable blockchain event log — every action recorded on Hyperledger Fabric</p>
+        <p className="text-sm text-[var(--text-secondary)]">Immutable blockchain event log — every action recorded with SHA-256 hash chain</p>
       </div>
 
       {/* Topic Filters */}
@@ -66,10 +63,14 @@ export default function AuditPage() {
         <div>
           <p className="text-sm font-medium">Immutable Audit Trail</p>
           <p className="text-xs text-[var(--text-secondary)]">
-            Every event is recorded on Hyperledger Fabric with MSP identity, IST timestamp, and blockchain transaction ID.
+            Every event is recorded on the SHA-256 hash chain with IST timestamp and blockchain transaction ID.
             Events cannot be modified or deleted — CAG has full read access.
           </p>
         </div>
+        {/* Data source transparency badge */}
+        <span className={`ml-auto badge text-[9px] whitespace-nowrap ${dataSource === 'live' ? 'badge-success' : 'badge-warning'}`}>
+          {dataSource === 'live' ? '🟢 Live Supabase' : '🟡 API Error'}
+        </span>
       </div>
 
       {/* Events Table */}
@@ -85,25 +86,43 @@ export default function AuditPage() {
             </tr>
           </thead>
           <tbody>
-            {(loading ? [] : demoEvents).map((event, i) => (
-              <tr key={i}>
-                <td>
-                  <span className="text-lg mr-2">{getEventIcon(event.event_type)}</span>
-                </td>
-                <td>
-                  <span className={`badge ${event.event_type?.includes('FROZEN') || event.event_type?.includes('FAILED') ? 'badge-danger' : event.event_type?.includes('AWARDED') ? 'badge-success' : 'badge-info'}`}>
-                    {event.event_type}
-                  </span>
-                </td>
-                <td className="text-xs text-[var(--text-secondary)]">{event.topic}</td>
-                <td className="font-mono text-xs">{event.timestamp_ist?.replace('T', ' ').slice(0, 19)}</td>
-                <td className="text-xs text-[var(--text-secondary)]">
-                  {JSON.stringify(event.data || {}).slice(0, 60)}...
+            {loading ? (
+              <tr><td colSpan={5} className="text-center py-8 text-[var(--text-secondary)]">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">⏳</span> Loading audit events...
+                </div>
+              </td></tr>
+            ) : events.length > 0 ? (
+              events.map((event, i) => (
+                <tr key={i}>
+                  <td>
+                    <span className="text-lg mr-2">{getEventIcon(event.event_type)}</span>
+                  </td>
+                  <td>
+                    <span className={`badge ${event.event_type?.includes('FROZEN') || event.event_type?.includes('FAILED') ? 'badge-danger' : event.event_type?.includes('AWARDED') ? 'badge-success' : 'badge-info'}`}>
+                      {event.event_type}
+                    </span>
+                  </td>
+                  <td className="text-xs text-[var(--text-secondary)]">{event.topic}</td>
+                  <td className="font-mono text-xs">{event.timestamp_ist?.replace('T', ' ').slice(0, 19)}</td>
+                  <td className="text-xs text-[var(--text-secondary)]">
+                    {JSON.stringify(event.data || {}).slice(0, 60)}...
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <span className="text-4xl">📭</span>
+                    <p className="text-[var(--text-secondary)] font-medium">No audit events recorded yet</p>
+                    <p className="text-xs text-[var(--text-secondary)] max-w-md">
+                      Events are created automatically when tenders are published, bids are submitted, or AI flags suspicious activity.
+                      Create a tender to generate your first audit event.
+                    </p>
+                  </div>
                 </td>
               </tr>
-            ))}
-            {!loading && demoEvents.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-8 text-[var(--text-secondary)]">No events recorded yet</td></tr>
             )}
           </tbody>
         </table>
