@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Block {
   blockNumber: number;
@@ -83,6 +84,7 @@ export default function BlockchainExplorer() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showArchitecture, setShowArchitecture] = useState(false);
   const [blockVerification, setBlockVerification] = useState<{ blockNumber: number; valid: boolean; computed: string; expected: string } | null>(null);
+  const [qrBlock, setQrBlock] = useState<Block | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -146,6 +148,13 @@ export default function BlockchainExplorer() {
     LifecycleState: '#8b5cf6', FraudEvaluation: '#ef4444', NotifyCAG: '#dc2626',
     VerifyCommitment: '#14b8a6',
   };
+
+  // Build scan-to-verify URL for a block
+  function getVerifyUrl(block: Block): string {
+    const tenderId = block.transactions[0]?.args?.[0] || `block-${block.blockNumber}`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/api/verify/scan?tender=${encodeURIComponent(tenderId)}&hash=${encodeURIComponent(block.blockHash)}&source=qr`;
+  }
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
@@ -404,6 +413,16 @@ export default function BlockchainExplorer() {
                         {blockVerification.valid ? '✅ Chain link valid — previousHash matches prior block' : '❌ Chain link BROKEN'}
                       </span>
                     )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setQrBlock(block); }}
+                      style={{
+                        padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                        background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
+                        color: '#a5b4fc', cursor: 'pointer',
+                      }}
+                    >
+                      📱 Show QR Code
+                    </button>
                   </div>
                 </div>
               )}
@@ -411,6 +430,82 @@ export default function BlockchainExplorer() {
           ))}
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      {qrBlock && (
+        <div
+          onClick={() => setQrBlock(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, #1e293b, #0f172a)', border: '1px solid rgba(99,102,241,0.3)',
+              borderRadius: 20, padding: 32, maxWidth: 400, width: '90%', textAlign: 'center',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 }}>
+              🔐 Block #{qrBlock.blockNumber} — QR Verification
+            </div>
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
+              Scan this QR code to independently verify this audit event on any device
+            </p>
+            <div style={{
+              background: '#fff', borderRadius: 16, padding: 20, display: 'inline-block',
+              boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+            }}>
+              <QRCodeSVG
+                value={getVerifyUrl(qrBlock)}
+                size={220}
+                bgColor="#ffffff"
+                fgColor="#0f172a"
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+            <div style={{ marginTop: 16, fontSize: 11, color: '#64748b' }}>
+              <div style={{ marginBottom: 6 }}>
+                <strong style={{ color: '#a5b4fc' }}>Block Hash:</strong>
+              </div>
+              <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#22c55e', wordBreak: 'break-all', lineHeight: 1.6 }}>
+                {qrBlock.blockHash}
+              </div>
+            </div>
+            <div style={{ marginTop: 12, fontSize: 10, color: '#64748b' }}>
+              <strong>Function:</strong> {qrBlock.transactions[0]?.function || 'N/A'} •
+              <strong> Actor:</strong> {qrBlock.transactions[0]?.creator.org || 'N/A'}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(getVerifyUrl(qrBlock));
+                }}
+                style={{
+                  padding: '8px 18px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
+                  color: '#a5b4fc', cursor: 'pointer',
+                }}
+              >
+                📋 Copy Link
+              </button>
+              <button
+                onClick={() => setQrBlock(null)}
+                style={{
+                  padding: '8px 18px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                  color: '#f87171', cursor: 'pointer',
+                }}
+              >
+                ✕ Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
