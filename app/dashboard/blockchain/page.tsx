@@ -156,6 +156,8 @@ export default function BlockchainExplorer() {
     return `${origin}/api/verify/scan?tender=${encodeURIComponent(tenderId)}&hash=${encodeURIComponent(block.blockHash)}&source=qr`;
   }
 
+  const [copySuccess, setCopySuccess] = useState(false);
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
       <div style={{ textAlign: 'center' }}>
@@ -414,7 +416,7 @@ export default function BlockchainExplorer() {
                       </span>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); setQrBlock(block); }}
+                      onClick={(e) => { e.stopPropagation(); setCopySuccess(false); setQrBlock(block); }}
                       style={{
                         padding: '6px 14px', borderRadius: 8, fontSize: 11, fontWeight: 600,
                         background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
@@ -481,16 +483,36 @@ export default function BlockchainExplorer() {
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(getVerifyUrl(qrBlock));
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(getVerifyUrl(qrBlock));
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  } catch {
+                    // Fallback for non-HTTPS or restricted contexts
+                    const textarea = document.createElement('textarea');
+                    textarea.value = getVerifyUrl(qrBlock);
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  }
                 }}
                 style={{
                   padding: '8px 18px', borderRadius: 10, fontSize: 12, fontWeight: 600,
-                  background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
-                  color: '#a5b4fc', cursor: 'pointer',
+                  background: copySuccess ? 'rgba(34,197,94,0.2)' : 'rgba(99,102,241,0.15)',
+                  border: `1px solid ${copySuccess ? 'rgba(34,197,94,0.4)' : 'rgba(99,102,241,0.3)'}`,
+                  color: copySuccess ? '#4ade80' : '#a5b4fc',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  minWidth: 120,
                 }}
               >
-                📋 Copy Link
+                {copySuccess ? '✅ Copied!' : '📋 Copy Link'}
               </button>
               <button
                 onClick={() => setQrBlock(null)}
