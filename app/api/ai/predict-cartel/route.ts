@@ -7,6 +7,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+function buildMeta(modelUsed: string, startTime: number) {
+  return {
+    model_used: modelUsed,
+    detection_ms: Date.now() - startTime,
+    timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    endpoint: '/api/ai/predict-cartel',
+  };
+}
+
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 const HAS_KEY = !!process.env.ANTHROPIC_API_KEY;
 
@@ -60,6 +69,7 @@ const DEMO_PREDICTION = {
 };
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await req.json();
     const { tender_id, title, ministry_code, category, value_crore } = body;
@@ -70,6 +80,7 @@ export async function POST(req: NextRequest) {
         tender_id: tender_id || 'TDR-MoH-2025-000003',
         tender_title: title || 'AIIMS Delhi Medical Equipment',
         mode: 'DEMO',
+        _meta: buildMeta('LOCAL_5_DETECTORS (demo fallback)', startTime),
       });
     }
 
@@ -102,8 +113,9 @@ export async function POST(req: NextRequest) {
       tender_id, tender_title: title,
       mode: 'REAL',
       prediction_made_at_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      _meta: buildMeta('Claude claude-sonnet-4-20250514 (Anthropic API)', startTime),
     });
   } catch (err: unknown) {
-    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)), ...DEMO_PREDICTION, mode: 'DEMO_FALLBACK' });
+    return NextResponse.json({ error: (err instanceof Error ? err.message : String(err)), ...DEMO_PREDICTION, mode: 'DEMO_FALLBACK', _meta: buildMeta('ERROR_FALLBACK', startTime) });
   }
 }

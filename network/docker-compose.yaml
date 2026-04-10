@@ -171,7 +171,7 @@ services:
     ports:
       - "7054:7054"
       - "17054:17054"
-    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    command: sh -c 'fabric-ca-server start -b ${FABRIC_CA_ADMIN_USER}:${FABRIC_CA_ADMIN_PASSWORD} -d'
     volumes:
       - ./crypto-config/peerOrganizations/ministry.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
     networks:
@@ -189,7 +189,7 @@ services:
     ports:
       - "8054:8054"
       - "18054:18054"
-    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    command: sh -c 'fabric-ca-server start -b ${FABRIC_CA_ADMIN_USER}:${FABRIC_CA_ADMIN_PASSWORD} -d'
     volumes:
       - ./crypto-config/peerOrganizations/bidder.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
     networks:
@@ -207,7 +207,7 @@ services:
     ports:
       - "9054:9054"
       - "19054:19054"
-    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    command: sh -c 'fabric-ca-server start -b ${FABRIC_CA_ADMIN_USER}:${FABRIC_CA_ADMIN_PASSWORD} -d'
     volumes:
       - ./crypto-config/peerOrganizations/auditor.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
     networks:
@@ -225,7 +225,7 @@ services:
     ports:
       - "10054:10054"
       - "20054:20054"
-    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    command: sh -c 'fabric-ca-server start -b ${FABRIC_CA_ADMIN_USER}:${FABRIC_CA_ADMIN_PASSWORD} -d'
     volumes:
       - ./crypto-config/peerOrganizations/nic.tendershield.gov.in/ca/:/etc/hyperledger/fabric-ca-server
     networks:
@@ -240,8 +240,8 @@ services:
     container_name: couchdb0.ministry
     image: couchdb:3.3
     environment:
-      - COUCHDB_USER=tendershield_admin
-      - COUCHDB_PASSWORD=tendershield_couchdb_2025
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     ports:
       - "5984:5984"
     networks:
@@ -304,8 +304,8 @@ services:
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.ministry:5984
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=tendershield_admin
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=tendershield_couchdb_2025
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=${COUCHDB_USER}
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=${COUCHDB_PASSWORD}
       - CORE_METRICS_PROVIDER=prometheus
       - CORE_OPERATIONS_LISTENADDRESS=peer0.ministry.tendershield.gov.in:9444
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
@@ -657,8 +657,8 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=tendershield_grafana_2025
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana

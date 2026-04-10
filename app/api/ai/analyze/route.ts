@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     if (!ANTHROPIC_KEY) {
       logger.info('[TenderShield] Analyze route: No API key — returning demo analysis');
-      return NextResponse.json({ ...DEMO_AIIMS_ANALYSIS, detection_time_seconds: 3.2 });
+      return NextResponse.json({ ...DEMO_AIIMS_ANALYSIS, detection_time_seconds: 3.2, _meta: { model_used: 'LOCAL_5_DETECTORS (demo fallback)', detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
     }
 
     const userPrompt = `Analyze this Indian government tender for fraud indicators:
@@ -177,12 +177,26 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
       time_ms: Date.now() - startTime,
     });
 
-    return NextResponse.json(analysis);
+    return NextResponse.json({
+      ...analysis,
+      _meta: {
+        model_used: 'Claude claude-sonnet-4-20250514 (Anthropic API)',
+        detection_ms: Date.now() - startTime,
+        timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        endpoint: '/api/ai/analyze',
+      },
+    });
   } catch (error) {
     logger.error('[TenderShield] Analyze route error:', error);
     return NextResponse.json({
       ...FALLBACK_ANALYSIS,
       detection_time_seconds: (Date.now() - startTime) / 1000,
+      _meta: {
+        model_used: 'ERROR_FALLBACK',
+        detection_ms: Date.now() - startTime,
+        timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        endpoint: '/api/ai/analyze',
+      },
     });
   }
 }

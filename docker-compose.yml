@@ -30,8 +30,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: tendershield_db
-      POSTGRES_USER: tendershield
-      POSTGRES_PASSWORD: Tender@2026Secure
+      POSTGRES_USER: ${POSTGRES_USER:-tendershield}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -68,13 +68,13 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://tendershield:Tender@2026Secure@postgres:5432/tendershield_db
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-tendershield}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/tendershield_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - AI_ENGINE_URL=http://ai-engine:8001
       - FABRIC_LIVE=false
       - APP_ENV=production
-      - JWT_SECRET_KEY=tendershield-jwt-secret-change-in-production
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme-in-production}
       - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
     depends_on:
       postgres:

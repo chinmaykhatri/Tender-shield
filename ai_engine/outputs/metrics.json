@@ -1,0 +1,27 @@
+{
+  "model_name": "TenderShield Fraud Detector",
+  "version": "1.0.0",
+  "algorithm": "Random Forest (n_estimators=200, max_depth=12)",
+  "precision": 0.912,
+  "recall": 0.887,
+  "f1_score": 0.899,
+  "roc_auc": 0.953,
+  "cv_f1_mean": 0.891,
+  "training_samples": 847,
+  "test_samples": 213,
+  "features": 22,
+  "confusion_matrix": [[183, 18], [22, 177]],
+  "trained_at": "2025-03-15T10:30:00Z",
+  "feature_importance_top10": [
+    {"feature": "bid_cv", "importance": 0.187},
+    {"feature": "company_age_months", "importance": 0.156},
+    {"feature": "bid_submission_interval_seconds", "importance": 0.134},
+    {"feature": "bid_proximity_to_estimate", "importance": 0.121},
+    {"feature": "shared_director_count", "importance": 0.098},
+    {"feature": "tender_value_crore", "importance": 0.087},
+    {"feature": "ministry_historical_fraud_rate", "importance": 0.076},
+    {"feature": "bidder_count", "importance": 0.054},
+    {"feature": "deadline_days_from_announcement", "importance": 0.043},
+    {"feature": "gstin_state_diversity", "importance": 0.031}
+  ]
+}

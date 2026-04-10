@@ -11,7 +11,18 @@ import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
+function buildMeta(modelUsed: string, startTime: number) {
+  return {
+    model_used: modelUsed,
+    detection_ms: Date.now() - startTime,
+    timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    endpoint: '/api/ai/predict-fraud',
+  };
+}
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const body = await request.json();
     const { title, ministry, estimated_value_crore, deadline, specs, category } = body;
@@ -35,6 +46,7 @@ export async function POST(request: NextRequest) {
         ],
         urgency: 'HIGH',
         demo: true,
+        _meta: buildMeta('LOCAL_5_DETECTORS (demo fallback)', startTime),
       });
     }
 
@@ -50,8 +62,18 @@ export async function POST(request: NextRequest) {
 
     const data = await res.json();
     const parsed = JSON.parse(data.content?.[0]?.text || '{}');
-    return NextResponse.json(parsed);
+    return NextResponse.json({
+      ...parsed,
+      _meta: buildMeta(`Claude claude-sonnet-4-20250514 (Anthropic API)`, startTime),
+    });
   } catch {
-    return NextResponse.json({ fraud_probability: 0.5, risk_factors: ['Analysis failed'], recommendations: ['Manual review recommended'], urgency: 'MEDIUM' });
+    return NextResponse.json({
+      fraud_probability: 0.5,
+      risk_factors: ['Analysis failed'],
+      recommendations: ['Manual review recommended'],
+      urgency: 'MEDIUM',
+      _meta: buildMeta('ERROR_FALLBACK', startTime),
+    });
   }
 }
+

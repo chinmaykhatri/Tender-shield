@@ -10,6 +10,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "TEST_URL=http://localhost:3000 vitest run __tests__/integration/",
     "test:ci": "vitest run --reporter=verbose",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
@@ -27,6 +28,7 @@
     "d3": "^7.8.5",
     "date-fns": "^3.2.0",
     "date-fns-tz": "^3.2.0",
+    "ethers": "^6.16.0",
     "framer-motion": "^10.17.12",
     "lucide-react": "^0.303.0",
     "next": "^14.0.4",

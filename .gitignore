@@ -39,6 +39,15 @@ redisdata/
 docker-data/
 tendershield_ledger.db
 
+# Fabric crypto material (generated, contains private keys)
+fabric-crypto/
+network/crypto-config/
+network/channel-artifacts/
+network/.env
+chaincode/tendershield/tendershield
+chaincode/tendershield.tar.gz
+chaincode/tendershield.block
+
 # Logs
 *.log
 npm-debug.log*

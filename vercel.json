@@ -4,6 +4,12 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci --legacy-peer-deps",
   "regions": ["bom1"],
+  "crons": [
+    {
+      "path": "/api/cron/anchor",
+      "schedule": "*/10 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",

@@ -25,8 +25,8 @@ services:
     labels:
       service: tendershield-fabric
     environment:
-      - COUCHDB_USER=admin
-      - COUCHDB_PASSWORD=adminpw
+      - COUCHDB_USER=${COUCHDB_USER:-tendershield_admin}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:-changeme}
     ports:
       - "5984:5984"
     volumes:
@@ -104,8 +104,8 @@ services:
       - CORE_METRICS_PROVIDER=prometheus
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.tendershield:5984
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
-      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=${COUCHDB_USER:-tendershield_admin}
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=${COUCHDB_PASSWORD:-changeme}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
       - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=tendershield_fabric

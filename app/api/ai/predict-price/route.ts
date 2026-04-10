@@ -11,7 +11,17 @@ import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
+function buildMeta(modelUsed: string, startTime: number) {
+  return {
+    model_used: modelUsed,
+    detection_ms: Date.now() - startTime,
+    timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    endpoint: '/api/ai/predict-price',
+  };
+}
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const { category, estimated_value_crore, location, description } = body;
@@ -28,6 +38,7 @@ export async function POST(request: NextRequest) {
         flag_above_crore: +(estimated_value_crore * 1.05).toFixed(1),
         reasoning: `Based on 23 similar ${category || 'GOODS'} tenders across India in the last 24 months, the statistically fair market bid range for ₹${estimated_value_crore}Cr is ₹${(estimated_value_crore * 0.82).toFixed(1)}Cr–₹${(estimated_value_crore * 0.98).toFixed(1)}Cr. Awards outside this band trigger an anomaly flag. Bids below ₹${(estimated_value_crore * 0.70).toFixed(1)}Cr signal predatory pricing (cartel cover strategy). Bids above ₹${(estimated_value_crore * 1.05).toFixed(1)}Cr indicate overpricing collusion.`,
         demo: true,
+        _meta: buildMeta('LOCAL_STATISTICAL_MODEL (demo fallback)', startTime),
       });
     }
 
@@ -43,8 +54,11 @@ export async function POST(request: NextRequest) {
 
     const data = await res.json();
     const parsed = JSON.parse(data.content?.[0]?.text || '{}');
-    return NextResponse.json(parsed);
+    return NextResponse.json({
+      ...parsed,
+      _meta: buildMeta('Claude claude-sonnet-4-20250514 (Anthropic API)', startTime),
+    });
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error' }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error', _meta: buildMeta('ERROR_FALLBACK', startTime) }, { status: 500 });
   }
 }
