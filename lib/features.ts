@@ -42,6 +42,14 @@ export const FEATURES = {
   IMPACT: !HIDE,
   MINISTRY_SCORES: !HIDE,
   PRACTICE: !HIDE,
+
+  // ADVANCED FEATURES — always visible
+  NETWORK_GRAPH: true,
+  ANOMALY_DETECTION: true,
+  PAILLIER_DEMO: true,
+  FEDERATED_LEARNING: true,
+  AI_CHAT: true,
+  IMPACT_METRICS: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

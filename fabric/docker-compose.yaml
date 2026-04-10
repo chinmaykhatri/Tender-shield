@@ -1,0 +1,149 @@
+# TenderShield — Hyperledger Fabric 2-Org Network
+# Run: docker-compose -f fabric/docker-compose.yaml up -d
+
+version: '3.7'
+
+networks:
+  tendershield-net:
+    name: tendershield-net
+
+volumes:
+  orderer.tendershield.com:
+  peer0.ministry.tendershield.com:
+  peer0.nic.tendershield.com:
+  couchdb0:
+  couchdb1:
+
+services:
+  # ── Orderer (Raft Consensus) ──
+  orderer.tendershield.com:
+    container_name: orderer.tendershield.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=none
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - orderer.tendershield.com:/var/hyperledger/production/orderer
+    ports:
+      - 7050:7050
+      - 7053:7053
+    networks:
+      - tendershield-net
+
+  # ── Ministry Org Peer ──
+  peer0.ministry.tendershield.com:
+    container_name: peer0.ministry.tendershield.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.ministry.tendershield.com
+      - CORE_PEER_ADDRESS=peer0.ministry.tendershield.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_LOCALMSPID=MinistryMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - peer0.ministry.tendershield.com:/var/hyperledger/production
+    ports:
+      - 7051:7051
+    depends_on:
+      - orderer.tendershield.com
+      - couchdb0
+    networks:
+      - tendershield-net
+
+  # ── NIC Org Peer ──
+  peer0.nic.tendershield.com:
+    container_name: peer0.nic.tendershield.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.nic.tendershield.com
+      - CORE_PEER_ADDRESS=peer0.nic.tendershield.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_LOCALMSPID=NICMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - peer0.nic.tendershield.com:/var/hyperledger/production
+    ports:
+      - 9051:9051
+    depends_on:
+      - orderer.tendershield.com
+      - couchdb1
+    networks:
+      - tendershield-net
+
+  # ── CouchDB for Ministry Peer ──
+  couchdb0:
+    container_name: couchdb0.tendershield
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 5984:5984
+    volumes:
+      - couchdb0:/opt/couchdb/data
+    networks:
+      - tendershield-net
+
+  # ── CouchDB for NIC Peer ──
+  couchdb1:
+    container_name: couchdb1.tendershield
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 7984:5984
+    volumes:
+      - couchdb1:/opt/couchdb/data
+    networks:
+      - tendershield-net
+
+  # ── Fabric CA — Ministry Org ──
+  ca.ministry.tendershield.com:
+    container_name: ca.ministry.tendershield.com
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-ministry
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+    ports:
+      - 7054:7054
+    networks:
+      - tendershield-net
+
+  # ── Fabric CA — NIC Org ──
+  ca.nic.tendershield.com:
+    container_name: ca.nic.tendershield.com
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-nic
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+    ports:
+      - 8054:7054
+    networks:
+      - tendershield-net

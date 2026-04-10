@@ -1,14 +1,27 @@
 {
-  "name": "TenderShield",
-  "short_name": "TenderShield",
-  "description": "AI-Secured Government Procurement — Government of India",
-  "start_url": "/dashboard",
+  "name": "TenderShield Verify",
+  "short_name": "TSVerify",
+  "description": "Scan QR codes to verify government tender integrity using SHA-256 hash chain verification",
+  "start_url": "/scan",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0f1e",
-  "theme_color": "#003f88",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["government", "security", "utilities"],
+  "lang": "en-IN",
+  "dir": "ltr"
 }

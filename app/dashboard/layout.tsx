@@ -9,6 +9,7 @@ import SessionWarning from '@/components/SessionWarning';
 import { ToastProvider } from '@/components/ToastSystem';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FEATURES } from '@/lib/features';
+import { useRealtimeAlerts } from '@/lib/useRealtimeAlerts';
 
 const navItems = [
   // ── CORE PAGES (always visible) ──
@@ -27,6 +28,13 @@ const navItems = [
   { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_ALERTS },
   { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
   { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR },
+  // ── ADVANCED FEATURES ──
+  { href: '/dashboard/network-graph', icon: '🕵️', label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH },
+  { href: '/dashboard/anomaly', icon: '📈', label: 'Anomaly Detection', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ANOMALY_DETECTION },
+  { href: '/dashboard/paillier-demo', icon: '🔐', label: 'Paillier Crypto', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO },
+  { href: '/dashboard/federated', icon: '🧠', label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING },
+  { href: '/dashboard/chat', icon: '💬', label: 'AI Analyst', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_CHAT },
+  { href: '/dashboard/metrics', icon: '📊', label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS },
 ].filter(item => item.visible);
 
 // Mobile bottom nav shows 5 most important tabs based on role
@@ -70,6 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { alerts: realtimeAlerts, unreadCount: alertCount, dismiss: dismissAlerts } = useRealtimeAlerts();
 
   // Stable refs to avoid re-render loops
   const routerRef = useRef(router);
@@ -174,9 +183,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             🛡️ TenderShield
           </span>
         </Link>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-          style={{ background: `${displayRoleColor}22`, color: displayRoleColor }}>
-          {displayInitial}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={dismissAlerts} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8' }}>
+            🔔
+            {alertCount > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {alertCount > 9 ? '9+' : alertCount}
+              </span>
+            )}
+          </button>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+            style={{ background: `${displayRoleColor}22`, color: displayRoleColor }}>
+            {displayInitial}
+          </div>
         </div>
       </div>
 
