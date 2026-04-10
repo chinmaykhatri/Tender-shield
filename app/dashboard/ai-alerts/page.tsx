@@ -16,27 +16,19 @@ export default function AIAlertsPage() {
       setAnalysis(res);
     } catch (e) {
       console.error(e);
-      // Fallback demo data when AI engine isn't running
+      // Honest offline state — no fabricated data
       setAnalysis({
-        success: true,
+        success: false,
         scenario: s,
-        alert_id: 'DEMO-PREVIEW',
+        alert_id: 'OFFLINE',
+        _note: 'AI analysis engine did not respond. Showing analysis template — no real data.',
         analysis: {
-          tender_id: s === 'bid_rigging' ? 'TDR-MoH-2025-000001' : s === 'shell_company' ? 'TDR-MoRTH-2025-000001' : 'TDR-MoE-2025-000001',
-          composite_risk_score: s === 'bid_rigging' ? 62 : s === 'shell_company' ? 80 : 8,
-          recommended_action: s === 'bid_rigging' ? 'FREEZE' : s === 'shell_company' ? 'ESCALATE_CAG' : 'MONITOR',
-          detectors_run: s === 'clean' ? 2 : 3,
-          convergence_bonus: s === 'shell_company' ? 10 : s === 'bid_rigging' ? 5 : 0,
-          flags: s === 'bid_rigging' ? [
-            'LOW_BID_VARIANCE: Bids are suspiciously similar (CV=0.032)',
-            'BURST_SUBMISSION: 3 bids within 60s — possible coordination',
-            'COVER_BIDS: 1 intentionally high bid detected',
-          ] : s === 'shell_company' ? [
-            'RECENTLY_INCORPORATED: Company is only 6 months old',
-            'LOW_TURNOVER: Tender value is 45x company turnover',
-            'COMMON_DIRECTORS: 1 director linked to flagged companies',
-            'COMMON_ADDRESS: Shares address with flagged entities',
-          ] : ['No anomalies detected'],
+          tender_id: `Scenario: ${s.replace(/_/g, ' ')}`,
+          composite_risk_score: 0,
+          recommended_action: 'ENGINE_OFFLINE',
+          detectors_run: 0,
+          convergence_bonus: 0,
+          flags: ['⚠️ AI engine is offline. Run a real analysis by starting the backend or connecting to the live API.'],
         },
       });
     }

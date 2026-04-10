@@ -6,6 +6,7 @@ import InvestigationsTab from './components/InvestigationsTab';
 import ReportsTab from './components/ReportsTab';
 import { smBtn, selStyle, inpStyle, lbl, riskColor, statusBadge } from './components/shared-styles';
 import type { TenderItem, AlertItem, FlagResult, FlagForm, StatCard, MinistryRisk, RecentAction } from './types';
+import { supabase } from '@/lib/dataLayer';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -17,48 +18,6 @@ function useIsMobile() {
   }, []);
   return isMobile;
 }
-
-// ─── Demo Data ─────────────────────────────────
-const STATS: StatCard[] = [
-  { label: 'Active Investigations', value: 3, sub: '₹382.5 Cr under audit', color: '#a78bfa', icon: '🔍' },
-  { label: 'Flagged Today', value: 2, sub: 'Requires your review', color: '#f59e0b', icon: '🚩', pulse: true },
-  { label: 'Pending Escalations', value: 1, sub: 'Awaiting CAG decision', color: '#ef4444', icon: '⚠️' },
-  { label: 'Reports This Month', value: 7, sub: 'Last: 2 hours ago', color: '#22c55e', icon: '📄' },
-  { label: 'Tenders Monitored', value: 127, sub: 'Across 8 ministries', color: '#6366f1', icon: '📊' },
-];
-
-const ALERTS: AlertItem[] = [
-  { id: 1, severity: 'CRITICAL', icon: '🚨', title: 'AIIMS Delhi — Shell company detected', detail: 'Risk: 94/100 | Auto-frozen | ₹120 Crore', time: '47 minutes ago', color: '#ef4444', tenderId: 'TDR-MoH-2025-000003' },
-  { id: 2, severity: 'HIGH', icon: '⚠️', title: 'MoD Defence Supplies — Bid rigging suspected', detail: 'Risk: 72/100 | Under evaluation | ₹62 Crore', time: '3 hours ago', color: '#f59e0b', tenderId: 'TDR-MoD-2025-000004' },
-  { id: 3, severity: 'HIGH', icon: '⚠️', title: 'MeitY AI Platform — Spec bias detected', detail: 'Risk: 45/100 | Bidding open | ₹180 Crore', time: '5 hours ago', color: '#f59e0b', tenderId: 'TDR-MeitY-2025-000007' },
-  { id: 4, severity: 'MEDIUM', icon: '⚡', title: 'New officer registered — MoRTH', detail: 'Pending verification review', time: 'Yesterday', color: '#eab308', tenderId: null },
-];
-
-const MINISTRY_RISK: MinistryRisk[] = [
-  { ministry: 'MoD', avgRisk: 74, tenders: 18 },
-  { ministry: 'MoH', avgRisk: 68, tenders: 24 },
-  { ministry: 'MoRTH', avgRisk: 48, tenders: 31 },
-  { ministry: 'MeitY', avgRisk: 41, tenders: 12 },
-  { ministry: 'MoE', avgRisk: 31, tenders: 22 },
-  { ministry: 'MoF', avgRisk: 18, tenders: 20 },
-];
-
-const RECENT_ACTIONS: RecentAction[] = [
-  { time: '14:32', action: 'Flagged AIIMS tender for investigation', tx: '0x8d1a4f...' },
-  { time: '13:45', action: 'Generated MoH compliance report', tx: '0x1c4b7e...' },
-  { time: '11:20', action: 'Reviewed officer registration', tx: '0x6a9f2c...' },
-  { time: 'Yesterday', action: 'Escalated MoD investigation to CVC', tx: '0x5a8f1c...' },
-];
-
-const ALL_TENDERS: TenderItem[] = [
-  { id: 'TDR-MoH-2025-000003', ministry: 'MoH', title: 'AIIMS Delhi Medical Equipment', value: 120, bidders: 3, risk: 94, status: 'FROZEN', officer: 'Rajesh Kumar Sharma', riskLevel: 'CRITICAL' },
-  { id: 'TDR-MoD-2025-000004', ministry: 'MoD', title: 'Border Roads Medical Supply', value: 62, bidders: 4, risk: 72, status: 'UNDER_EVAL', officer: 'Col. Vikram Singh', riskLevel: 'HIGH' },
-  { id: 'TDR-MeitY-2025-000007', ministry: 'MeitY', title: 'AI Research Platform Procurement', value: 180, bidders: 5, risk: 45, status: 'BIDDING_OPEN', officer: 'Dr. Neha Kapoor', riskLevel: 'MEDIUM' },
-  { id: 'TDR-MoRTH-2025-000012', ministry: 'MoRTH', title: 'Rural Road Construction Batch 7', value: 28, bidders: 6, risk: 38, status: 'BIDDING_OPEN', officer: 'Arvind Mehta', riskLevel: 'MEDIUM' },
-  { id: 'TDR-MoE-2025-000011', ministry: 'MoE', title: 'Digital Classroom Equipment Phase 4', value: 28, bidders: 8, risk: 18, status: 'AWARDED', officer: 'Rahul Verma', riskLevel: 'LOW' },
-  { id: 'TDR-MoF-2025-000015', ministry: 'MoF', title: 'Tax Filing Infrastructure Upgrade', value: 45, bidders: 3, risk: 12, status: 'BIDDING_OPEN', officer: 'Sunita Devi', riskLevel: 'LOW' },
-  { id: 'TDR-MoRTH-2024-000089', ministry: 'MoRTH', title: 'NH-44 Highway Phase 2', value: 320, bidders: 4, risk: 67, status: 'FROZEN', officer: 'Deepak Mishra', riskLevel: 'HIGH' },
-];
 
 // ─── Main Component ─────────────────────────────────────
 export default function CAGAuditorDashboard() {
@@ -74,13 +33,139 @@ export default function CAGAuditorDashboard() {
   const [reportLoading, setReportLoading] = useState(false);
   const [istTime, setIstTime] = useState('');
 
+  // ─── Live data state ─────────────────────────────────
+  const [stats, setStats] = useState<StatCard[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [allTenders, setAllTenders] = useState<TenderItem[]>([]);
+  const [ministryRisk, setMinistryRisk] = useState<MinistryRisk[]>([]);
+  const [recentActions, setRecentActions] = useState<RecentAction[]>([]);
+  const [dataSource, setDataSource] = useState<'loading' | 'supabase' | 'empty'>('loading');
+
   useEffect(() => {
     const tick = () => setIstTime(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     tick(); const iv = setInterval(tick, 1000); return () => clearInterval(iv);
   }, []);
 
+  // ─── Fetch LIVE data from Supabase ───────────────────
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        // 1. Fetch tenders
+        const { data: tenders, error: tErr } = await supabase
+          .from('tenders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        // 2. Fetch audit events (for recent actions)
+        const { data: events, error: eErr } = await supabase
+          .from('audit_events')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        // 3. Fetch bids count
+        const { count: bidCount } = await supabase
+          .from('bids')
+          .select('*', { count: 'exact', head: true });
+
+        const tenderList = tenders || [];
+        const eventList = events || [];
+
+        if (tErr && eErr) {
+          setDataSource('empty');
+          return;
+        }
+
+        // ─── BUILD STATS from real data ───
+        const frozenCount = tenderList.filter((t: any) => t.status === 'FROZEN_BY_AI').length;
+        const highRiskCount = tenderList.filter((t: any) => (t.risk_score || 0) >= 70).length;
+        const pendingEscalations = tenderList.filter((t: any) => t.status === 'FROZEN_BY_AI' && (t.risk_score || 0) >= 80).length;
+
+        setStats([
+          { label: 'Active Investigations', value: frozenCount, sub: `₹${tenderList.filter((t: any) => t.status === 'FROZEN_BY_AI').reduce((s: number, t: any) => s + (t.estimated_value_crore || 0), 0)} Cr under audit`, color: '#a78bfa', icon: '🔍' },
+          { label: 'Flagged Today', value: highRiskCount, sub: highRiskCount > 0 ? 'Requires your review' : 'No flags today', color: '#f59e0b', icon: '🚩', pulse: highRiskCount > 0 },
+          { label: 'Pending Escalations', value: pendingEscalations, sub: pendingEscalations > 0 ? 'Awaiting CAG decision' : 'None pending', color: '#ef4444', icon: '⚠️' },
+          { label: 'Audit Events', value: eventList.length, sub: eventList.length > 0 ? `Last: ${new Date(eventList[0].created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}` : 'No events yet', color: '#22c55e', icon: '📄' },
+          { label: 'Tenders Monitored', value: tenderList.length, sub: `Across ${new Set(tenderList.map((t: any) => t.ministry_code)).size} ministries`, color: '#6366f1', icon: '📊' },
+        ]);
+
+        // ─── BUILD ALERTS from real tenders ───
+        const alertItems: AlertItem[] = tenderList
+          .filter((t: any) => (t.risk_score || 0) >= 40)
+          .sort((a: any, b: any) => (b.risk_score || 0) - (a.risk_score || 0))
+          .slice(0, 6)
+          .map((t: any, i: number) => {
+            const risk = t.risk_score || 0;
+            const severity = risk >= 80 ? 'CRITICAL' : risk >= 60 ? 'HIGH' : 'MEDIUM';
+            const icon = risk >= 80 ? '🚨' : risk >= 60 ? '⚠️' : '⚡';
+            const color = risk >= 80 ? '#ef4444' : risk >= 60 ? '#f59e0b' : '#eab308';
+            return {
+              id: i + 1,
+              severity,
+              icon,
+              title: `${t.title} — Risk ${risk}/100`,
+              detail: `Risk: ${risk}/100 | ${t.status?.replace(/_/g, ' ')} | ₹${t.estimated_value_crore || 0} Crore`,
+              time: new Date(t.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+              color,
+              tenderId: t.tender_id || t.id,
+            };
+          });
+        setAlerts(alertItems);
+
+        // ─── BUILD TENDER TABLE from real data ───
+        const tenderItems: TenderItem[] = tenderList.map((t: any) => {
+          const risk = t.risk_score || 0;
+          return {
+            id: t.tender_id || t.id,
+            ministry: t.ministry_code || 'N/A',
+            title: t.title,
+            value: t.estimated_value_crore || Math.round((t.estimated_value_paise || 0) / 1_00_00_00_000),
+            bidders: t.bids_count || 0,
+            risk,
+            status: t.status,
+            officer: t.created_by || 'Officer',
+            riskLevel: risk >= 80 ? 'CRITICAL' : risk >= 50 ? 'HIGH' : risk >= 25 ? 'MEDIUM' : 'LOW',
+          };
+        });
+        setAllTenders(tenderItems);
+
+        // ─── BUILD MINISTRY RISK from real data ───
+        const ministryMap: Record<string, { totalRisk: number; count: number }> = {};
+        for (const t of tenderList) {
+          const code = (t as any).ministry_code || 'Other';
+          if (!ministryMap[code]) ministryMap[code] = { totalRisk: 0, count: 0 };
+          ministryMap[code].totalRisk += (t as any).risk_score || 0;
+          ministryMap[code].count += 1;
+        }
+        const mRisk: MinistryRisk[] = Object.entries(ministryMap)
+          .map(([ministry, data]) => ({
+            ministry,
+            avgRisk: Math.round(data.totalRisk / data.count),
+            tenders: data.count,
+          }))
+          .sort((a, b) => b.avgRisk - a.avgRisk);
+        setMinistryRisk(mRisk);
+
+        // ─── BUILD RECENT ACTIONS from audit events ───
+        const actions: RecentAction[] = eventList.slice(0, 5).map((e: any) => ({
+          time: new Date(e.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }),
+          action: `${(e.event_type || '').replace(/_/g, ' ')} — ${(e.data?.tender_id || e.event_id || 'system')}`,
+          tx: e.data?.blockchain_tx || e.event_id || 'N/A',
+        }));
+        setRecentActions(actions);
+
+        setDataSource(tenderList.length > 0 || eventList.length > 0 ? 'supabase' : 'empty');
+      } catch (err) {
+        console.error('Auditor dashboard load error:', err);
+        setDataSource('empty');
+      }
+    }
+
+    loadDashboard();
+  }, []);
+
   // Filtered tenders
-  const filtered = ALL_TENDERS.filter(t =>
+  const filtered = allTenders.filter(t =>
     (!ministryFilter || t.ministry === ministryFilter) &&
     (!riskFilter || t.riskLevel === riskFilter) &&
     (!statusFilter || t.status === statusFilter)
@@ -124,6 +209,9 @@ export default function CAGAuditorDashboard() {
     setReportLoading(false);
   };
 
+  // All unique ministries for filter
+  const allMinistries = [...new Set(allTenders.map(t => t.ministry))].filter(Boolean);
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', width: '100%' }}>
       {/* Role Banner */}
@@ -132,7 +220,10 @@ export default function CAGAuditorDashboard() {
           🛡️ <strong style={{ color: '#a78bfa' }}>CAG Auditor</strong> — {isMobile ? 'Full access' : 'Full system access. All your actions are recorded on blockchain.'}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 11, color: '#f87171', fontWeight: 600, animation: 'pulse 2s infinite' }}>🔴 {ALERTS.length - dismissedAlerts.length} Alerts</span>
+          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: dataSource === 'supabase' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', color: dataSource === 'supabase' ? '#22c55e' : '#f59e0b', fontWeight: 600 }}>
+            {dataSource === 'loading' ? '⏳ Loading...' : dataSource === 'supabase' ? '🟢 Live Data' : '⚪ No Data'}
+          </span>
+          <span style={{ fontSize: 11, color: '#f87171', fontWeight: 600, animation: alerts.length > 0 ? 'pulse 2s infinite' : undefined }}>{alerts.length > 0 ? `🔴 ${alerts.length - dismissedAlerts.length} Alerts` : '✅ No Alerts'}</span>
           <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>🕐 {istTime} IST</span>
         </div>
       </div>
@@ -152,25 +243,49 @@ export default function CAGAuditorDashboard() {
       {activeTab === 'overview' && (<>
         {/* Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 16 }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{ background: 'rgba(30,41,59,0.6)', border: `1px solid ${s.color}25`, borderLeft: `3px solid ${s.color}`, borderRadius: 12, padding: isMobile ? '10px 12px' : '14px 16px', position: 'relative' }}>
-              <div style={{ fontSize: isMobile ? 10 : 11, color: '#94a3b8', fontWeight: 600 }}>{s.icon} {s.label}</div>
-              <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
-              <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{s.sub}</div>
-              {s.pulse && <div style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: s.color, animation: 'pulse 2s infinite' }} />}
+          {(dataSource === 'loading' ? Array(5).fill(null) : stats).map((s, i) => (
+            <div key={i} style={{ background: 'rgba(30,41,59,0.6)', border: `1px solid ${s?.color || '#334155'}25`, borderLeft: `3px solid ${s?.color || '#334155'}`, borderRadius: 12, padding: isMobile ? '10px 12px' : '14px 16px', position: 'relative' }}>
+              {s ? (<>
+                <div style={{ fontSize: isMobile ? 10 : 11, color: '#94a3b8', fontWeight: 600 }}>{s.icon} {s.label}</div>
+                <div style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{s.sub}</div>
+                {s.pulse && <div style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: '50%', background: s.color, animation: 'pulse 2s infinite' }} />}
+              </>) : (
+                <div className="shimmer" style={{ height: 60, borderRadius: 8 }} />
+              )}
             </div>
           ))}
         </div>
 
+        {/* Empty State */}
+        {dataSource === 'empty' && (
+          <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 14, padding: 24, textAlign: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 }}>No Data Yet</h3>
+            <p style={{ fontSize: 12, color: '#94a3b8', maxWidth: 400, margin: '0 auto' }}>
+              The auditor dashboard shows real data from Supabase. Create tenders and submit bids to see live statistics here.
+            </p>
+            <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 8, padding: '4px 12px', borderRadius: 6, background: 'rgba(245,158,11,0.08)', display: 'inline-block' }}>
+              ℹ️ Data source: Supabase (tenders, audit_events, bids tables)
+            </div>
+          </div>
+        )}
+
         {/* Main Grid */}
+        {dataSource !== 'empty' && (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 340px', gap: 16 }}>
           {/* Left */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Alerts */}
             <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 16 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>🚨 Unread Alerts — Action Required</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>🚨 Alerts — High-Risk Tenders</h3>
+              {alerts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20, color: '#64748b', fontSize: 12 }}>
+                  ✅ No high-risk tenders detected. All tenders scoring below threshold.
+                </div>
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {ALERTS.filter(a => !dismissedAlerts.includes(a.id)).map(alert => (
+                {alerts.filter(a => !dismissedAlerts.includes(a.id)).map(alert => (
                   <div key={alert.id} style={{ padding: '10px 14px', borderRadius: 10, background: `${alert.color}08`, borderLeft: `3px solid ${alert.color}`, border: `1px solid ${alert.color}20` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
@@ -182,24 +297,25 @@ export default function CAGAuditorDashboard() {
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       {alert.tenderId && <button onClick={() => {}} style={smBtn('#6366f1')}>View Analysis</button>}
                       <button onClick={() => setDismissedAlerts([...dismissedAlerts, alert.id])} style={smBtn('#22c55e')}>Mark Reviewed</button>
-                      {alert.tenderId && <button onClick={() => setFlagModal(ALL_TENDERS.find(t => t.id === alert.tenderId) || null)} style={smBtn('#ef4444')}>🚩 Flag</button>}
+                      {alert.tenderId && <button onClick={() => setFlagModal(allTenders.find(t => t.id === alert.tenderId) || null)} style={smBtn('#ef4444')}>🚩 Flag</button>}
                     </div>
                   </div>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Tender Table / Cards */}
             <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: isMobile ? 12 : 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div><h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>📋 All Tenders</h3>
-                <p style={{ fontSize: 10, color: '#64748b' }}>Full access across all ministries</p></div>
+                <p style={{ fontSize: 10, color: '#64748b' }}>Live from Supabase · {allTenders.length} tenders</p></div>
               </div>
               {/* Filters */}
               <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
                 <select value={ministryFilter} onChange={e => setMinistryFilter(e.target.value)} style={{ ...selStyle, flex: isMobile ? '1 1 45%' : undefined }}>
                   <option value="">All Ministries</option>
-                  {['MoH','MoD','MoRTH','MeitY','MoE','MoF'].map(m => <option key={m} value={m}>{m}</option>)}
+                  {allMinistries.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
                 <select value={riskFilter} onChange={e => setRiskFilter(e.target.value)} style={{ ...selStyle, flex: isMobile ? '1 1 45%' : undefined }}>
                   <option value="">All Risk</option>
@@ -207,16 +323,19 @@ export default function CAGAuditorDashboard() {
                 </select>
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selStyle, flex: isMobile ? '1 1 45%' : undefined }}>
                   <option value="">All Status</option>
-                  {['FROZEN','UNDER_EVAL','BIDDING_OPEN','AWARDED'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['FROZEN_BY_AI','UNDER_EVALUATION','BIDDING_OPEN','AWARDED','PUBLISHED','DRAFT'].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              {/* Desktop: Table | Mobile: Cards */}
-              {isMobile ? (
+              {filtered.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20, color: '#64748b', fontSize: 12 }}>
+                  No tenders match the current filters.
+                </div>
+              ) : isMobile ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {filtered.map(t => {
                     const badge = statusBadge(t.status);
                     return (
-                      <div key={t.id} style={{ padding: '12px', borderRadius: 10, background: t.status === 'FROZEN' ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div key={t.id} style={{ padding: '12px', borderRadius: 10, background: t.status === 'FROZEN_BY_AI' ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                           <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{t.ministry}</span>
                           <span style={{ color: riskColor(t.risk), fontWeight: 700, fontSize: 14 }}>Risk: {t.risk}</span>
@@ -247,7 +366,7 @@ export default function CAGAuditorDashboard() {
                 <tbody>
                   {filtered.map(t => {
                     const badge = statusBadge(t.status);
-                    const isFrozen = t.status === 'FROZEN';
+                    const isFrozen = t.status === 'FROZEN_BY_AI';
                     return (
                       <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: isFrozen ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
                         <td style={{ padding: '8px 4px', fontFamily: 'monospace', fontSize: 10, color: '#94a3b8' }}>{t.id.slice(-8)}</td>
@@ -278,10 +397,12 @@ export default function CAGAuditorDashboard() {
             {/* Ministry Risk */}
             <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 16 }}>
               <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>🏛️ Risk by Ministry</h3>
-              {MINISTRY_RISK.map(m => (
+              {ministryRisk.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 16, color: '#64748b', fontSize: 11 }}>No ministry data available yet.</div>
+              ) : ministryRisk.map(m => (
                 <div key={m.ministry} style={{ marginBottom: 8, cursor: 'pointer' }} onClick={() => setMinistryFilter(m.ministry)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{m.ministry}</span>
+                    <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{m.ministry} ({m.tenders})</span>
                     <span style={{ color: riskColor(m.avgRisk), fontWeight: 700 }}>{m.avgRisk}</span>
                   </div>
                   <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
@@ -293,11 +414,13 @@ export default function CAGAuditorDashboard() {
 
             {/* Recent Actions */}
             <div style={{ background: 'rgba(30,41,59,0.6)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 16 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>📜 Your Recent Actions</h3>
-              {RECENT_ACTIONS.map((a, i) => (
-                <div key={i} style={{ padding: '6px 0', borderBottom: i < RECENT_ACTIONS.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>📜 Recent Audit Events</h3>
+              {recentActions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 16, color: '#64748b', fontSize: 11 }}>No audit events recorded yet.</div>
+              ) : recentActions.map((a, i) => (
+                <div key={i} style={{ padding: '6px 0', borderBottom: i < recentActions.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
                   <div style={{ fontSize: 11, color: '#e2e8f0' }}>{a.action}</div>
-                  <div style={{ fontSize: 9, color: '#475569', fontFamily: 'monospace' }}>{a.time} | TX: {a.tx}</div>
+                  <div style={{ fontSize: 9, color: '#475569', fontFamily: 'monospace' }}>{a.time} | REF: {typeof a.tx === 'string' ? a.tx.slice(0, 16) : 'N/A'}...</div>
                 </div>
               ))}
             </div>
@@ -307,11 +430,10 @@ export default function CAGAuditorDashboard() {
               <h3 style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0', marginBottom: 10 }}>⚡ Quick Actions</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { label: '🚩 Flag a Tender', color: '#ef4444', action: () => setFlagModal(ALL_TENDERS[0]) },
+                  { label: '🚩 Flag a Tender', color: '#ef4444', action: () => allTenders[0] && setFlagModal(allTenders[0]) },
                   { label: '📄 Generate Report', color: '#22c55e', action: () => handleReport() },
                   { label: '🔍 View Investigations', color: '#6366f1', action: () => setActiveTab('investigations') },
                   { label: '📜 Full Audit Trail', color: '#a78bfa', action: () => setActiveTab('audit-trail') },
-                  { label: '🔒 Emergency Freeze', color: '#ef4444', action: () => {} },
                 ].map((btn, i) => (
                   <button key={i} onClick={btn.action} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${btn.color}30`, background: `${btn.color}08`, color: btn.color, fontSize: 11, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
                     {btn.label}
@@ -321,6 +443,7 @@ export default function CAGAuditorDashboard() {
             </div>
           </div>
         </div>
+        )}
       </>)}
 
       {/* ═══ EXTRACTED TABS ═══ */}

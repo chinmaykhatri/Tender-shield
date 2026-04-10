@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/dataLayer';
 
 interface OfficerSummary {
   id: string;
@@ -15,28 +16,119 @@ interface OfficerSummary {
   flags_count: number;
 }
 
-const DEMO_OFFICERS: OfficerSummary[] = [
-  { id: 'officer_002', name: 'Sunita Devi', ministry: 'Ministry of Finance', designation: 'Under Secretary', integrity_score: 96, integrity_grade: 'A+', tenders_managed: 31, ai_overrides: 0, flags_count: 0 },
-  { id: 'officer_003', name: 'Vikram Singh', ministry: 'Ministry of Defence', designation: 'Director (Procurement)', integrity_score: 91, integrity_grade: 'A+', tenders_managed: 18, ai_overrides: 0, flags_count: 0 },
-  { id: 'officer_004', name: 'Priya Mehta', ministry: 'Ministry of Health', designation: 'Joint Secretary', integrity_score: 88, integrity_grade: 'A', tenders_managed: 42, ai_overrides: 1, flags_count: 0 },
-  { id: 'officer_001', name: 'Rajesh Kumar Sharma', ministry: 'Ministry of Road Transport', designation: 'Deputy Director', integrity_score: 72, integrity_grade: 'B', tenders_managed: 24, ai_overrides: 2, flags_count: 2 },
-  { id: 'officer_005', name: 'Anil Gupta', ministry: 'Ministry of Railways', designation: 'Deputy Secretary', integrity_score: 58, integrity_grade: 'C', tenders_managed: 15, ai_overrides: 4, flags_count: 3 },
-];
-
 const GRADE_COLORS: Record<string, string> = {
   'A+': '#22c55e', A: '#22c55e', B: '#fbbf24', C: '#f97316', D: '#ef4444',
 };
+
+function computeGrade(score: number): string {
+  if (score >= 90) return 'A+';
+  if (score >= 80) return 'A';
+  if (score >= 65) return 'B';
+  if (score >= 50) return 'C';
+  return 'D';
+}
 
 export default function OfficersListPage() {
   const router = useRouter();
   const [officers, setOfficers] = useState<OfficerSummary[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [dataSource, setDataSource] = useState<'supabase' | 'empty'>('empty');
 
   useEffect(() => {
-    // Demo mode: use hardcoded data
-    setOfficers(DEMO_OFFICERS);
-    setLoading(false);
+    async function loadOfficers() {
+      try {
+        // Query profiles with role = OFFICER
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, name, email, role, org, created_at')
+          .in('role', ['OFFICER', 'NIC_ADMIN']);
+
+        if (error || !profiles || profiles.length === 0) {
+          // Also try tenders table for created_by officers
+          const { data: tenders } = await supabase
+            .from('tenders')
+            .select('created_by, ministry_code, status, risk_score');
+
+          if (tenders && tenders.length > 0) {
+            // Build officer profiles from tender data
+            const officerMap: Record<string, { tenders: number; frozenCount: number; totalRisk: number; ministries: Set<string> }> = {};
+            for (const t of tenders) {
+              const officer = (t as any).created_by || 'unknown';
+              if (!officerMap[officer]) officerMap[officer] = { tenders: 0, frozenCount: 0, totalRisk: 0, ministries: new Set() };
+              officerMap[officer].tenders += 1;
+              officerMap[officer].totalRisk += (t as any).risk_score || 0;
+              officerMap[officer].ministries.add((t as any).ministry_code || 'N/A');
+              if ((t as any).status === 'FROZEN_BY_AI') officerMap[officer].frozenCount += 1;
+            }
+
+            const computed: OfficerSummary[] = Object.entries(officerMap).map(([email, data]) => {
+              const avgRisk = data.tenders > 0 ? Math.round(data.totalRisk / data.tenders) : 0;
+              const score = Math.max(0, Math.min(100, 100 - avgRisk - (data.frozenCount * 10)));
+              return {
+                id: email,
+                name: email.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                ministry: [...data.ministries].join(', '),
+                designation: 'Procurement Officer',
+                integrity_score: score,
+                integrity_grade: computeGrade(score),
+                tenders_managed: data.tenders,
+                ai_overrides: data.frozenCount,
+                flags_count: data.frozenCount,
+              };
+            }).sort((a, b) => b.integrity_score - a.integrity_score);
+
+            setOfficers(computed);
+            setDataSource('supabase');
+          } else {
+            setDataSource('empty');
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Build officers from profile data + cross-reference with tenders
+        const { data: tenders } = await supabase
+          .from('tenders')
+          .select('created_by, ministry_code, status, risk_score');
+
+        const tenderMap: Record<string, { count: number; frozen: number; totalRisk: number; ministry: string }> = {};
+        for (const t of (tenders || [])) {
+          const key = (t as any).created_by || '';
+          if (!tenderMap[key]) tenderMap[key] = { count: 0, frozen: 0, totalRisk: 0, ministry: '' };
+          tenderMap[key].count += 1;
+          tenderMap[key].totalRisk += (t as any).risk_score || 0;
+          tenderMap[key].ministry = (t as any).ministry_code || tenderMap[key].ministry;
+          if ((t as any).status === 'FROZEN_BY_AI') tenderMap[key].frozen += 1;
+        }
+
+        const officerList: OfficerSummary[] = profiles.map((p: any) => {
+          const td = tenderMap[p.email] || { count: 0, frozen: 0, totalRisk: 0, ministry: '' };
+          const avgRisk = td.count > 0 ? Math.round(td.totalRisk / td.count) : 0;
+          const score = Math.max(0, Math.min(100, 100 - avgRisk - (td.frozen * 10)));
+          return {
+            id: p.id,
+            name: p.name || p.email.split('@')[0],
+            ministry: p.org || td.ministry || 'Unassigned',
+            designation: p.role === 'NIC_ADMIN' ? 'NIC Administrator' : 'Procurement Officer',
+            integrity_score: score,
+            integrity_grade: computeGrade(score),
+            tenders_managed: td.count,
+            ai_overrides: td.frozen,
+            flags_count: td.frozen,
+          };
+        }).sort((a, b) => b.integrity_score - a.integrity_score);
+
+        setOfficers(officerList);
+        setDataSource(officerList.length > 0 ? 'supabase' : 'empty');
+      } catch (err) {
+        console.error('Officers load error:', err);
+        setDataSource('empty');
+      }
+      setLoading(false);
+    }
+
+    loadOfficers();
   }, []);
 
   const filtered = officers.filter(
@@ -52,6 +144,12 @@ export default function OfficersListPage() {
         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>
           Every officer&#39;s decisions are tracked and scored. Ranked by integrity score.
         </p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: dataSource === 'supabase' ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)', color: dataSource === 'supabase' ? '#22c55e' : '#f59e0b', fontWeight: 600 }}>
+            {dataSource === 'supabase' ? '🟢 Live from Supabase' : '⚪ No officers registered'}
+          </span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{officers.length} officers</span>
+        </div>
       </div>
 
       {/* Search */}
@@ -80,6 +178,19 @@ export default function OfficersListPage() {
           {[1, 2, 3].map((i) => (
             <div key={i} className="shimmer" style={{ height: '72px', borderRadius: '14px' }} />
           ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, background: 'rgba(255,255,255,0.02)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>👤</div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>No Officers Found</h3>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', maxWidth: 400, margin: '0 auto' }}>
+            {officers.length === 0
+              ? 'No officers have been registered yet. Officer integrity scores are computed from their tender management activity in Supabase.'
+              : 'No officers match your search criteria.'}
+          </p>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 8 }}>
+            Data source: Supabase (profiles + tenders tables)
+          </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -125,7 +236,7 @@ export default function OfficersListPage() {
                   </div>
                   {officer.ai_overrides > 0 && (
                     <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>Overrides</p>
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>Frozen</p>
                       <p style={{ fontSize: '14px', fontWeight: 600, color: '#f97316' }}>{officer.ai_overrides}</p>
                     </div>
                   )}

@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 // FILE: app/api/verify/gstin/route.ts
 // PURPOSE: GSTIN verification with shell company detection
-// DEMO MODE: Uses demo GSTIN database when API_SETU_KEY is not set
+// SANDBOX MODE: Uses local verification database when API_SETU_KEY is not set
 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -96,11 +96,14 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
-      verification_mode: (isDemoMode || !hasApiKey) ? 'DEMO_MOCK' : 'REAL_API_SETU',
+      verification_mode: (isDemoMode || !hasApiKey) ? 'SANDBOX_LOCAL' : 'LIVE_API_SETU',
       data: companyData,
       message: (companyData.is_shell_company_risk as boolean)
         ? 'Company verified but shell company risk detected'
         : 'GSTIN verified successfully',
+      _note: (isDemoMode || !hasApiKey)
+        ? 'Sandbox mode: Using local GSTIN lookup. Set API_SETU_KEY for live GST Portal verification.'
+        : 'Live mode: Verified via Government API Setu / GST Portal.',
     });
   } catch (error) {
     logger.error('[TenderShield GSTIN] Error:', error);

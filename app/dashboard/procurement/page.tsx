@@ -220,7 +220,7 @@ export default function ProcurementLifecyclePage() {
                 boxShadow: loading ? 'none' : '0 4px 20px rgba(99,102,241,0.4)',
               }}
             >
-              {loading ? '⏳ Running...' : '▶ Run Full Demo'}
+              {loading ? '⏳ Running...' : '▶ Run Full Lifecycle'}
             </button>
             {tender && (
               <button

@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 // FILE: app/api/verify/pan/route.ts
 // PURPOSE: PAN verification with duplicate detection
-// DEMO MODE: Uses demo PAN database when API_SETU_KEY is not set
+// SANDBOX MODE: Uses local PAN database when API_SETU_KEY is not set
 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       success: true,
-      verification_mode: (isDemoMode || !hasApiKey) ? 'DEMO_MOCK' : 'REAL_API_SETU',
+      verification_mode: (isDemoMode || !hasApiKey) ? 'SANDBOX_LOCAL' : 'LIVE_API_SETU',
       data: {
         ...panData,
         is_duplicate: isDuplicate,
@@ -89,6 +89,9 @@ export async function POST(req: Request) {
       message: isDuplicate
         ? `PAN already linked to ${duplicateCompany}. Both accounts flagged for review.`
         : 'PAN verified successfully',
+      _note: (isDemoMode || !hasApiKey)
+        ? 'Sandbox mode: Using local PAN lookup. Set API_SETU_KEY for live CAMS PAN verification.'
+        : 'Live mode: Verified via CAMS / NSDL PAN API.',
     });
   } catch (error) {
     logger.error('[TenderShield PAN] Error:', error);

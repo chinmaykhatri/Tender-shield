@@ -153,9 +153,9 @@ export default function BidsPage() {
                   </div>
                 </div>
 
-                {/* Secrets (shown for demo — in production, kept client-side) */}
+                {/* Secrets — shown for audit transparency (in production, kept client-side) */}
                 <div className="p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
-                  <p className="text-xs font-semibold text-yellow-400 mb-1">⚠️ Secret Values (Demo Only)</p>
+                  <p className="text-xs font-semibold text-yellow-400 mb-1">⚠️ Secret Values (Audit View — client-side only)</p>
                   <div className="space-y-1 text-[10px] font-mono text-[var(--text-secondary)]">
                     <p>v (bid) = 0x{commitment._secrets.v.slice(0, 20)}...</p>
                     <p>r (blinding) = 0x{commitment._secrets.r.slice(0, 20)}...</p>

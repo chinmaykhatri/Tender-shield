@@ -252,10 +252,10 @@ export default function ImpactPage() {
               <p className="text-sm text-green-300/70 mb-6">And growing every minute</p>
               <div className="grid grid-cols-2 gap-3 text-left">
                 {[
-                  { label: 'Bid Rigging', value: '31 cases blocked' },
-                  { label: 'Shell Companies', value: '12 flagged' },
-                  { label: 'Timing Collusion', value: '8 detected' },
-                  { label: 'Cartel Rotation', value: '5 identified' },
+                  { label: 'Bids Flagged', value: `${stats.bids_flagged || 0} flagged` },
+                  { label: 'Tenders Frozen', value: `${stats.tenders_frozen || 0} frozen` },
+                  { label: 'High Risk Alerts', value: `${stats.high_risk_alerts || 0} alerts` },
+                  { label: 'Blockchain TXs', value: `${stats.blockchain_transactions || 0} recorded` },
                 ].map((item, i) => (
                   <div key={i} className="p-3 rounded-lg bg-green-500/10 border border-green-500/15">
                     <p className="text-xs text-green-300/70">{item.label}</p>

@@ -197,7 +197,6 @@ async function executeStep(step: TourStep): Promise<{ result: string; proof: Rec
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-fabric-api-key': 'tendershield-fabric-demo-2026',
           'referer': typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
         },
         body: JSON.stringify({
