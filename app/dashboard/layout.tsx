@@ -14,30 +14,48 @@ import { canAccessRoute, type Role } from '@/lib/rbac';
 import LanguageToggle, { useTranslation } from '@/components/LanguageToggle';
 
 const navItems = [
-  // ── CORE PAGES (always visible) ──
+  // ── CORE PAGES ──
   { href: '/dashboard', icon: '📊', label: 'Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DASHBOARD },
   { href: '/dashboard/tenders', icon: '📋', label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TENDERS },
   { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.CREATE_TENDER },
   { href: '/dashboard/procurement', icon: '📦', label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PROCUREMENT },
   { href: '/dashboard/bids', icon: '🔒', label: 'Sealed Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS },
   { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.BLOCKCHAIN },
-  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR },
-  { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
-  { href: '/architecture', icon: '🏗️', label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ARCHITECTURE },
-  { href: '/demo', icon: '🎬', label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DEMO },
-  // ── GATED PAGES (hidden when NEXT_PUBLIC_HIDE_INCOMPLETE=true) ──
-  { href: '/dashboard/ml-model', icon: '🧠', label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ML_MODEL },
+
+  // ── AI & INTELLIGENCE ──
+  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR },
   { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_ALERTS },
-  { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
-  { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR },
-  // ── ADVANCED FEATURES ──
-  { href: '/dashboard/network-graph', icon: '🕵️', label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH },
-  { href: '/dashboard/anomaly', icon: '📈', label: 'Anomaly Detection', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ANOMALY_DETECTION },
-  { href: '/dashboard/paillier-demo', icon: '🔐', label: 'Paillier Crypto', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO },
-  { href: '/dashboard/federated', icon: '🧠', label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING },
+  { href: '/dashboard/ml-model', icon: '🧠', label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ML_MODEL },
   { href: '/dashboard/chat', icon: '💬', label: 'AI Analyst', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_CHAT },
-  { href: '/dashboard/metrics', icon: '📊', label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS },
+  { href: '/dashboard/anomaly', icon: '📈', label: 'Anomaly Detection', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ANOMALY_DETECTION },
+
+  // ── INVESTIGATION & AUDIT ──
+  { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
+  { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
+  { href: '/dashboard/network-graph', icon: '🕵️', label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH },
+
+  // ── ADVANCED CRYPTO ──
+  { href: '/dashboard/paillier-demo', icon: '🔐', label: 'Paillier Crypto', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO },
+  { href: '/dashboard/federated', icon: '🧬', label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING },
+
+  // ── CITIZEN / PUBLIC ──
   { href: '/rti', icon: '🇮🇳', label: 'RTI Portal', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.RTI_PORTAL },
+  { href: '/whistleblower', icon: '📢', label: 'Whistleblower', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.WHISTLEBLOWER },
+  { href: '/impact', icon: '🌍', label: 'Impact Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT },
+  { href: '/transparency', icon: '🔍', label: 'Transparency', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TRANSPARENCY },
+
+  // ── METRICS & REPORTS ──
+  { href: '/dashboard/metrics', icon: '📊', label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS },
+  { href: '/ministry-scores', icon: '🏛️', label: 'Ministry Scores', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.MINISTRY_SCORES },
+  { href: '/heatmap', icon: '🗺️', label: 'Fraud Heatmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.HEATMAP },
+
+  // ── SYSTEM & DEMO ──
+  { href: '/demo', icon: '🎬', label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DEMO },
+  { href: '/architecture', icon: '🏗️', label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ARCHITECTURE },
+  { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR },
+  { href: '/roadmap', icon: '🗓️', label: 'Roadmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ROADMAP },
+  { href: '/settings', icon: '⚙️', label: 'Settings', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.SETTINGS },
+  { href: '/dashboard/admin', icon: '👤', label: 'Admin Panel', roles: ['NIC_ADMIN'], visible: FEATURES.ADMIN },
 ].filter(item => item.visible);
 
 // Mobile bottom nav shows 5 most important tabs based on role

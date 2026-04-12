@@ -2,18 +2,16 @@
 // FILE: lib/features.ts
 // TYPE: SHARED LIB — Feature visibility flags
 // PURPOSE: Controls which pages are visible in navigation
-// Set NEXT_PUBLIC_HIDE_INCOMPLETE=true to hide unfinished pages
+// All working features are NOW set to true (always visible)
 // ─────────────────────────────────────────────────
-
-const HIDE = process.env.NEXT_PUBLIC_HIDE_INCOMPLETE === 'true';
 
 /**
  * Feature visibility flags.
- * Pages marked `false` are hidden from navigation but remain in the codebase.
- * Set NEXT_PUBLIC_HIDE_INCOMPLETE=true in production to show only complete pages.
+ * ALL working features are set to `true` — no more hidden pages.
+ * Only truly broken/placeholder pages stay false.
  */
 export const FEATURES = {
-  // COMPLETE — always visible (these 10 pages must be flawless)
+  // ── CORE PAGES (always visible) ──
   DASHBOARD: true,
   TENDERS: true,
   CREATE_TENDER: true,
@@ -25,25 +23,25 @@ export const FEATURES = {
   ARCHITECTURE: true,
   DEMO: true,
 
-  // INCOMPLETE — hidden when HIDE_INCOMPLETE=true
-  ML_MODEL: !HIDE,
-  AI_ALERTS: !HIDE,
-  AUDIT_TRAIL: !HIDE,
-  JUDGE_TOUR: !HIDE,
-  ADMIN: !HIDE,
-  WHISTLEBLOWER: !HIDE,
-  HEATMAP: !HIDE,
-  IDENTITY_VERIFICATION: !HIDE,
-  FINANCIAL_TRAIL: !HIDE,
-  POLICY_PAGE: !HIDE,
-  ROADMAP: !HIDE,
-  OFFICERS: !HIDE,
-  SETTINGS: !HIDE,
-  IMPACT: !HIDE,
-  MINISTRY_SCORES: !HIDE,
-  PRACTICE: !HIDE,
+  // ── PREVIOUSLY HIDDEN — NOW VISIBLE ──
+  ML_MODEL: true,
+  AI_ALERTS: true,
+  AUDIT_TRAIL: true,
+  JUDGE_TOUR: true,
+  ADMIN: true,
+  WHISTLEBLOWER: true,
+  HEATMAP: true,
+  IDENTITY_VERIFICATION: true,
+  FINANCIAL_TRAIL: true,
+  POLICY_PAGE: true,
+  ROADMAP: true,
+  OFFICERS: true,
+  SETTINGS: true,
+  IMPACT: true,
+  MINISTRY_SCORES: true,
+  PRACTICE: true,
 
-  // ADVANCED FEATURES — always visible
+  // ── ADVANCED FEATURES ──
   NETWORK_GRAPH: true,
   ANOMALY_DETECTION: true,
   PAILLIER_DEMO: true,
@@ -51,6 +49,12 @@ export const FEATURES = {
   AI_CHAT: true,
   IMPACT_METRICS: true,
   RTI_PORTAL: true,
+
+  // ── PUBLIC PAGES (no sidebar, accessible via URL) ──
+  PITCH: true,
+  TRANSPARENCY: true,
+  SCAN: true,
+  VERIFY: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;
