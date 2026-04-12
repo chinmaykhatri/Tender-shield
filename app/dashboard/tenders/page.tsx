@@ -35,6 +35,13 @@ export default function TendersPage() {
 
   const statusFilters = ['', 'BIDDING_OPEN', 'UNDER_EVALUATION', 'AWARDED', 'FROZEN_BY_AI'];
 
+  const riskLevel = (score: number) => {
+    if (score >= 80) return 'CRITICAL';
+    if (score >= 50) return 'HIGH';
+    if (score >= 25) return 'MEDIUM';
+    return 'LOW';
+  };
+
   const riskColor = (level: string) => {
     const map: Record<string, string> = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#f97316', CRITICAL: '#ef4444' };
     return map[level] || '#6366f1';
@@ -106,13 +113,13 @@ export default function TendersPage() {
                     <p className="text-xl font-display font-bold text-[var(--accent)]">
                       {tender.estimated_value_display || `₹${tender.estimated_value_crore} Cr`}
                     </p>
-                    {tender.risk_score !== undefined && (
+                    {tender.risk_score !== undefined && tender.risk_score > 0 && (
                       <div className="mt-2">
-                        <span className="text-xs" style={{ color: riskColor(tender.risk_level) }}>
-                          Risk: {tender.risk_score}
+                        <span className="text-xs font-semibold" style={{ color: riskColor(riskLevel(tender.risk_score)) }}>
+                          {riskLevel(tender.risk_score)} · {tender.risk_score}
                         </span>
                         <div className="risk-meter mt-1 w-20">
-                          <div className="risk-meter-fill" style={{ width: `${tender.risk_score}%`, background: riskColor(tender.risk_level) }} />
+                          <div className="risk-meter-fill" style={{ width: `${tender.risk_score}%`, background: riskColor(riskLevel(tender.risk_score)) }} />
                         </div>
                       </div>
                     )}
