@@ -14,6 +14,7 @@ interface GraphNode extends d3.SimulationNodeDatum {
   risk: number;
   bids: number;
   flagged: boolean;
+  type?: string;
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
@@ -124,15 +125,31 @@ export default function NetworkGraphPage() {
       })
     );
 
-    // Node circles
-    node.append('circle')
-      .attr('r', d => 14 + Math.min(d.bids, 15))
-      .attr('fill', d => `${riskColor(d.risk)}20`)
-      .attr('stroke', d => riskColor(d.risk))
-      .attr('stroke-width', d => d.flagged ? 3 : 1.5);
+    // Node shapes — companies = circles, directors = diamonds
+    node.each(function (d) {
+      const el = d3.select(this);
+      const isDir = d.type === 'director';
+      const r = isDir ? 12 : 14 + Math.min(d.bids, 15);
+
+      if (isDir) {
+        // Diamond for directors
+        el.append('polygon')
+          .attr('points', `0,-${r} ${r},0 0,${r} -${r},0`)
+          .attr('fill', `${riskColor(d.risk)}20`)
+          .attr('stroke', riskColor(d.risk))
+          .attr('stroke-width', d.flagged ? 3 : 1.5);
+      } else {
+        // Circle for companies
+        el.append('circle')
+          .attr('r', r)
+          .attr('fill', `${riskColor(d.risk)}20`)
+          .attr('stroke', riskColor(d.risk))
+          .attr('stroke-width', d.flagged ? 3 : 1.5);
+      }
+    });
 
     // Flagged pulse ring
-    node.filter(d => d.flagged)
+    node.filter(d => d.flagged && d.type !== 'director')
       .append('circle')
       .attr('r', d => 18 + Math.min(d.bids, 15))
       .attr('fill', 'none')
@@ -143,21 +160,21 @@ export default function NetworkGraphPage() {
 
     // Node labels
     node.append('text')
-      .attr('dy', d => -(18 + Math.min(d.bids, 15)))
+      .attr('dy', d => d.type === 'director' ? -18 : -(18 + Math.min(d.bids, 15)))
       .attr('text-anchor', 'middle')
       .attr('font-size', 10)
       .attr('font-weight', 600)
       .attr('fill', '#e2e8f0')
       .text(d => d.label.length > 20 ? d.label.slice(0, 18) + '…' : d.label);
 
-    // Risk score inside node
+    // Type indicator
     node.append('text')
-      .attr('dy', 4)
+      .attr('dy', d => d.type === 'director' ? 4 : 4)
       .attr('text-anchor', 'middle')
-      .attr('font-size', 11)
+      .attr('font-size', d => d.type === 'director' ? 9 : 11)
       .attr('font-weight', 800)
-      .attr('fill', d => riskColor(d.risk))
-      .text(d => d.risk);
+      .attr('fill', d => d.type === 'director' ? '#a5b4fc' : riskColor(d.risk))
+      .text(d => d.type === 'director' ? '👤' : d.risk);
 
     // Tick
     simulation.on('tick', () => {
@@ -238,6 +255,10 @@ export default function NetworkGraphPage() {
                 {l.label}
               </div>
             ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 10, height: 10, transform: 'rotate(45deg)', border: '2px solid #a5b4fc', background: 'rgba(165,180,252,0.1)' }} />
+              Director
+            </div>
           </div>
 
           {/* Hovered link tooltip */}

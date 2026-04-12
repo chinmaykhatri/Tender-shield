@@ -72,7 +72,7 @@ export async function detectDirectorNetwork(): Promise<{
   }
 }
 
-function buildGraphFromDirectorTable(links: any[]): {
+function buildGraphFromDirectorTable(rows: any[]): {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
   data_source: string;
@@ -81,58 +81,80 @@ function buildGraphFromDirectorTable(links: any[]): {
   const nodes = new Map<string, NetworkNode>();
   const edges: NetworkEdge[] = [];
 
-  for (const link of links) {
-    // Company nodes
-    if (!nodes.has(link.company_a)) {
-      nodes.set(link.company_a, {
-        id: link.company_a,
-        label: link.company_a_name || link.company_a,
+  // Schema: director_name, company_name, din_number, role, flagged
+  // Build bipartite graph: directors ↔ companies
+
+  // Track which companies each director is linked to
+  const directorCompanies = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    const dirName = row.director_name;
+    const compName = row.company_name;
+    const din = row.din_number || '';
+    const flagged = row.flagged || false;
+
+    // Add company node
+    if (!nodes.has(compName)) {
+      nodes.set(compName, {
+        id: compName,
+        label: compName,
         type: 'company',
-        risk_score: link.risk_score_a,
+        risk_score: flagged ? 85 : 25,
       });
-    }
-    if (!nodes.has(link.company_b)) {
-      nodes.set(link.company_b, {
-        id: link.company_b,
-        label: link.company_b_name || link.company_b,
-        type: 'company',
-        risk_score: link.risk_score_b,
-      });
+    } else if (flagged) {
+      // Increase risk if flagged connection
+      const n = nodes.get(compName)!;
+      n.risk_score = Math.max(n.risk_score || 0, 85);
     }
 
-    // Director node
-    const dirId = `DIR-${link.shared_identifier || link.id}`;
+    // Add director node
+    const dirId = `DIR-${din || dirName.replace(/\s/g, '-')}`;
     if (!nodes.has(dirId)) {
       nodes.set(dirId, {
         id: dirId,
-        label: link.director_name || link.shared_identifier || 'Unknown Director',
+        label: dirName,
         type: 'director',
-        metadata: { pan: link.shared_pan, din: link.shared_din },
+        risk_score: 0,
+        metadata: { din, role: row.role },
       });
     }
 
-    // Edges
-    edges.push({
-      source: link.company_a,
-      target: dirId,
-      label: `Shared ${link.link_type || 'Director'}`,
-      type: link.link_type || 'SHARED_DIRECTOR',
-      weight: link.confidence || 0.9,
-    });
+    // Track director → companies
+    if (!directorCompanies.has(dirId)) directorCompanies.set(dirId, new Set());
+    directorCompanies.get(dirId)!.add(compName);
+
+    // Edge: director ↔ company
     edges.push({
       source: dirId,
-      target: link.company_b,
-      label: `Shared ${link.link_type || 'Director'}`,
-      type: link.link_type || 'SHARED_DIRECTOR',
-      weight: link.confidence || 0.9,
+      target: compName,
+      label: `Director (DIN: ${din})`,
+      type: 'SHARED_DIRECTOR',
+      weight: flagged ? 0.95 : 0.5,
     });
+  }
+
+  // Mark directors who control 2+ companies as high risk
+  for (const [dirId, companies] of directorCompanies.entries()) {
+    if (companies.size >= 2) {
+      const dirNode = nodes.get(dirId);
+      if (dirNode) {
+        dirNode.risk_score = 75 + (companies.size * 5);
+      }
+      // Also increase risk on all connected companies
+      for (const comp of companies) {
+        const compNode = nodes.get(comp);
+        if (compNode) {
+          compNode.risk_score = Math.max(compNode.risk_score || 0, 65);
+        }
+      }
+    }
   }
 
   return {
     nodes: Array.from(nodes.values()),
     edges,
-    data_source: 'DATABASE_DIRECTOR_TABLE',
-    total_links: links.length,
+    data_source: 'SUPABASE_DIRECTOR_NETWORK',
+    total_links: rows.length,
   };
 }
 
