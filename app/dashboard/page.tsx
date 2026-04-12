@@ -9,6 +9,7 @@ import DataSourceBadge from '@/components/DataSourceBadge';
 import GlowStripes from '@/components/GlowStripes';
 import { SkeletonDashboard } from '@/components/Skeleton';
 import BlockchainProof from '@/components/BlockchainProof';
+import { useTranslation } from '@/components/LanguageToggle';
 import Link from 'next/link';
 import type { DashboardStats, MinistryBreakdown, RiskDistribution, BlockchainEvent } from '@/lib/types';
 
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [tenderCount, setTenderCount] = useState<number | undefined>(undefined);
   const [istTime, setIstTime] = useState('');
   const blockchainFeed = useBlockchainFeed();
+  const { t } = useTranslation();
   const [chainStats, setChainStats] = useState<{ chain_height: number; merkle_root: string; integrity_status: string; data_status: string; total_transactions: number; tps: number; peers_active: number; source: string } | null>(null);
   const [chainError, setChainError] = useState(false);
 
@@ -58,11 +60,11 @@ export default function DashboardPage() {
   const stats = useLiveStats(rawStats);
 
   const statCards = useMemo(() => [
-    { icon: '📋', label: 'Active Tenders', value: stats?.total_active_tenders || 0, color: '#6366f1', accent: 'rgba(99,102,241,0.15)' },
-    { icon: '📝', label: 'Bids Today', value: stats?.bids_received_today || 0, color: '#22c55e', accent: 'rgba(34,197,94,0.15)' },
-    { icon: '🚨', label: 'AI Alerts', value: stats?.ai_alerts_active || 0, color: '#ef4444', accent: 'rgba(239,68,68,0.15)' },
-    { icon: '⛓️', label: 'Blockchain TXs', value: stats?.blockchain_tx_today || 0, color: '#f59e0b', accent: 'rgba(245,158,11,0.15)' },
-  ], [stats]);
+    { icon: '📋', label: t('active_tenders'), value: stats?.total_active_tenders || 0, color: '#6366f1', accent: 'rgba(99,102,241,0.15)' },
+    { icon: '📝', label: t('total_bids'), value: stats?.bids_received_today || 0, color: '#22c55e', accent: 'rgba(34,197,94,0.15)' },
+    { icon: '🚨', label: t('ai_alerts'), value: stats?.ai_alerts_active || 0, color: '#ef4444', accent: 'rgba(239,68,68,0.15)' },
+    { icon: '⛓️', label: t('blockchain_transactions'), value: stats?.blockchain_tx_today || 0, color: '#f59e0b', accent: 'rgba(245,158,11,0.15)' },
+  ], [stats, t]);
 
   if (loading) return <SkeletonDashboard />;
 
@@ -90,7 +92,7 @@ export default function DashboardPage() {
               </h1>
               <DataSourceBadge usingRealData={usingRealData} recordCount={tenderCount} />
             </div>
-            <p style={{ color: '#888', fontSize: '13px' }}>Welcome back, {user?.name || 'Officer'} · {user?.role || 'N/A'}</p>
+            <p style={{ color: '#888', fontSize: '13px' }}>{t('welcome_back')}, {user?.name || 'Officer'} · {user?.role || 'N/A'}</p>
           </div>
 
           {/* Right: block counter + IST clock */}
@@ -151,7 +153,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card-3d stagger-5">
             <div className="card-3d-inner glass-layer-1">
-              <p style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>💰 Total Procurement Value</p>
+              <p style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>💰 {t('total_procurement_value')}</p>
               <p className="number-pop" style={{ fontSize: '40px', fontWeight: 700, fontFamily: "'Rajdhani', sans-serif", background: 'linear-gradient(135deg, #FF9933, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: 'none' }}>
                 ₹{(stats?.total_tender_value_crore || 0).toLocaleString('en-IN')} Cr
               </p>
@@ -160,10 +162,11 @@ export default function DashboardPage() {
           </div>
           <div className="card-3d stagger-6">
             <div className="card-3d-inner glass-layer-1">
-              <p style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>🛡️ Fraud Prevented</p>
+              <p style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>🛡️ {t('fraud_prevented_label')}</p>
               <p className="number-pop" style={{ fontSize: '40px', fontWeight: 700, fontFamily: "'Rajdhani', sans-serif", background: 'linear-gradient(135deg, #22c55e, #4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                ₹{(stats?.fraud_prevented_value_crore || 0).toFixed(1)} Cr
+                ₹{(stats?.auto_locked_value_crore || 0).toFixed(1)} Cr
               </p>
+              <p style={{ fontSize: '9px', color: '#64748b', marginTop: '4px' }}>{t('auto_locked_subtitle')}</p>
               <div className="accent-line-animated" style={{ marginTop: '12px', background: 'linear-gradient(90deg, #22c55e, transparent)' }} />
             </div>
           </div>
@@ -173,7 +176,7 @@ export default function DashboardPage() {
         {stats?.ministry_breakdown && stats.ministry_breakdown.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ alignItems: 'start' }}>
             <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden', minWidth: 0 }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Ministry Breakdown</h2>
+              <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>{t('ministry_breakdown')}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '320px', overflowY: 'auto' }}>
                 {stats.ministry_breakdown.slice(0, 8).map((m: MinistryBreakdown, i: number) => (
                   <div key={i} style={{ minHeight: '28px' }}>
@@ -195,7 +198,7 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', alignSelf: 'start' }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>Risk Distribution</h2>
+              <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white' }}>{t('risk_distribution')}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {(stats.risk_distribution || []).map((r: RiskDistribution, i: number) => (
                   <div key={i} style={{ minHeight: '32px' }}>
@@ -216,7 +219,7 @@ export default function DashboardPage() {
           <div className="lg:col-span-2" style={{ padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <h2 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '16px', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span className="pulse-ring" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', color: '#4ade80' }} />
-              Live Blockchain Feed
+              {t('live_blockchain_feed')}
             </h2>
             <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {blockchainFeed.length === 0 ? (

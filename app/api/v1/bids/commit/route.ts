@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { bidCommitSchema } from '@/lib/validation/schemas';
+import { requirePermission } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  // ── RBAC: Only Bidders can submit bids ──
+  const cookie = req.cookies.get('tendershield-demo-user');
+  let role: string | undefined;
+  if (cookie?.value) { try { role = JSON.parse(cookie.value).role; } catch { /* */ } }
+  role = role || req.headers.get('x-user-role') || undefined;
+  const denied = requirePermission(role, 'submit_bid');
+  if (denied) return denied;
+
   try {
     const body = await req.json();
 
@@ -18,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     const bid = {
-      bid_id: `BID-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      bid_id: `BID-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`,
       tender_id: parsed.data.tender_id,
       bidder_did: parsed.data.bidder_did,
       commitment_hash: parsed.data.commitment_hash,

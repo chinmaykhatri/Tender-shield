@@ -135,7 +135,7 @@ export interface DashboardStats {
   critical_alerts: number;
   blockchain_tx_total: number;
   blockchain_tx_today: number;
-  fraud_prevented_value_crore: number;
+  auto_locked_value_crore: number;
   tenders_frozen: number;
   tenders_awarded_this_month: number;
   avg_risk_score: number;

@@ -73,7 +73,7 @@ export default function PredictionsPage() {
           <StatCard label="Total Predictions" value={String(predictions.length)} icon="📊" color="#a5b4fc" />
           <StatCard label="Correct" value={`${correct}/${total}`} icon="✅" color="#4ade80" />
           <StatCard label="Accuracy Rate" value={`${accuracy}%`} icon="🎯" color="#fbbf24" />
-          <StatCard label="Fraud Prevented" value={`₹${fraudPrevented} Cr`} icon="💰" color="#4ade80" />
+          <StatCard label="Auto-Locked Value" value={`₹${fraudPrevented} Cr`} icon="💰" color="#4ade80" />
         </div>
 
         {/* Accuracy Trend Chart */}

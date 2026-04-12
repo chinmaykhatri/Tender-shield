@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     // Calculate total value
     const totalValuePaise = tenders.reduce((sum: number, t: any) => sum + (t.estimated_value_paise || 0), 0);
-    const fraudPreventedPaise = flaggedTenders.reduce((sum: number, t: any) => sum + (t.estimated_value_paise || 0), 0);
+    const autoLockedPaise = flaggedTenders.reduce((sum: number, t: any) => sum + (t.estimated_value_paise || 0), 0);
 
     return NextResponse.json({
       stats: {
@@ -26,14 +26,14 @@ export async function GET(req: NextRequest) {
         total_bids: bidCount || 0,
         flagged_tenders: flaggedTenders.length,
         total_value_crores: totalValuePaise / 1_00_00_00_000,
-        fraud_prevented_value_crores: fraudPreventedPaise / 1_00_00_00_000,
+        auto_locked_value_crores: autoLockedPaise / 1_00_00_00_000,
       },
     });
   } catch (err: unknown) {
     return NextResponse.json({
       stats: {
         total_tenders: 0, active_tenders: 0, total_bids: 0,
-        flagged_tenders: 0, total_value_crores: 0, fraud_prevented_value_crores: 0,
+        flagged_tenders: 0, total_value_crores: 0, auto_locked_value_crores: 0,
       },
     }, { status: 500 });
   }

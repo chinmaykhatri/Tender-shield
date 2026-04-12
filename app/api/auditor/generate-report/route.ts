@@ -2,19 +2,27 @@
  * CAG Auditor — Report Generator API
  * POST: Generate compliance report (HTML)
  * DUAL MODE: Supabase → Demo
+ * RBAC: Requires 'export_report' permission (OFFICER, AUDITOR, NIC_ADMIN)
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { requirePermission } from '@/lib/rbac';
 
 function generateTxHash() {
-  return '0x' + Array.from({ length: 48 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const uuid1 = crypto.randomUUID().replace(/-/g, '');
+  const uuid2 = crypto.randomUUID().replace(/-/g, '');
+  return '0x' + (uuid1 + uuid2).slice(0, 48);
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { report_type, scope, sections, auditor_name } = body;
+    const { report_type, scope, sections, auditor_name, user_role } = body;
 
-    const reportId = `RPT-2025-${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, '0')}`;
+    // RBAC: Only OFFICER, AUDITOR, NIC_ADMIN can generate reports
+    const denied = requirePermission(user_role, 'export_report');
+    if (denied) return denied;
+
+    const reportId = `RPT-2025-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
     const dateIST = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     const reportHash = generateTxHash();
 

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     level,
     action,
     signed_at: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-    signature_hash: '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+    signature_hash: '0x' + crypto.randomUUID().replace(/-/g, ''),
     next_state: action === 'APPROVE' ? (level < 3 ? `LEVEL_${level + 1}_PENDING` : 'PUBLISHED') : 'DRAFT',
     demo: true,
   });

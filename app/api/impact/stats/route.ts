@@ -29,7 +29,7 @@ export async function GET() {
       success: true,
       data_source: 'FALLBACK — No Supabase credentials',
       data: {
-        fraud_prevented_crore: 0,
+        auto_locked_crore: 0,
         bids_analyzed: 0,
         bids_flagged: 0,
         tenders_frozen: 0,
@@ -65,14 +65,14 @@ export async function GET() {
     const highRiskAlerts = alerts.filter((a: any) => a.risk_score >= 70).length;
 
     // Fraud prevented estimate: 12% of total tender value that went through AI analysis
-    const fraudPreventedCrore = +(totalValueCrore * 0.12).toFixed(1);
+    const autoLockedCrore = +(totalValueCrore * 0.12).toFixed(1);
 
     return NextResponse.json({
       success: true,
       data_source: 'SUPABASE_REAL_COUNTS',
       data: {
         // ── REAL VALUES (from database) ──
-        fraud_prevented_crore: fraudPreventedCrore,
+        auto_locked_crore: autoLockedCrore,
         bids_analyzed: bids.length,
         bids_flagged: flaggedBids,
         tenders_frozen: frozenTenders,
@@ -83,8 +83,8 @@ export async function GET() {
 
         // ── COMPUTED ESTIMATES (labeled) ──
         avg_detection_seconds: 3.2,                              // Real: measured from fraud-analyze API
-        schools_equivalent: Math.floor(fraudPreventedCrore / 0.2), // ₹20L per school (UDISE+ avg)
-        hospitals_equivalent: Math.floor(fraudPreventedCrore / 5), // ₹5Cr per PHC
+        schools_equivalent: Math.floor(autoLockedCrore / 0.2), // ₹20L per school (UDISE+ avg)
+        hospitals_equivalent: Math.floor(autoLockedCrore / 5), // ₹5Cr per PHC
         shell_companies_caught: bids.filter((b: any) => b.flagged).length,
         officers_monitored: new Set(tenders.map((t: any) => t.status).filter(Boolean)).size,
         ministries_protected: new Set(tenders.map((t: any) => t.ministry_code || t.status).filter(Boolean)).size,

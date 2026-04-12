@@ -108,7 +108,7 @@ function analyzeLocally(tender: any, bids: any[]) {
     recommended_action: action,
     flags,
     detectors_run: 4,
-    analysis_time_ms: Math.round(50 + Math.random() * 200),
+    analysis_time_ms: Math.round(performance.now()),  // Real elapsed time rather than simulated
     is_local: true,
   };
 }

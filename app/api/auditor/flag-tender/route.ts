@@ -2,22 +2,30 @@
  * CAG Auditor — Flag Tender API
  * POST: Flag a tender for formal CAG investigation
  * DUAL MODE: Supabase → Demo fallback
+ * RBAC: Requires 'flag_tender' permission (AUDITOR, NIC_ADMIN)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requirePermission } from '@/lib/rbac';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 function generateTxHash(): string {
-  return '0x' + Array.from({ length: 48 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const uuid1 = crypto.randomUUID().replace(/-/g, '');
+  const uuid2 = crypto.randomUUID().replace(/-/g, '');
+  return '0x' + (uuid1 + uuid2).slice(0, 48);
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { tender_id, flag_type, severity, reason, evidence_notes, recommended_action, notify } = body;
+    const { tender_id, flag_type, severity, reason, evidence_notes, recommended_action, notify, user_role } = body;
+
+    // RBAC: Only AUDITOR and NIC_ADMIN can flag tenders
+    const denied = requirePermission(user_role, 'flag_tender');
+    if (denied) return denied;
 
     // Validation
     if (!tender_id) return NextResponse.json({ error: 'tender_id required' }, { status: 400 });
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Reason must be at least 100 characters (legal requirement)' }, { status: 400 });
     }
 
-    const caseNumber = `CAG-INV-2025-${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, '0')}`;
+    const caseNumber = `CAG-INV-2025-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
     const blockchainTx = generateTxHash();
     let storage = 'IN_MEMORY';
 

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requirePermission } from '@/lib/rbac';
 
 // ═══════════════════════════════════════════════════════════
 // RAG Chat API — Gemini + Supabase Context
@@ -93,7 +94,15 @@ function templateFallback(question: string, context: string): string {
   return `Here is the current database context:\n\n${context.slice(0, 800)}\n\n_Set GEMINI_API_KEY for intelligent analysis._`;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // ── RBAC: Only Officers, Auditors, and Admins can use AI chat ──
+  const cookie = req.cookies.get('tendershield-demo-user');
+  let role: string | undefined;
+  if (cookie?.value) { try { role = JSON.parse(cookie.value).role; } catch { /* */ } }
+  role = role || req.headers.get('x-user-role') || undefined;
+  const denied = requirePermission(role, 'ai_analyze');
+  if (denied) return denied;
+
   try {
     const { message, history = [] } = await req.json();
 

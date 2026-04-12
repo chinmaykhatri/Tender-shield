@@ -63,12 +63,7 @@ export function determineLockLevel(riskScore: number): LockDecision {
   };
 }
 
-/** Generate a mock blockchain transaction hash */
+/** Generate a cryptographically random transaction hash */
 export function generateTxHash(): string {
-  return (
-    '0x' +
-    Array.from({ length: 64 }, () =>
-      Math.floor(Math.random() * 16).toString(16)
-    ).join('')
-  );
+  return '0x' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 }

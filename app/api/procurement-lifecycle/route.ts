@@ -173,7 +173,7 @@ async function trySupabase(operation: () => PromiseLike<any> | any): Promise<{ s
 
 // ─── Helper: try real chaincode invoke ─────────────────
 async function tryChaincode(req: NextRequest, fnName: string, args: string[]): Promise<{ txHash: string; source: string }> {
-  const fallbackTx = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const fallbackTx = '0x' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   try {
     const resp = await fetch(new URL('/api/chaincode-invoke', req.url).toString(), {
       method: 'POST',
@@ -501,7 +501,7 @@ export async function POST(req: NextRequest) {
           const curr = new Date(b.submittedAt).getTime();
           return Math.max(0.1, (curr - prev) / 3600000);
         }),
-        bidder_pans: tender.bids.map(() => 'UNIQUE' + Math.random().toString(36).slice(2, 7)),
+        bidder_pans: tender.bids.map((_: Bid, i: number) => 'UNIQUE' + crypto.randomUUID().slice(0, 5) + i),
         winning_amount: Math.min(...bidAmounts),
         historical_winner_count: 1,
         is_repeat_winner: false,

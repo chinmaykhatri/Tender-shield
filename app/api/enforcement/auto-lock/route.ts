@@ -5,10 +5,20 @@
 import { logger } from '@/lib/logger';
 import { determineLockLevel, generateTxHash } from '@/lib/enforcement/autoLock';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { requirePermission } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  // ── RBAC: Only Auditors and Admins can lock tenders ──
+  // Note: auto-lock is called by AI system, so we accept AI_SYSTEM via header
+  const roleHeader = (req as any).headers?.get?.('x-user-role') || 'AI_SYSTEM';
+  // AI_SYSTEM bypasses RBAC (it's the system itself), but human callers need freeze_tender
+  if (roleHeader !== 'AI_SYSTEM') {
+    const denied = requirePermission(roleHeader, 'freeze_tender');
+    if (denied) return denied;
+  }
+
   try {
     const { tender_id, risk_score, risk_level, flags } = await req.json();
 

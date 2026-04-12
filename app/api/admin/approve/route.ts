@@ -2,15 +2,21 @@
 // PURPOSE: Admin approve/reject pending registrations
 // INDIA API: none — Supabase operations
 // MOCK MODE: YES — returns success in demo
+// RBAC: Requires 'manage_users' permission (NIC_ADMIN only)
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requirePermission } from '@/lib/rbac';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { action, user_id, admin_user_id, rejection_note } = await req.json();
+    const { action, user_id, admin_user_id, rejection_note, user_role } = await req.json();
+
+    // RBAC: Only NIC_ADMIN can manage users
+    const denied = requirePermission(user_role, 'manage_users');
+    if (denied) return denied;
 
     if (action === 'approve') {
       await supabase.from('user_verifications').update({
@@ -47,8 +53,10 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generate_access_code') {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const bytes = new Uint8Array(6);
+      crypto.getRandomValues(bytes);
       let code = 'TS-AUD-';
-      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      for (let i = 0; i < 6; i++) code += chars[bytes[i] % chars.length];
 
       await supabase.from('auditor_access_codes').insert({
         code,

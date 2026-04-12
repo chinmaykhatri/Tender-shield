@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
         num_bidders: bid_amounts.length,
         bid_amounts,
         bid_times_hours,
-        bidder_pans: bidder_pans.length > 0 ? bidder_pans : bid_amounts.map(() => 'UNIQ' + Math.random().toString(36).slice(2, 7)),
+        bidder_pans: bidder_pans.length > 0 ? bidder_pans : bid_amounts.map((_: number, i: number) => 'UNIQ' + crypto.randomUUID().slice(0, 5) + i),
         winning_amount,
         historical_winner_count,
         is_repeat_winner,

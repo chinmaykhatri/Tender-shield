@@ -13,6 +13,8 @@
     "test:integration": "TEST_URL=http://localhost:3000 vitest run __tests__/integration/",
     "test:ci": "vitest run --reporter=verbose",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

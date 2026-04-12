@@ -102,7 +102,7 @@ export async function executeTool(
       }
 
       case 'freeze_tender': {
-        const txHash = '0x' + Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        const txHash = '0x' + crypto.randomUUID().replace(/-/g, '');
         if (!DEMO_MODE) {
           await supabase.from('tenders').update({
             status: 'FROZEN_BY_AI',
@@ -170,7 +170,7 @@ export async function executeTool(
       }
 
       case 'escalate_to_cag': {
-        const caseNumber = `CAG-AI-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
+        const caseNumber = `CAG-AI-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
         if (!DEMO_MODE) {
           await supabase.from('cag_escalations').insert({
             case_number: caseNumber,
@@ -191,8 +191,8 @@ export async function executeTool(
       }
 
       case 'record_on_blockchain': {
-        const bTxHash = '0x' + Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-        const blockNumber = 1337 + Math.floor(Math.random() * 100);
+        const bTxHash = '0x' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+        const blockNumber = 1337 + parseInt(crypto.randomUUID().slice(0, 2), 16) % 100;
         if (!DEMO_MODE) {
           await supabase.from('blockchain_records').insert({
             tx_hash: bTxHash,

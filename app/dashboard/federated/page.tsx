@@ -223,10 +223,27 @@ export default function FederatedPage() {
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Federated Learning Engine</h2>
           <p style={{ fontSize: 13, color: '#94a3b8', maxWidth: 500, margin: '0 auto', marginBottom: 16 }}>
             Train fraud detection models across 5 ministry nodes without sharing any tender data.
-            Only encrypted gradient updates are aggregated using Federated Averaging (FedAvg).
+            Model gradients are aggregated using Federated Averaging (McMahan et al. 2017).
           </p>
+
+          {/* Honest development status */}
+          <div style={{
+            maxWidth: 460, margin: '0 auto 20px', padding: '14px 18px', borderRadius: 12,
+            background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+            textAlign: 'left',
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 8 }}>⚠ Development Status</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 10 }}>
+              <p style={{ color: '#4ade80' }}>✅ FedAvg aggregation algorithm (real, deterministic)</p>
+              <p style={{ color: '#4ade80' }}>✅ Weighted averaging by ministry data size</p>
+              <p style={{ color: '#4ade80' }}>✅ Convergence visualization (sigmoid curves)</p>
+              <p style={{ color: '#f59e0b' }}>⏳ Python FL backend (set FL_BACKEND_URL)</p>
+              <p style={{ color: '#f59e0b' }}>⏳ Distributed training infrastructure</p>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 10, color: '#64748b' }}>
-            {['🔒 Differential Privacy', '📊 FedAvg Aggregation', '🏛️ 5 Ministry Nodes', '🚫 Zero Data Transfer'].map(g => (
+            {['📊 FedAvg Aggregation', '🏛️ 5 Ministry Nodes', '🚫 Zero Data Transfer'].map(g => (
               <span key={g} style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
                 {g}
               </span>

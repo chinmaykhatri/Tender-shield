@@ -68,8 +68,8 @@ describe('DEMO_STATS', () => {
     expect(DEMO_STATS.ministry_breakdown.length).toBe(8);
   });
 
-  it('should have positive fraud prevented value', () => {
-    expect(DEMO_STATS.fraud_prevented_value_crore).toBeGreaterThan(0);
+  it('should have positive auto-locked value', () => {
+    expect(DEMO_STATS.auto_locked_value_crore).toBeGreaterThan(0);
   });
 
   it('should have risk distribution', () => {

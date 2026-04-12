@@ -109,7 +109,7 @@ export default function SecurityDashboardPage() {
         total: allLogins.length,
         failed: failedCount,
         injections: injectionCount,
-        integrity: Math.floor(Math.random() * 50) + 150, // Simulated integrity checks count
+        integrity: allLogins.length + (events || []).length,  // Real count from DB rows
       });
     } catch (error) {
       console.error('[TenderShield] Security dashboard error:', error);

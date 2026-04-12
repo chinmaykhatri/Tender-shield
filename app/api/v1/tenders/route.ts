@@ -6,6 +6,16 @@ import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { sanitizeTenderInput, sanitizeText } from '@/lib/security/sanitize';
+import { requirePermission } from '@/lib/rbac';
+
+/** Extract role from demo cookie or header */
+function extractRole(req: NextRequest): string | undefined {
+  const cookie = req.cookies.get('tendershield-demo-user');
+  if (cookie?.value) {
+    try { return JSON.parse(cookie.value).role; } catch { /* ignore */ }
+  }
+  return req.headers.get('x-user-role') || undefined;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +43,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // ── RBAC: Only Officers and Admins can create tenders ──
+  const role = extractRole(req);
+  const denied = requirePermission(role, 'create_tender');
+  if (denied) return denied;
+
   try {
     const raw = await req.json();
 

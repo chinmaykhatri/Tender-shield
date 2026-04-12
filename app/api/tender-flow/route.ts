@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { validateComplete } from '@/lib/validation/tenderValidation';
+import { requirePermission } from '@/lib/rbac';
 
 // ============================================================================
 // TenderShield — End-to-End Live Tender Flow
@@ -21,9 +22,7 @@ const supabase = createClient(
 );
 
 function generateTxHash(): string {
-  return '0x' + Array.from({ length: 16 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join('');
+  return '0x' + crypto.randomUUID().replace(/-/g, '');
 }
 
 // Allowed roles for tender creation (server-side enforcement)
@@ -33,16 +32,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // ─── SERVER-SIDE RBAC CHECK ───
-    // Check cookie-based auth or passed role
-    const userRole = body._user_role || '';
-    if (userRole && !ALLOWED_ROLES.includes(userRole)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Forbidden',
-        message: `Role "${userRole}" cannot create tenders. Required: ${ALLOWED_ROLES.join(' or ')}`,
-      }, { status: 403 });
-    }
+    // ─── SERVER-SIDE RBAC CHECK (centralized) ───
+    const cookie = req.cookies.get('tendershield-demo-user');
+    let userRole: string | undefined;
+    if (cookie?.value) { try { userRole = JSON.parse(cookie.value).role; } catch { /* */ } }
+    userRole = userRole || body._user_role || req.headers.get('x-user-role') || undefined;
+    const denied = requirePermission(userRole, 'create_tender');
+    if (denied) return denied;
 
     // ─── SERVER-SIDE VALIDATION ───
     const validation = validateComplete(body);
@@ -159,7 +155,7 @@ export async function POST(req: NextRequest) {
           actor_role: 'MINISTRY_OFFICER',
           blockchain_tx: peerTxHash,
           fabric_source: chaincodeSource,
-          block_number: 1340 + Math.floor(Math.random() * 100),
+          block_number: 1340 + (parseInt(crypto.randomUUID().slice(0, 2), 16) % 100),
           description: `${tenderData.title} created via live demo — ₹${tenderData.estimated_value_crore} Cr`,
         },
       });
@@ -199,7 +195,7 @@ export async function POST(req: NextRequest) {
     } catch {
       // fallback — generate a low-risk result
       aiResult = {
-        risk_score: 12 + Math.floor(Math.random() * 20),
+        risk_score: 15,  // Honest fixed fallback when AI is unavailable
         risk_level: 'LOW',
         detectors: [
           { name: 'Shell Company Detector', score: 5, status: 'CLEAR' },
@@ -258,7 +254,7 @@ export async function POST(req: NextRequest) {
           actor: 'AI_SERVICE',
           actor_role: 'AI_SYSTEM',
           blockchain_tx: alertTx,
-          block_number: 1340 + Math.floor(Math.random() * 100),
+          block_number: 1340 + (parseInt(crypto.randomUUID().slice(0, 2), 16) % 100),
           reason: `AI detected risk score ${riskScore}%`,
           description: `${tenderData.title} FROZEN by AI — risk ${riskScore}%`,
         },
@@ -268,7 +264,7 @@ export async function POST(req: NextRequest) {
         alert_id: `ALT-LIVE-${Date.now().toString(36).toUpperCase()}`,
         tender_id,
         risk_score: riskScore,
-        confidence: 0.9 + Math.random() * 0.09,
+        confidence: 0.95,  // Fixed confidence for AI-generated alerts
         status: 'OPEN',
         recommended_action: 'ESCALATE_CAG',
         auto_frozen: true,

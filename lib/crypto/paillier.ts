@@ -10,11 +10,8 @@
 function randomBigInt(bits: number): bigint {
   const bytes = Math.ceil(bits / 8);
   const arr = new Uint8Array(bytes);
-  if (typeof globalThis.crypto !== 'undefined') {
-    globalThis.crypto.getRandomValues(arr);
-  } else {
-    for (let i = 0; i < bytes; i++) arr[i] = Math.floor(Math.random() * 256);
-  }
+  // Always use CSPRNG — globalThis.crypto available in Node 19+ and all browsers
+  globalThis.crypto.getRandomValues(arr);
   let n = BigInt(0);
   for (let i = 0; i < bytes; i++) n = (n << BigInt(8)) | BigInt(arr[i]);
   return n;

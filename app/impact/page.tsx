@@ -146,12 +146,12 @@ export default function ImpactPage() {
           {/* Main counter */}
           <h1 className="mb-2">
             <span className="text-6xl md:text-8xl font-serif font-bold text-[var(--saffron)]" style={{ fontFamily: "'Instrument Serif', serif" }}>
-              <CountUp target={stats.fraud_prevented_crore} duration={3000} prefix="₹" decimals={1} />
+              <CountUp target={stats.auto_locked_crore} duration={3000} prefix="₹" decimals={1} />
             </span>
             <span className="text-2xl md:text-3xl text-[var(--saffron)]/80 ml-2 font-semibold">Crore</span>
           </h1>
-          <p className="text-xl md:text-2xl text-white font-semibold mb-2">Fraud Prevented</p>
-          <p className="text-[var(--text-secondary)] text-lg">And counting. In real time.</p>
+          <p className="text-xl md:text-2xl text-white font-semibold mb-2">Tenders Auto-Locked</p>
+          <p className="text-[var(--text-secondary)] text-lg">Blocked from award — requires dual-authority approval</p>
 
           {/* Three key stats */}
           <div className="flex flex-wrap justify-center gap-6 md:gap-12 mt-12">
@@ -182,8 +182,8 @@ export default function ImpactPage() {
       {/* ═══ STATS GRID ═══ */}
       <section className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-2">What ₹{stats.fraud_prevented_crore} Crore Means</h2>
-          <p className="text-[var(--text-secondary)]">Real-world impact of every rupee saved from corruption</p>
+          <h2 className="text-3xl font-bold mb-2">What ₹{stats.auto_locked_crore} Crore Auto-Locked Means</h2>
+          <p className="text-[var(--text-secondary)]">Real-world impact of every rupee blocked from corrupt procurement</p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((card, i) => (
@@ -243,13 +243,13 @@ export default function ImpactPage() {
           <div className="p-6 rounded-2xl border border-green-500/20 bg-green-500/5">
             <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-              TenderShield Prevents
+              TenderShield Auto-Locks
             </h3>
             <div className="text-center py-8">
               <p className="text-5xl font-bold text-green-400 font-mono mb-2">
-                <CountUp target={stats.fraud_prevented_crore} duration={3000} prefix="₹" decimals={1} suffix=" Cr" />
+                <CountUp target={stats.auto_locked_crore} duration={3000} prefix="₹" decimals={1} suffix=" Cr" />
               </p>
-              <p className="text-sm text-green-300/70 mb-6">And growing every minute</p>
+              <p className="text-sm text-green-300/70 mb-6">Sum of frozen tender values — growing with each detection</p>
               <div className="grid grid-cols-2 gap-3 text-left">
                 {[
                   { label: 'Bids Flagged', value: `${stats.bids_flagged || 0} flagged` },
@@ -273,7 +273,7 @@ export default function ImpactPage() {
           <p className="text-3xl font-bold text-white mb-1">
             <CountUp target={45000} duration={3000} prefix="₹" suffix=" Crore" />
           </p>
-          <p className="text-[var(--text-secondary)]">prevented annually — covering all Indian government procurement</p>
+          <p className="text-[var(--text-secondary)]">auto-locked annually — covering all Indian government procurement</p>
         </div>
       </section>
 

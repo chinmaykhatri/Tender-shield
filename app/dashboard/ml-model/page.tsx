@@ -174,7 +174,7 @@ export default function MLModelPage() {
         body: JSON.stringify({
           estimated_value_crore: parseFloat(testEstimate),
           bid_amounts: bids,
-          bid_times_hours: bids.slice(1).map(() => Math.random() * 48),
+          bid_times_hours: bids.slice(1).map((_: number, i: number) => (i + 1) * 8),  // Deterministic test intervals
         }),
       });
       const data = await res.json();

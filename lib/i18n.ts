@@ -23,7 +23,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'impact.title': 'National Impact Dashboard',
     'impact.subtitle': 'Real-time statistics on TenderShield\'s impact on government procurement transparency',
     'impact.tenders_secured': 'Tenders Secured',
-    'impact.fraud_prevented': 'Fraud Cases Prevented',
+    'impact.fraud_prevented': 'Tenders Auto-Locked',
     'impact.savings': 'Estimated Savings',
     'impact.transparency': 'Transparency Score',
 
@@ -52,7 +52,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'impact.title': 'राष्ट्रीय प्रभाव डैशबोर्ड',
     'impact.subtitle': 'सरकारी खरीद पारदर्शिता पर टेंडरशील्ड के प्रभाव के वास्तविक समय के आँकड़े',
     'impact.tenders_secured': 'सुरक्षित टेंडर',
-    'impact.fraud_prevented': 'रोके गए धोखाधड़ी मामले',
+    'impact.fraud_prevented': 'निविदाएं स्वतः-लॉक',
     'impact.savings': 'अनुमानित बचत',
     'impact.transparency': 'पारदर्शिता स्कोर',
 

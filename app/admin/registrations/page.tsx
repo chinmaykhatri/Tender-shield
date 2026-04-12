@@ -96,7 +96,9 @@ export default function AdminRegistrationsPage() {
   function generateAccessCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = 'TS-AUD-';
-    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < 6; i++) code += chars[bytes[i] % chars.length];
     setGeneratedCode(code);
   }
 

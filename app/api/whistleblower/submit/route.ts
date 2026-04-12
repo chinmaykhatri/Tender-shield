@@ -36,19 +36,14 @@ export async function POST(req: Request) {
         .join('');
     }
 
-    // Generate anonymous submission ID
-    const submissionId =
-      'WB-' +
-      Array.from({ length: 8 }, () =>
-        'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]
-      ).join('');
+    // Generate anonymous submission ID using CSPRNG
+    const idBytes = new Uint8Array(8);
+    crypto.getRandomValues(idBytes);
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const submissionId = 'WB-' + Array.from(idBytes, b => chars[b % chars.length]).join('');
 
-    // Blockchain TX hash
-    const txHash =
-      '0x' +
-      Array.from({ length: 64 }, () =>
-        Math.floor(Math.random() * 16).toString(16)
-      ).join('');
+    // Blockchain TX hash using CSPRNG
+    const txHash = '0x' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
     const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 

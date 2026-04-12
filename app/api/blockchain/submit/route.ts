@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       demoFn: (): any => {
         const uuid = crypto.randomUUID().replace(/-/g, '');
         const txHash = '0x' + uuid + uuid; // 64 hex chars from CSPRNG
-        const blockNumber = 1200 + Math.floor(Math.random() * 300);
+        const blockNumber = 1200 + (parseInt(crypto.randomUUID().slice(0, 3), 16) % 300);
         return {
           tx_hash: txHash,
           block_number: blockNumber,

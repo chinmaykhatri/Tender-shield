@@ -11,12 +11,14 @@ export type Permission =
   | 'submit_bid' | 'read_own_bids' | 'read_all_bids'
   | 'flag_tender' | 'freeze_tender' | 'investigate'
   | 'view_audit_trail' | 'export_report'
-  | 'manage_users' | 'manage_roles' | 'system_config';
+  | 'manage_users' | 'manage_roles' | 'system_config'
+  | 'ai_analyze' | 'ai_full_access';
 
 const PERMISSION_MATRIX: Record<Role, Permission[]> = {
   OFFICER: [
     'read_own_tenders', 'create_tender', 'edit_tender',
     'read_own_bids', 'view_audit_trail', 'export_report',
+    'ai_analyze',
   ],
   BIDDER: [
     'read_own_tenders', 'submit_bid', 'read_own_bids',
@@ -25,6 +27,7 @@ const PERMISSION_MATRIX: Record<Role, Permission[]> = {
     'read_all_tenders', 'read_all_bids',
     'flag_tender', 'freeze_tender', 'investigate',
     'view_audit_trail', 'export_report',
+    'ai_analyze', 'ai_full_access',
   ],
   NIC_ADMIN: [
     'read_all_tenders', 'create_tender', 'edit_tender', 'delete_tender',
@@ -32,6 +35,7 @@ const PERMISSION_MATRIX: Record<Role, Permission[]> = {
     'flag_tender', 'freeze_tender', 'investigate',
     'view_audit_trail', 'export_report',
     'manage_users', 'manage_roles', 'system_config',
+    'ai_analyze', 'ai_full_access',
   ],
 };
 
@@ -50,6 +54,40 @@ export function getPermissions(role: Role): Permission[] {
 }
 
 /**
+ * Require a permission — returns a 403 Response if denied.
+ * Use in API routes:
+ *   const denied = requirePermission(userRole, 'flag_tender');
+ *   if (denied) return denied;
+ */
+export function requirePermission(
+  role: string | undefined,
+  permission: Permission
+): Response | null {
+  if (!role) {
+    return new Response(
+      JSON.stringify({
+        error: 'Forbidden — no role assigned',
+        required_permission: permission,
+        code: 'RBAC_NO_ROLE',
+      }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  if (!checkPermission(role as Role, permission)) {
+    return new Response(
+      JSON.stringify({
+        error: `Forbidden — role '${role}' lacks permission '${permission}'`,
+        your_role: role,
+        required_permission: permission,
+        code: 'RBAC_DENIED',
+      }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  return null; // Permission granted
+}
+
+/**
  * Check if a role can access a specific dashboard route
  */
 export function canAccessRoute(role: Role, route: string): boolean {
@@ -57,7 +95,14 @@ export function canAccessRoute(role: Role, route: string): boolean {
     '/dashboard/tenders/create': ['create_tender'],
     '/dashboard/auditor': ['flag_tender', 'investigate'],
     '/dashboard/bids': ['submit_bid', 'read_own_bids', 'read_all_bids'],
-    '/admin': ['manage_users', 'manage_roles'],
+    '/dashboard/admin': ['manage_users', 'manage_roles'],
+    '/dashboard/ai-monitor': ['ai_analyze'],
+    '/dashboard/ai-alerts': ['ai_analyze'],
+    '/dashboard/network-graph': ['investigate', 'ai_analyze'],
+    '/dashboard/anomaly': ['investigate', 'ai_analyze'],
+    '/dashboard/federated': ['ai_analyze'],
+    '/dashboard/chat': ['ai_analyze'],
+    '/dashboard/ml-model': ['ai_analyze'],
   };
 
   const required = routePermissions[route];
@@ -66,10 +111,10 @@ export function canAccessRoute(role: Role, route: string): boolean {
 }
 
 /**
- * Get Supabase query filter for data scoping
- * Officers see only their ministry's data
- * Auditors see everything
- * Bidders see only their eligible tenders
+ * Get Supabase query filter for data scoping.
+ * Officers see only their ministry's data.
+ * Auditors see everything.
+ * Bidders see only their eligible tenders.
  */
 export function getDataScope(role: Role, userId?: string, ministryCode?: string) {
   switch (role) {

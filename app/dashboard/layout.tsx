@@ -10,6 +10,8 @@ import { ToastProvider } from '@/components/ToastSystem';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { FEATURES } from '@/lib/features';
 import { useRealtimeAlerts } from '@/lib/useRealtimeAlerts';
+import { canAccessRoute, type Role } from '@/lib/rbac';
+import LanguageToggle, { useTranslation } from '@/components/LanguageToggle';
 
 const navItems = [
   // ── CORE PAGES (always visible) ──
@@ -205,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div onClick={e => e.stopPropagation()} className="w-72 h-full bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] overflow-y-auto"
             style={{ paddingTop: 48 }}>
             <nav className="p-3 space-y-1">
-              {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
+              {navItems.filter(item => (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
                 const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
                 return (
                   <Link key={item.href} href={item.href}
@@ -254,7 +256,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav Links */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.filter(item => !mounted || !user?.role || item.roles.includes(user.role)).map(item => {
+          {navItems.filter(item => (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}
@@ -289,6 +291,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="text-[8px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
               Production: Supabase JWT + RLS + Fabric CA
             </p>
+          </div>
+
+          {/* Language Toggle — EN/हिं */}
+          <div className="mb-2 flex justify-center">
+            <LanguageToggle />
           </div>
 
           {/* Backend Status Indicator */}

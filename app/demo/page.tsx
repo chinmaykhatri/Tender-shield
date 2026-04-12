@@ -33,7 +33,7 @@ const INITIAL_STEPS: DemoStep[] = [
 
 // Execute step — uses real API for AI, realistic simulation for others
 async function executeStep(step: DemoStep): Promise<{ result: string; tx: string; block: number }> {
-  const tx = '0x' + [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+  const tx = '0x' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 8);
   const block = 1340 + step.id;
 
   // Step 5: AI Detection — calls REAL Claude API
