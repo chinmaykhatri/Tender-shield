@@ -13,6 +13,58 @@ export default function BidsPage() {
   const [message, setMessage] = useState('');
   const [chainTx, setChainTx] = useState<any>(null);
 
+  // ─── Paillier Integration State ───
+  const [paillierResult, setPaillierResult] = useState<any>(null);
+  const [paillierRevealed, setPaillierRevealed] = useState<any>(null);
+
+  // ─── Paillier Encrypt & Submit ───
+  const handlePaillierEncrypt = async () => {
+    if (!amount) return;
+    setLoading(true);
+    setPaillierResult(null);
+    setPaillierRevealed(null);
+    try {
+      const res = await fetch('/api/v1/bids/paillier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit-encrypted',
+          tender_id: 'TDR-DEMO-PAILLIER',
+          bidder_name: user?.name || 'Anonymous Bidder',
+          amount_crore: parseFloat(amount),
+          bidder_did: user?.did || 'DID-demo',
+        }),
+      });
+      const data = await res.json();
+      setPaillierResult(data);
+    } catch (e: any) {
+      setMessage('❌ Paillier encryption failed: ' + e.message);
+    }
+    setLoading(false);
+  };
+
+  // ─── Paillier Reveal ───
+  const handlePaillierReveal = async () => {
+    if (!paillierResult?.bid?.bid_id || !paillierResult?._privateKey) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/bids/paillier', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reveal',
+          bid_id: paillierResult.bid.bid_id,
+          private_key: paillierResult._privateKey,
+        }),
+      });
+      const data = await res.json();
+      setPaillierRevealed(data);
+    } catch (e: any) {
+      setMessage('❌ Reveal failed: ' + e.message);
+    }
+    setLoading(false);
+  };
+
   // ─── Generate SHA-256 Commitment ───
   const handleGenerateCommitment = async () => {
     if (!amount) return;
@@ -268,6 +320,112 @@ export default function BidsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ═══ PAILLIER HOMOMORPHIC ENCRYPTION SECTION ═══ */}
+      <div className="card-glass p-6" style={{ borderLeft: '3px solid #8b5cf6' }}>
+        <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          🔐 Paillier Homomorphic Encryption — Live Pipeline
+        </h2>
+        <p className="text-xs text-[var(--text-secondary)] mb-4">
+          Encrypt your bid with Paillier HE → Store ciphertext in Supabase → Reveal & verify later.
+          <strong className="text-purple-400"> This hits a real API and stores encrypted data.</strong>
+        </p>
+
+        <div className="flex gap-3 mb-4">
+          <button
+            onClick={handlePaillierEncrypt}
+            className="btn-primary flex-1"
+            disabled={loading || !amount}
+            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+          >
+            {loading ? '🔄 Encrypting...' : '🔐 Encrypt & Submit with Paillier HE'}
+          </button>
+        </div>
+
+        {/* Paillier Result */}
+        {paillierResult?.success && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <p className="text-xs font-semibold text-purple-400 mb-2">
+                ✅ Bid Encrypted with Paillier HE & Stored in Supabase
+              </p>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div>
+                  <span className="text-[var(--text-secondary)]">Bid ID:</span>
+                  <span className="ml-2 text-purple-300">{paillierResult.bid?.bid_id}</span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-secondary)]">Algorithm:</span>
+                  <span className="ml-2">{paillierResult.encryption?.algorithm}</span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-secondary)]">Key Size:</span>
+                  <span className="ml-2">{paillierResult.encryption?.key_bits}-bit</span>
+                  <span className="text-yellow-400 ml-1">(demo — prod: 2048-bit)</span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-secondary)]">Ciphertext:</span>
+                  <span className="ml-1 text-red-400 break-all">{paillierResult.encryption?.ciphertext_preview}</span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-secondary)]">Public Key n:</span>
+                  <span className="ml-1 text-indigo-400">{paillierResult.encryption?.public_key?.n?.slice(0, 24)}...</span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-secondary)]">Status:</span>
+                  <span className="ml-2 text-green-400 font-bold">{paillierResult.encryption?.status}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Private Key Warning */}
+            <div className="p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
+              <p className="text-xs font-semibold text-yellow-400 mb-1">⚠️ Private Key (Demo — stored client-side only)</p>
+              <p className="text-[10px] font-mono text-[var(--text-secondary)]">
+                λ = {paillierResult._privateKey?.lambda?.slice(0, 24)}...
+              </p>
+              <p className="text-[10px] text-yellow-500 mt-1">
+                In production: stored in HSM, never exposed to client.
+              </p>
+            </div>
+
+            {/* Reveal Button */}
+            <button
+              onClick={handlePaillierReveal}
+              className="btn-primary w-full"
+              disabled={loading}
+              style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
+            >
+              🔓 Reveal & Verify — Decrypt Ciphertext with Private Key
+            </button>
+
+            {/* Reveal Result */}
+            {paillierRevealed?.success && (
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <p className="text-xs font-semibold text-green-400 mb-2">✅ Bid Revealed & Verified</p>
+                <div className="space-y-1 text-xs font-mono">
+                  <div>
+                    <span className="text-[var(--text-secondary)]">Revealed Amount:</span>
+                    <span className="ml-2 text-green-400 text-lg font-bold">₹{paillierRevealed.revealed_amount_crore} Cr</span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--text-secondary)]">Paise Value:</span>
+                    <span className="ml-2">{paillierRevealed.revealed_amount_paise?.toLocaleString('en-IN')}</span>
+                  </div>
+                  <p className="text-[10px] text-green-300 mt-2">{paillierRevealed.verification}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error display */}
+        {paillierResult && !paillierResult.success && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+            ❌ {paillierResult.error || 'Encryption failed'}
+          </div>
+        )}
       </div>
     </div>
   );

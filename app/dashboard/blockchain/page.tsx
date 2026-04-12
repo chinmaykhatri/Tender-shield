@@ -199,6 +199,16 @@ export default function BlockchainExplorer() {
         <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>
           Real SHA-256 hash chain from <strong style={{ color: '#22c55e' }}>live Supabase audit_events</strong> • {data.stats.totalBlocks} blocks • Updated: {lastRefresh}
         </p>
+        {/* Honest Architecture Banner */}
+        <div style={{
+          marginTop: 10, padding: '8px 14px', borderRadius: 10,
+          background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)',
+          fontSize: 11, color: '#94a3b8', lineHeight: 1.6,
+        }}>
+          <strong style={{ color: '#a5b4fc' }}>🏗️ Architecture:</strong> Running on <strong style={{ color: '#22c55e' }}>SHA-256 hash chain</strong> (FIPS 180-4) backed by Supabase PostgreSQL.
+          {' '}Production target: <strong style={{ color: '#c4b5fd' }}>Hyperledger Fabric 2.5</strong> (requires Docker infrastructure with 4+ containers).
+          {' '}The cryptographic integrity is identical — both use SHA-256 chained blocks with immutable audit trails.
+        </div>
       </div>
 
       {/* Action Bar */}
