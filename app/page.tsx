@@ -398,6 +398,19 @@ export default function LoginPage() {
             >
               🛡️ Register with Full Verification →
             </a>
+            <a
+              href="/rti"
+              style={{
+                display: 'block', textAlign: 'center', padding: '10px 20px',
+                borderRadius: '10px', marginTop: '8px',
+                background: 'rgba(255,153,51,0.08)',
+                border: '1px solid rgba(255,153,51,0.2)',
+                color: '#FF9933', fontSize: '13px', fontWeight: 600,
+                textDecoration: 'none', transition: 'opacity 200ms',
+              }}
+            >
+              🇮🇳 RTI Portal — File RTI (No Login Required)
+            </a>
           </div>
         </div>
       </div>

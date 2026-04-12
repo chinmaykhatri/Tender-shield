@@ -50,6 +50,7 @@ export const FEATURES = {
   FEDERATED_LEARNING: true,
   AI_CHAT: true,
   IMPACT_METRICS: true,
+  RTI_PORTAL: true,
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

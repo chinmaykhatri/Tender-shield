@@ -37,6 +37,7 @@ const navItems = [
   { href: '/dashboard/federated', icon: '🧠', label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING },
   { href: '/dashboard/chat', icon: '💬', label: 'AI Analyst', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_CHAT },
   { href: '/dashboard/metrics', icon: '📊', label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS },
+  { href: '/rti', icon: '🇮🇳', label: 'RTI Portal', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.RTI_PORTAL },
 ].filter(item => item.visible);
 
 // Mobile bottom nav shows 5 most important tabs based on role
