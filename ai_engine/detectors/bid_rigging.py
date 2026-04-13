@@ -25,11 +25,43 @@ INDIA CONTEXT:
 """
 
 import math
+import hmac
+import hashlib
 import logging
 from typing import List, Dict, Any, Optional
 from collections import Counter
 
 logger = logging.getLogger("tendershield.ai.bid_rigging")
+
+
+def get_dynamic_cv_threshold(
+    tender_id: str,
+    base_min: float = 0.02,
+    base_max: float = 0.05,
+) -> float:
+    """
+    Compute a per-tender CV threshold using HMAC-SHA256.
+
+    The threshold varies between base_min and base_max, seeded by
+    the tender ID. This is deterministic (auditors can reproduce it)
+    but unpredictable to bidders (they don't know the HMAC key).
+
+    Args:
+        tender_id: Unique tender identifier used as HMAC message
+        base_min: Minimum CV threshold (default 2%)
+        base_max: Maximum CV threshold (default 5%)
+
+    Returns:
+        A float in [base_min, base_max] unique to this tender
+    """
+    seed = hmac.new(
+        b"tendershield-antifraud-v2-cv-randomization",
+        tender_id.encode(),
+        hashlib.sha256,
+    ).digest()
+    # Convert first 4 bytes to a ratio in [0, 1)
+    ratio = int.from_bytes(seed[:4], "big") / (2 ** 32)
+    return base_min + ratio * (base_max - base_min)
 
 
 class BidRiggingDetector:
@@ -40,8 +72,15 @@ class BidRiggingDetector:
 
     def __init__(self):
         self.name = "BID_RIGGING"
-        # Thresholds calibrated for Indian government procurement
-        self.cv_threshold = 0.05      # CV < 5% = suspiciously similar bids
+        # ── Dynamic threshold configuration ──
+        # When use_dynamic_thresholds=True, CV threshold varies per-tender
+        # using HMAC-SHA256(tender_id). Range: [cv_threshold_min, cv_threshold_max]
+        # This makes it mathematically impossible for cartels to know the
+        # current detection boundary for any given tender.
+        self.use_dynamic_thresholds = True
+        self.cv_threshold = 0.05       # Static fallback (used when dynamic=False)
+        self.cv_threshold_min = 0.02   # Dynamic range minimum (2%)
+        self.cv_threshold_max = 0.05   # Dynamic range maximum (5%)
         self.min_bids_for_analysis = 3
         self.cover_bid_z_threshold = 2.5  # Z-score > 2.5 = likely cover bid
         self.benford_threshold = 0.25     # Chi-square distance from Benford's law
@@ -66,7 +105,17 @@ class BidRiggingDetector:
             return result
 
         # ---- Test 1: Coefficient of Variation (CV) ----
-        cv_result = self._check_coefficient_of_variation(amounts)
+        # Use HMAC-derived per-tender threshold when dynamic mode is enabled
+        if self.use_dynamic_thresholds:
+            effective_cv_threshold = get_dynamic_cv_threshold(
+                tender.get("tender_id", ""),
+                self.cv_threshold_min,
+                self.cv_threshold_max,
+            )
+        else:
+            effective_cv_threshold = self.cv_threshold
+
+        cv_result = self._check_coefficient_of_variation(amounts, threshold=effective_cv_threshold)
         result["evidence"]["cv_analysis"] = cv_result
         if cv_result["suspicious"]:
             result["risk_score"] += 30
@@ -115,8 +164,17 @@ class BidRiggingDetector:
         logger.info(f"[BidRigging] Tender {tender.get('tender_id')}: score={result['risk_score']}, flags={len(result['flags'])}")
         return result
 
-    def _check_coefficient_of_variation(self, amounts: List[int]) -> Dict[str, Any]:
-        """CV = std_dev / mean. Low CV means bids are too similar."""
+    def _check_coefficient_of_variation(
+        self, amounts: List[int], threshold: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        CV = std_dev / mean. Low CV means bids are too similar.
+
+        Args:
+            amounts: Bid amounts in paise
+            threshold: Optional dynamic threshold; falls back to self.cv_threshold
+        """
+        effective_threshold = threshold if threshold is not None else self.cv_threshold
         mean: float = sum(amounts) / len(amounts)
         variance: float = sum((x - mean) ** 2 for x in amounts) / len(amounts)
         std_dev: float = math.sqrt(variance)
@@ -126,8 +184,9 @@ class BidRiggingDetector:
             "cv": round(float(cv), 4),  # type: ignore[call-overload]
             "mean_paise": int(mean),
             "std_dev_paise": int(std_dev),
-            "suspicious": cv < self.cv_threshold and len(amounts) >= 3,
-            "threshold": self.cv_threshold,
+            "suspicious": cv < effective_threshold and len(amounts) >= 3,
+            "threshold": round(effective_threshold, 4),
+            "threshold_mode": "DYNAMIC_HMAC" if threshold is not None else "STATIC",
         }
 
     def _detect_cover_bids(self, amounts: List[int], bids: List[Dict]) -> Dict[str, Any]:

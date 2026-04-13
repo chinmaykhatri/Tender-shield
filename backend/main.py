@@ -24,6 +24,7 @@ from backend.routers.tender_router import router as tender_router
 from backend.routers.bid_router import router as bid_router
 from backend.routers.dashboard_router import auth_router, dashboard_router
 from backend.routers.blockchain_router import router as blockchain_router
+from backend.routers.feedback_router import router as feedback_router
 from backend.middleware.security import (
     SecurityHeadersMiddleware,
     RateLimitMiddleware,
@@ -194,6 +195,7 @@ app.include_router(dashboard_router)
 app.include_router(tender_router)
 app.include_router(bid_router)
 app.include_router(blockchain_router)
+app.include_router(feedback_router)
 
 
 # ============================================================================

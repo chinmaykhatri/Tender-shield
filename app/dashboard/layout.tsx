@@ -33,6 +33,8 @@ const navItems = [
   { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
   { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
   { href: '/dashboard/network-graph', icon: '🕵️', label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH },
+  { href: '/dashboard/compliance', icon: '⚖️', label: 'GFR Compliance', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.COMPLIANCE },
+  { href: '/dashboard/national-risk', icon: '🗺️', label: 'National Risk', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.CAG_NATIONAL_DASHBOARD },
 
   // ── ADVANCED CRYPTO ──
   { href: '/dashboard/paillier-demo', icon: '🔐', label: 'Paillier Crypto', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO },
@@ -267,7 +269,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 TenderShield
               </span>
               <span className="block text-[10px] text-[var(--text-secondary)] tracking-wider uppercase -mt-0.5">
-                Blockchain Secured
+                Cryptographically Audited
               </span>
             </div>
           </Link>
@@ -275,7 +277,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav Links */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.filter(item => (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
+          {navItems.filter(item => item.visible !== false && (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}

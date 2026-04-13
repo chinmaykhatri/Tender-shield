@@ -24,11 +24,39 @@ INDIA CONTEXT:
 """
 
 import math
+import hmac
+import hashlib
 import logging
 from typing import List, Dict, Any
 from collections import defaultdict, Counter
 
 logger = logging.getLogger("tendershield.ai.cartel")
+
+
+def get_dynamic_rotation_threshold(
+    tender_key: str,
+    base_min: float = 0.60,
+    base_max: float = 0.80,
+) -> float:
+    """
+    Compute a per-analysis rotation score threshold using HMAC-SHA256.
+
+    Similar to bid_rigging.get_dynamic_cv_threshold, this prevents
+    cartels from calibrating their rotation patterns to a known
+    detection boundary.
+
+    Args:
+        tender_key: Composite key from participating tender IDs
+        base_min: Minimum threshold (default 60% match rate)
+        base_max: Maximum threshold (default 80% match rate)
+    """
+    seed = hmac.new(
+        b"tendershield-antifraud-v2-rotation-threshold",
+        tender_key.encode(),
+        hashlib.sha256,
+    ).digest()
+    ratio = int.from_bytes(seed[:4], "big") / (2 ** 32)
+    return base_min + ratio * (base_max - base_min)
 
 
 class CartelRotationDetector:
@@ -37,7 +65,11 @@ class CartelRotationDetector:
     def __init__(self):
         self.name = "CARTEL"
         self.min_tenders_for_analysis = 5
-        self.rotation_score_threshold = 0.7
+        # Dynamic threshold range (applied per-analysis via HMAC)
+        self.use_dynamic_thresholds = True
+        self.rotation_score_threshold = 0.7   # Static fallback
+        self.rotation_threshold_min = 0.60
+        self.rotation_threshold_max = 0.80
         self.concentration_threshold = 0.4
 
     def analyze(self, historical_tenders: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -63,6 +95,24 @@ class CartelRotationDetector:
             result["evidence"]["reason"] = f"Insufficient history ({len(historical_tenders)} < {self.min_tenders_for_analysis} tenders)"
             return result
 
+        # Compute dynamic rotation threshold
+        if self.use_dynamic_thresholds:
+            tender_key = "|".join(
+                t.get("tender_id", "") for t in historical_tenders[:5]
+            )
+            effective_rotation_threshold = get_dynamic_rotation_threshold(
+                tender_key,
+                self.rotation_threshold_min,
+                self.rotation_threshold_max,
+            )
+        else:
+            effective_rotation_threshold = self.rotation_score_threshold
+
+        result["evidence"]["rotation_threshold"] = round(effective_rotation_threshold, 4)
+        result["evidence"]["rotation_threshold_mode"] = (
+            "DYNAMIC_HMAC" if self.use_dynamic_thresholds else "STATIC"
+        )
+
         # ---- Analysis 1: Win Concentration ----
         winners = [t.get("winner_did", "") for t in historical_tenders if t.get("winner_did")]
         win_counts = Counter(winners)
@@ -83,7 +133,7 @@ class CartelRotationDetector:
                 result["flags"].append(f"WIN_CONCENTRATION: Only {unique_winners} unique winners in {total} tenders")
 
         # ---- Analysis 2: Sequential Rotation ----
-        rotation = self._detect_rotation(winners)
+        rotation = self._detect_rotation(winners, effective_rotation_threshold)
         result["evidence"]["rotation_analysis"] = rotation
         if rotation["detected"]:
             result["risk_score"] += 35
@@ -115,7 +165,7 @@ class CartelRotationDetector:
 
         return result
 
-    def _detect_rotation(self, winners: List[str]) -> Dict[str, Any]:
+    def _detect_rotation(self, winners: List[str], threshold: float = 0.7) -> Dict[str, Any]:
         """Detect repeating winner sequences."""
         if len(winners) < 4:
             return {"detected": False}
@@ -130,11 +180,13 @@ class CartelRotationDetector:
 
             if total_checks > 0:
                 match_rate: float = float(matches) / float(total_checks)
-                if match_rate >= self.rotation_score_threshold:
+                if match_rate >= threshold:
                     return {
                         "detected": True,
                         "period": period,
                         "match_rate": round(float(match_rate), 3),
+                        "threshold": round(threshold, 4),
+                        "threshold_mode": "DYNAMIC_HMAC",
                         "sequence": winners[:period * 2],
                     }
 

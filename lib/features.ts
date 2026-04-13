@@ -50,6 +50,11 @@ export const FEATURES = {
   IMPACT_METRICS: true,
   RTI_PORTAL: true,
 
+  // ── NEW: IMMORTALITY FEATURES ──
+  PLAYGROUND: true,
+  COMPLIANCE: true,
+  CAG_NATIONAL_DASHBOARD: true,
+
   // ── PUBLIC PAGES (no sidebar, accessible via URL) ──
   PITCH: true,
   TRANSPARENCY: true,

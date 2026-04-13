@@ -34,11 +34,12 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone, timedelta
 
-from ai_engine.detectors.bid_rigging import BidRiggingDetector
+from ai_engine.detectors.bid_rigging import BidRiggingDetector, get_dynamic_cv_threshold
 from ai_engine.detectors.collusion_graph import CollusionGraphDetector
 from ai_engine.detectors.shell_company import ShellCompanyDetector
 from ai_engine.detectors.cartel_rotation import CartelRotationDetector
 from ai_engine.detectors.timing_anomaly import TimingAnomalyDetector
+from ai_engine.detectors.boundary_gaming import BoundaryGamingDetector
 
 # Import ML pipeline
 try:
@@ -67,6 +68,9 @@ class CompositeRiskScorer:
             "CARTEL": {"instance": CartelRotationDetector(), "weight": 0.15},
             "TIMING_ANOMALY": {"instance": TimingAnomalyDetector(), "weight": 0.10},
         }
+
+        # Anti-gaming checksum detector (meta-detector)
+        self.boundary_detector = BoundaryGamingDetector()
 
         # Action thresholds
         self.thresholds = {
@@ -250,6 +254,28 @@ class CompositeRiskScorer:
             if ta_result["risk_score"] >= 50:
                 high_score_count += 1
 
+        # ---- Detector 6: Boundary Gaming (Anti-Gaming Checksum) ----
+        # This meta-detector checks if bids are engineered to just-barely-avoid
+        # the other detectors' thresholds. It uses the same dynamic CV threshold
+        # that Detector 1 (Bid Rigging) used for this tender.
+        if bids and len(bids) >= 3:
+            dynamic_cv = get_dynamic_cv_threshold(tender.get("tender_id", ""))
+            bg_result = self.boundary_detector.analyze(bids, tender, cv_threshold=dynamic_cv)
+            result["detector_results"]["BOUNDARY_GAMING"] = bg_result
+            result["flags"].extend(bg_result.get("flags", []))
+            result["detectors_run"] += 1
+            if bg_result["risk_score"] >= 35:
+                # Boundary gaming adds a fraction of its score as a bonus
+                # (it's a meta-signal, not a primary detector)
+                gaming_bonus = bg_result["risk_score"] // 3
+                result["convergence_bonus"] += gaming_bonus
+                result["flags"].append(
+                    "META_GAMING: Anti-gaming checksum triggered — "
+                    "cartel may be reverse-engineering detection thresholds"
+                )
+            if bg_result["risk_score"] >= 50:
+                high_score_count += 1
+
         # Calculate weighted rule-based score
         weighted_sum = 0
         total_weight = 0
@@ -352,8 +378,11 @@ class CompositeRiskScorer:
             f"action={result['recommended_action']}, "
             f"mode={result['scoring_mode']}, "
             f"detectors={result['detectors_run']}, "
-            f"convergence={result['convergence_bonus']}"
+            f"convergence={result['convergence_bonus']}, "
+            f"thresholds=DYNAMIC_HMAC"
         )
+
+        result["threshold_mode"] = "DYNAMIC_HMAC"
 
         return result
 

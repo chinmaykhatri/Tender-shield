@@ -411,6 +411,19 @@ export default function LoginPage() {
             >
               🇮🇳 RTI Portal — File RTI (No Login Required)
             </a>
+            <a
+              href="/playground"
+              style={{
+                display: 'block', textAlign: 'center', padding: '10px 20px',
+                borderRadius: '10px', marginTop: '8px',
+                background: 'rgba(99,102,241,0.08)',
+                border: '1px solid rgba(99,102,241,0.2)',
+                color: '#6366f1', fontSize: '13px', fontWeight: 600,
+                textDecoration: 'none', transition: 'opacity 200ms',
+              }}
+            >
+              🔬 Fraud Detection Playground — Try Live Analysis
+            </a>
           </div>
         </div>
       </div>
