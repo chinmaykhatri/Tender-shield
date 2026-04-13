@@ -277,7 +277,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Nav Links */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.filter(item => item.visible !== false && (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
+          {navItems.filter(item => (item.visible as boolean) !== false && (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}
