@@ -3,12 +3,14 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { requirePermission } from '@/lib/rbac';
 
 // ═══════════════════════════════════════════════════════════
-// RAG Chat API — Gemini + Supabase Context
+// RAG Chat API — OpenAI GPT + Supabase Context
 // Natural language querying of the procurement database
+// Priority: OpenAI → Gemini → Template fallback
 // ═══════════════════════════════════════════════════════════
 
 export const dynamic = 'force-dynamic';
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -59,6 +61,35 @@ async function querySupabaseContext(question: string) {
   return context.join('\n\n');
 }
 
+// ── OpenAI GPT-4o-mini ──────────────────────────────────
+async function callOpenAI(systemPrompt: string, userMessage: string): Promise<string> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 1024,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`OpenAI API error: ${res.status} - ${error.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || 'No response generated.';
+}
+
+// ── Gemini fallback ────────────────────────────────────
 async function callGemini(systemPrompt: string, userMessage: string): Promise<string> {
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
@@ -83,15 +114,16 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<st
   return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
 }
 
+// ── Template fallback (no API key) ─────────────────────
 function templateFallback(question: string, context: string): string {
   const q = question.toLowerCase();
   if (q.includes('high risk') || q.includes('risky')) {
-    return `Based on the current database:\n\n${context.split('\n').filter(l => l.includes('Risk:')).join('\n') || 'No risk data available.'}\n\n_Note: AI analyst is in template mode. Set GEMINI_API_KEY for full natural language analysis._`;
+    return `Based on the current database:\n\n${context.split('\n').filter(l => l.includes('Risk:')).join('\n') || 'No risk data available.'}\n\n_Note: AI analyst is in template mode. Set OPENAI_API_KEY or GEMINI_API_KEY for full natural language analysis._`;
   }
   if (q.includes('flagged') || q.includes('fraud')) {
     return `Flagged items from database:\n\n${context.split('\n').filter(l => l.includes('FLAGGED') || l.includes('FRAUD')).join('\n') || 'No flagged items found.'}\n\n_Template mode active._`;
   }
-  return `Here is the current database context:\n\n${context.slice(0, 800)}\n\n_Set GEMINI_API_KEY for intelligent analysis._`;
+  return `Here is the current database context:\n\n${context.slice(0, 800)}\n\n_Set OPENAI_API_KEY or GEMINI_API_KEY for intelligent analysis._`;
 }
 
 export async function POST(req: NextRequest) {
@@ -132,7 +164,22 @@ RULES:
     let response: string;
     let source: string;
 
-    if (GEMINI_API_KEY) {
+    // Priority: OpenAI → Gemini → Template (with graceful fallback)
+    if (OPENAI_API_KEY) {
+      try {
+        response = await callOpenAI(systemPrompt, message);
+        source = 'gpt-4o-mini';
+      } catch (e: any) {
+        console.warn('[AI Chat] OpenAI failed, falling back:', e.message?.slice(0, 100));
+        if (GEMINI_API_KEY) {
+          response = await callGemini(systemPrompt, message);
+          source = 'gemini-2.0-flash';
+        } else {
+          response = templateFallback(message, context);
+          source = 'template-engine';
+        }
+      }
+    } else if (GEMINI_API_KEY) {
       response = await callGemini(systemPrompt, message);
       source = 'gemini-2.0-flash';
     } else {

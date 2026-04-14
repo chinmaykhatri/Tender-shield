@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { login, register } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -29,9 +29,9 @@ interface LiveCounter {
 }
 
 const LIVE_COUNTERS: LiveCounter[] = [
-  { icon: '⛓', target: 1847, label: 'blockchain events (demo)', suffix: '' },
-  { icon: '₹', target: 238.5, label: 'fraud flagged (simulated)', suffix: ' Cr', decimal: true },
-  { icon: '📋', target: 47, label: 'demo tenders loaded', suffix: '' },
+  { icon: '🔬', target: 6, label: 'statistical detectors (real math)', suffix: '' },
+  { icon: '🎯', target: 5, label: 'fraud scenarios you can test now', suffix: '' },
+  { icon: '⚡', target: 0, label: 'external API calls (100% local)', suffix: '' },
 ];
 const DEMO_EMAILS = ['officer@morth.gov.in', 'medtech@medtechsolutions.com', 'auditor@cag.gov.in'];
 
@@ -214,18 +214,18 @@ export default function LoginPage() {
         <div style={{ maxWidth: '520px', position: 'relative', zIndex: 2 }}>
           <h1 className="landing-headline" style={{ fontSize: '40px', lineHeight: 1.05, fontWeight: 300, margin: 0 }}>
             <span style={{ display: 'block', color: 'white', fontFamily: "'Instrument Serif', serif", opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 0.2s' }}>
-              Ending
+              India loses ₹4-6 lakh crore
             </span>
             <span style={{ display: 'block', color: 'white', fontFamily: "'Instrument Serif', serif", opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 0.4s' }}>
-              Procurement
+              annually to procurement fraud.
             </span>
             <span style={{ display: 'block', color: '#FF9933', fontFamily: "'Instrument Serif', serif", fontStyle: 'italic', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 0.6s' }}>
-              Fraud.
+              TenderShield detects it in 3 seconds.
             </span>
           </h1>
-          <p style={{ color: '#888', fontSize: '14px', marginTop: '16px', lineHeight: 1.7, maxWidth: '380px', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 0.8s' }}>
-            India loses ₹4-6 lakh crore annually to procurement fraud.
-            TenderShield uses AI + Blockchain to make every tender tamper-proof.
+          <p style={{ color: '#888', fontSize: '14px', marginTop: '16px', lineHeight: 1.7, maxWidth: '420px', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 0.8s' }}>
+            5 statistical detectors. Real math. No buzzwords.
+            Enter any bid data and watch the algorithms run — no login required.
           </p>
         </div>
 
@@ -244,13 +244,33 @@ export default function LoginPage() {
         </div>
 
         {/* Production-Ready Strip (Fix 5: Deployment Credibility) */}
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 1.2s', position: 'relative', zIndex: 2, marginTop: '16px' }}>
+        {/* 3-Line Proof — verifiable claims */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 1.2s', position: 'relative', zIndex: 2, marginTop: '16px', maxWidth: '480px' }}>
           {[
-            { icon: '🐳', text: 'Docker Containerized' },
-            { icon: '🧪', text: 'Vitest + Pytest Tested' },
+            { formula: 'CV = σ/μ < 3%', label: 'Bid Rigging — statistically impossible bid spread', color: '#ef4444' },
+            { formula: 'Age < 6 months', label: 'Shell Companies — freshly registered proxy companies', color: '#f59e0b' },
+            { formula: 'Bid > 97.5% est.', label: 'Front Running — insider knowledge of confidential estimate', color: '#6366f1' },
+          ].map((proof, i) => (
+            <a key={i} href="/playground" style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '8px 12px', borderRadius: '8px', textDecoration: 'none',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+              transition: 'all 0.2s',
+            }}>
+              <code style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: proof.color, whiteSpace: 'nowrap', minWidth: '120px' }}>{proof.formula}</code>
+              <span style={{ fontSize: '11px', color: '#888', flex: 1 }}>{proof.label}</span>
+              <span style={{ fontSize: '10px', color: '#666' }}>Try →</span>
+            </a>
+          ))}
+        </div>
+
+        {/* Honest badge strip */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 1.5s', position: 'relative', zIndex: 2, marginTop: '12px' }}>
+          {[
+            { icon: '📊', text: '5 Statistical Detectors' },
             { icon: '🔒', text: 'SHA-256 Sealed Bids' },
-            { icon: '📜', text: 'GFR 2017 Aligned' },
-            { icon: '🏗️', text: 'Hyperledger Fabric Architecture' },
+            { icon: '📜', text: 'GFR 2017 Compliance' },
+            { icon: '🧪', text: 'Vitest + Pytest Tested' },
           ].map((badge, i) => (
             <span key={i} style={{
               display: 'inline-flex', alignItems: 'center', gap: '5px',
@@ -261,6 +281,36 @@ export default function LoginPage() {
               {badge.icon} {badge.text}
             </span>
           ))}
+        </div>
+
+        {/* What We Are / Are Not — radical honesty */}
+        <div style={{ opacity: 0, animation: 'fadeSlideIn 0.8s ease forwards 1.8s', position: 'relative', zIndex: 2, marginTop: '20px', maxWidth: '480px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(34,197,94,0.04)', border: '1px solid rgba(34,197,94,0.1)' }}>
+              <div style={{ fontSize: '10px', color: '#22c55e', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.1em' }}>WHAT THIS IS</div>
+              {[
+                '5 statistical fraud detectors',
+                'SHA-256 cryptographic audit trail',
+                'GFR 2017 rule enforcement',
+                'Random Forest ML model',
+                'Real-time Supabase data layer',
+              ].map((item, i) => (
+                <div key={i} style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '3px' }}>✅ {item}</div>
+              ))}
+            </div>
+            <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.1)' }}>
+              <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.1em' }}>WHAT THIS IS NOT (YET)</div>
+              {[
+                'Hyperledger Fabric (arch ready)',
+                'Real Aadhaar eKYC',
+                'Live GeM portal connection',
+                'Production government users',
+                'NIC-certified deployment',
+              ].map((item, i) => (
+                <div key={i} style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '3px' }}>⚙️ {item}</div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -281,7 +331,7 @@ export default function LoginPage() {
               <div style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', background: 'linear-gradient(135deg, #FF9933, #6366f1, #138808)' }}>🛡️</div>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'white', margin: 0, fontFamily: "'Rajdhani', 'DM Sans', sans-serif" }}>TenderShield</h2>
-                <p style={{ fontSize: '10px', color: '#666', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>AI-Secured Procurement</p>
+                <p style={{ fontSize: '10px', color: '#666', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0 }}>Fraud Detection Engine</p>
               </div>
             </div>
           </div>
@@ -370,7 +420,7 @@ export default function LoginPage() {
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: '10px', color: '#555', marginTop: '20px' }}>
-            🔒 All actions recorded on Hyperledger Fabric
+            🔒 SHA-256 Cryptographic Audit Trail · Every analysis is hash-chained
           </p>
 
           {/* Real Registration CTA — always visible */}
@@ -444,7 +494,6 @@ export default function LoginPage() {
 }
 
 // Reusable dark input field
-import React from 'react';
 const InputField = React.forwardRef<HTMLInputElement, {
   label: string; type: string; value: string; onChange: (v: string) => void;
   placeholder?: string; required?: boolean;

@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
@@ -12,85 +12,156 @@ import { FEATURES } from '@/lib/features';
 import { useRealtimeAlerts } from '@/lib/useRealtimeAlerts';
 import { canAccessRoute, type Role } from '@/lib/rbac';
 import LanguageToggle, { useTranslation } from '@/components/LanguageToggle';
+import {
+  LayoutDashboard, FileText, FilePlus, Package, Lock, Link2,
+  Brain, AlertTriangle, Cpu, MessageSquare, TrendingUp,
+  Scale, ScrollText, Network, ShieldCheck, Map,
+  KeyRound, GitBranch, Landmark, Megaphone, Globe, Eye,
+  BarChart3, Building, MapPin, Play, Layers, Trophy, Calendar,
+  Settings, UserCog, ChevronDown, ChevronRight, LogOut, Building2, Shield, Search,
+  type LucideIcon,
+} from 'lucide-react';
 
-const navItems = [
-  // ── CORE PAGES ──
-  { href: '/dashboard', icon: '📊', label: 'Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DASHBOARD },
-  { href: '/dashboard/tenders', icon: '📋', label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TENDERS },
-  { href: '/dashboard/tenders/create', icon: '➕', label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.CREATE_TENDER },
-  { href: '/dashboard/procurement', icon: '📦', label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PROCUREMENT },
-  { href: '/dashboard/bids', icon: '🔒', label: 'Sealed Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS },
-  { href: '/dashboard/blockchain', icon: '⛓️', label: 'Blockchain', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.BLOCKCHAIN },
+// â”€â”€â”€ Icon-based nav item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+interface NavItem {
+  href: string;
+  Icon: LucideIcon;
+  label: string;
+  roles: string[];
+  visible: boolean;
+  group: string;
+}
 
-  // ── AI & INTELLIGENCE ──
-  { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI Monitor', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR },
-  { href: '/dashboard/ai-alerts', icon: '🚨', label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_ALERTS },
-  { href: '/dashboard/ml-model', icon: '🧠', label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ML_MODEL },
-  { href: '/dashboard/chat', icon: '💬', label: 'AI Analyst', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_CHAT },
-  { href: '/dashboard/anomaly', icon: '📈', label: 'Anomaly Detection', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ANOMALY_DETECTION },
+const navItems: NavItem[] = [
+  // â”€â”€ CORE â”€â”€
+  { href: '/dashboard', Icon: LayoutDashboard, label: 'Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DASHBOARD as boolean, group: 'Core' },
+  { href: '/dashboard/tenders', Icon: FileText, label: 'Tenders', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TENDERS as boolean, group: 'Core' },
+  { href: '/dashboard/tenders/create', Icon: FilePlus, label: 'Create Tender', roles: ['OFFICER', 'NIC_ADMIN'], visible: FEATURES.CREATE_TENDER as boolean, group: 'Core' },
+  { href: '/dashboard/procurement', Icon: Package, label: 'Procurement Flow', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PROCUREMENT as boolean, group: 'Core' },
 
-  // ── INVESTIGATION & AUDIT ──
-  { href: '/dashboard/auditor', icon: '⚖️', label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR },
-  { href: '/dashboard/audit', icon: '📜', label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL },
-  { href: '/dashboard/network-graph', icon: '🕵️', label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH },
-  { href: '/dashboard/compliance', icon: '⚖️', label: 'GFR Compliance', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.COMPLIANCE },
-  { href: '/dashboard/national-risk', icon: '🗺️', label: 'National Risk', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.CAG_NATIONAL_DASHBOARD },
+  // â”€â”€ INTELLIGENCE â”€â”€
+  { href: '/dashboard/ai-monitor', Icon: Brain, label: 'AI Monitor', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_MONITOR as boolean, group: 'Intelligence' },
+  { href: '/dashboard/ai-alerts', Icon: AlertTriangle, label: 'AI Alerts', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_ALERTS as boolean, group: 'Intelligence' },
+  { href: '/dashboard/ml-model', Icon: Cpu, label: 'ML Model', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ML_MODEL as boolean, group: 'Intelligence' },
+  { href: '/dashboard/chat', Icon: MessageSquare, label: 'AI Analyst', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AI_CHAT as boolean, group: 'Intelligence' },
+  { href: '/dashboard/anomaly', Icon: TrendingUp, label: 'Anomaly Detection', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ANOMALY_DETECTION as boolean, group: 'Intelligence' },
 
-  // ── ADVANCED CRYPTO ──
-  { href: '/dashboard/paillier-demo', icon: '🔐', label: 'Paillier Crypto', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO },
-  { href: '/dashboard/federated', icon: '🧬', label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING },
+  // â”€â”€ INVESTIGATION â”€â”€
+  { href: '/dashboard/auditor', Icon: Scale, label: 'CAG Auditor', roles: ['AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDITOR as boolean, group: 'Investigation' },
+  { href: '/dashboard/audit', Icon: ScrollText, label: 'Audit Trail', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.AUDIT_TRAIL as boolean, group: 'Investigation' },
+  { href: '/dashboard/network-graph', Icon: Network, label: 'Network Graph', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.NETWORK_GRAPH as boolean, group: 'Investigation' },
+  { href: '/dashboard/compliance', Icon: ShieldCheck, label: 'GFR Compliance', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.COMPLIANCE as boolean, group: 'Investigation' },
+  { href: '/dashboard/national-risk', Icon: Map, label: 'National Risk', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.CAG_NATIONAL_DASHBOARD as boolean, group: 'Investigation' },
 
-  // ── CITIZEN / PUBLIC ──
-  { href: '/rti', icon: '🇮🇳', label: 'RTI Portal', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.RTI_PORTAL },
-  { href: '/whistleblower', icon: '📢', label: 'Whistleblower', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.WHISTLEBLOWER },
-  { href: '/impact', icon: '🌍', label: 'Impact Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT },
-  { href: '/transparency', icon: '🔍', label: 'Transparency', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TRANSPARENCY },
+  // â”€â”€ CRYPTO & SECURITY â”€â”€
+  { href: '/dashboard/bids', Icon: Lock, label: 'Sealed Bids', roles: ['BIDDER', 'OFFICER', 'NIC_ADMIN'], visible: FEATURES.ZKP_BIDS as boolean, group: 'Crypto & Security' },
+  { href: '/dashboard/blockchain', Icon: Link2, label: 'Audit Ledger', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.BLOCKCHAIN as boolean, group: 'Crypto & Security' },
+  { href: '/dashboard/paillier-demo', Icon: KeyRound, label: 'Paillier Crypto', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.PAILLIER_DEMO as boolean, group: 'Crypto & Security' },
+  { href: '/dashboard/federated', Icon: GitBranch, label: 'Federated Learning', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.FEDERATED_LEARNING as boolean, group: 'Crypto & Security' },
 
-  // ── METRICS & REPORTS ──
-  { href: '/dashboard/metrics', icon: '📊', label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS },
-  { href: '/ministry-scores', icon: '🏛️', label: 'Ministry Scores', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.MINISTRY_SCORES },
-  { href: '/heatmap', icon: '🗺️', label: 'Fraud Heatmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.HEATMAP },
+  // â”€â”€ PUBLIC â”€â”€
+  { href: '/rti', Icon: Landmark, label: 'RTI Portal', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.RTI_PORTAL as boolean, group: 'Public' },
+  { href: '/whistleblower', Icon: Megaphone, label: 'Whistleblower', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.WHISTLEBLOWER as boolean, group: 'Public' },
+  { href: '/impact', Icon: Globe, label: 'Impact Dashboard', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT as boolean, group: 'Public' },
+  { href: '/transparency', Icon: Eye, label: 'Transparency', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.TRANSPARENCY as boolean, group: 'Public' },
 
-  // ── SYSTEM & DEMO ──
-  { href: '/demo', icon: '🎬', label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DEMO },
-  { href: '/architecture', icon: '🏗️', label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ARCHITECTURE },
-  { href: '/dashboard/judge-tour', icon: '🏆', label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR },
-  { href: '/roadmap', icon: '🗓️', label: 'Roadmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ROADMAP },
-  { href: '/settings', icon: '⚙️', label: 'Settings', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.SETTINGS },
-  { href: '/dashboard/admin', icon: '👤', label: 'Admin Panel', roles: ['NIC_ADMIN'], visible: FEATURES.ADMIN },
+  // â”€â”€ SYSTEM â”€â”€
+  { href: '/dashboard/metrics', Icon: BarChart3, label: 'Impact Metrics', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.IMPACT_METRICS as boolean, group: 'System' },
+  { href: '/ministry-scores', Icon: Building, label: 'Ministry Scores', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.MINISTRY_SCORES as boolean, group: 'System' },
+  { href: '/heatmap', Icon: MapPin, label: 'Fraud Heatmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.HEATMAP as boolean, group: 'System' },
+  { href: '/demo', Icon: Play, label: 'Live Demo', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.DEMO as boolean, group: 'System' },
+  { href: '/architecture', Icon: Layers, label: 'Architecture', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ARCHITECTURE as boolean, group: 'System' },
+  { href: '/dashboard/judge-tour', Icon: Trophy, label: 'Judge Walkthrough', roles: ['OFFICER', 'BIDDER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.JUDGE_TOUR as boolean, group: 'System' },
+  { href: '/roadmap', Icon: Calendar, label: 'Roadmap', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.ROADMAP as boolean, group: 'System' },
+  { href: '/settings', Icon: Settings, label: 'Settings', roles: ['OFFICER', 'AUDITOR', 'NIC_ADMIN'], visible: FEATURES.SETTINGS as boolean, group: 'System' },
+  { href: '/dashboard/admin', Icon: UserCog, label: 'Admin Panel', roles: ['NIC_ADMIN'], visible: FEATURES.ADMIN as boolean, group: 'System' },
 ].filter(item => item.visible);
 
-// Mobile bottom nav shows 5 most important tabs based on role
-// Uses feature flags to hide incomplete features from mobile nav
-const mobileNavConfig: Record<string, { href: string; icon: string; label: string }[]> = {
+// Group definitions with ordering
+const SIDEBAR_GROUPS = ['Core', 'Intelligence', 'Investigation', 'Crypto & Security', 'Public', 'System'] as const;
+const DEFAULT_OPEN = new Set(['Core', 'Intelligence']);
+
+// Mobile bottom nav â€” 5 most important per role
+const mobileNavConfig: Record<string, { href: string; Icon: LucideIcon; label: string }[]> = {
   OFFICER: [
-    { href: '/dashboard', icon: '📊', label: 'Home' },
-    { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
-    { href: '/dashboard/procurement', icon: '📦', label: 'Procure' },
-    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
-    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
+    { href: '/dashboard', Icon: LayoutDashboard, label: 'Home' },
+    { href: '/dashboard/tenders', Icon: FileText, label: 'Tenders' },
+    { href: '/dashboard/procurement', Icon: Package, label: 'Procure' },
+    { href: '/dashboard/ai-monitor', Icon: Brain, label: 'AI' },
+    { href: '/dashboard/blockchain', Icon: Link2, label: 'Audit' },
   ],
   BIDDER: [
-    { href: '/dashboard', icon: '📊', label: 'Home' },
-    { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
-    { href: '/dashboard/bids', icon: '🔒', label: 'My Bids' },
-    { href: '/dashboard/procurement', icon: '📦', label: 'Procure' },
-    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
+    { href: '/dashboard', Icon: LayoutDashboard, label: 'Home' },
+    { href: '/dashboard/tenders', Icon: FileText, label: 'Tenders' },
+    { href: '/dashboard/bids', Icon: Lock, label: 'My Bids' },
+    { href: '/dashboard/procurement', Icon: Package, label: 'Procure' },
+    { href: '/dashboard/blockchain', Icon: Link2, label: 'Audit' },
   ],
   AUDITOR: [
-    { href: '/dashboard', icon: '📊', label: 'Home' },
-    { href: '/dashboard/auditor', icon: '⚖️', label: 'Audit' },
-    { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
-    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
-    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
+    { href: '/dashboard', Icon: LayoutDashboard, label: 'Home' },
+    { href: '/dashboard/auditor', Icon: Scale, label: 'Audit' },
+    { href: '/dashboard/tenders', Icon: FileText, label: 'Tenders' },
+    { href: '/dashboard/ai-monitor', Icon: Brain, label: 'AI' },
+    { href: '/dashboard/blockchain', Icon: Link2, label: 'Audit' },
   ],
   NIC_ADMIN: [
-    { href: '/dashboard', icon: '📊', label: 'Home' },
-    { href: '/dashboard/tenders', icon: '📋', label: 'Tenders' },
-    { href: '/dashboard/auditor', icon: '⚖️', label: 'Audit' },
-    { href: '/dashboard/ai-monitor', icon: '🤖', label: 'AI' },
-    { href: '/dashboard/blockchain', icon: '⛓️', label: 'Chain' },
+    { href: '/dashboard', Icon: LayoutDashboard, label: 'Home' },
+    { href: '/dashboard/tenders', Icon: FileText, label: 'Tenders' },
+    { href: '/dashboard/auditor', Icon: Scale, label: 'Audit' },
+    { href: '/dashboard/ai-monitor', Icon: Brain, label: 'AI' },
+    { href: '/dashboard/blockchain', Icon: Link2, label: 'Audit' },
   ],
+};
+
+// â”€â”€â”€ Collapsible Group Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function CollapsibleGroup({
+  title,
+  children,
+  defaultOpen,
+  storageKey,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen: boolean;
+  storageKey: string;
+}) {
+  const [open, setOpen] = useState(() => {
+    if (typeof window === 'undefined') return defaultOpen;
+    const stored = localStorage.getItem(storageKey);
+    return stored !== null ? stored === 'true' : defaultOpen;
+  });
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    localStorage.setItem(storageKey, String(next));
+  };
+
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <button
+        onClick={toggle}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
+          fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {title}
+        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+      </button>
+      {open && <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>{children}</div>}
+    </div>
+  );
+}
+
+// â”€â”€â”€ Role badge config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const roleBadge: Record<string, { color: string; label: string; Icon: LucideIcon }> = {
+  OFFICER: { color: '#6366f1', label: 'Officer', Icon: Building2 },
+  BIDDER: { color: '#22c55e', label: 'Bidder', Icon: Building },
+  AUDITOR: { color: '#f59e0b', label: 'Auditor', Icon: Search },
+  NIC_ADMIN: { color: '#ef4444', label: 'NIC Admin', Icon: Shield },
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -111,7 +182,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => { setMounted(true); }, []);
 
-  // ── BACKEND WARMUP: Wake Render free-tier on dashboard load ──
+  // â”€â”€ BACKEND WARMUP: Wake Render free-tier on dashboard load â”€â”€
   const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'waking' | 'offline'>('unknown');
   useEffect(() => {
     const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tendershield-api.onrender.com';
@@ -123,10 +194,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => setBackendStatus('offline'));
   }, []);
 
-  // ────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // AUTH GUARD: Wait for hydration, then check auth
   // Uses refs to avoid dependency-triggered infinite loops
-  // ────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!mounted) return;
     // Check session expiry
@@ -137,7 +208,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [mounted, isAuthenticated]);
 
-  // Close sidebar on navigation (must be before early return — Rules of Hooks)
+  // Close sidebar on navigation (must be before early return â€” Rules of Hooks)
   useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   const handleLogout = useCallback(() => {
@@ -149,7 +220,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // IMPORTANT: This must come AFTER all hook calls (Rules of Hooks)
   if (!mounted || !isAuthenticated) {
     return (
-      <div style={{
+      <div suppressHydrationWarning style={{
         minHeight: '100vh',
         background: '#080808',
         display: 'flex',
@@ -173,42 +244,63 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const roleBadge: Record<string, { color: string; label: string }> = {
-    OFFICER: { color: '#6366f1', label: '🏛️ Officer' },
-    BIDDER: { color: '#22c55e', label: '🏢 Bidder' },
-    AUDITOR: { color: '#f59e0b', label: '🔍 Auditor' },
-    NIC_ADMIN: { color: '#ef4444', label: '🛡️ NIC Admin' },
-  };
-
-  const role = roleBadge[user?.role || ''] || { color: '#6366f1', label: '👤 User' };
+  const role = roleBadge[user?.role || ''] || { color: '#6366f1', label: 'User', Icon: UserCog };
   const displayName = mounted ? (user?.name || 'User') : 'User';
   const displayInitial = mounted ? (user?.name || 'U')[0] : 'U';
-  const displayRole = mounted ? role.label : '👤 User';
+  const displayRole = mounted ? role.label : 'User';
   const displayRoleColor = mounted ? role.color : '#6366f1';
+  const RoleIcon = role.Icon;
 
   const mobileNav = mobileNavConfig[user?.role || 'OFFICER'] || mobileNavConfig.OFFICER;
+
+  // Filter nav items by role and access
+  const visibleItems = navItems.filter(item =>
+    (!mounted || !user?.role || item.roles.includes(user.role)) &&
+    canAccessRoute((user?.role || 'OFFICER') as Role, item.href)
+  );
+
+  // Render a single nav link
+  const renderNavLink = (item: NavItem, closeSidebar?: () => void) => {
+    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+    const ItemIcon = item.Icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={closeSidebar}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+          isActive
+            ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
+            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+        }`}
+      >
+        <ItemIcon size={16} strokeWidth={isActive ? 2.5 : 2} />
+        {item.label}
+      </Link>
+    );
+  };
 
   return (
     <ToastProvider>
     <ErrorBoundary>
     <div className="flex min-h-screen" style={{ paddingTop: '28px' }}>
-      {/* Mobile Header Bar — hamburger + logo */}
+      {/* Mobile Header Bar â€” hamburger + logo */}
       <div className="md:hidden fixed top-7 left-0 right-0 z-40 flex items-center justify-between px-3 py-2"
         style={{ background: 'rgba(17,17,40,0.95)', borderBottom: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(12px)' }}>
         <button onClick={() => setSidebarOpen(!sidebarOpen)}
           className="w-10 h-10 flex items-center justify-center rounded-lg"
           style={{ background: 'rgba(99,102,241,0.1)' }}>
-          <span style={{ fontSize: 20 }}>{sidebarOpen ? '✕' : '☰'}</span>
+          <span style={{ fontSize: 20 }}>{sidebarOpen ? 'âœ•' : 'â˜°'}</span>
         </button>
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="font-display font-bold text-base bg-clip-text text-transparent"
             style={{ backgroundImage: 'linear-gradient(135deg, #FF9933, #a5b4fc)' }}>
-            🛡️ TenderShield
+            ðŸ›¡ï¸ TenderShield
           </span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={dismissAlerts} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8' }}>
-            🔔
+            ðŸ””
             {alertCount > 0 && (
               <span style={{ position: 'absolute', top: -4, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {alertCount > 9 ? '9+' : alertCount}
@@ -228,26 +320,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div onClick={e => e.stopPropagation()} className="w-72 h-full bg-[var(--bg-secondary)] border-r border-[var(--border-subtle)] overflow-y-auto"
             style={{ paddingTop: 48 }}>
             <nav className="p-3 space-y-1">
-              {navItems.filter(item => (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
-                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+              {SIDEBAR_GROUPS.map(group => {
+                const groupItems = visibleItems.filter(i => i.group === group);
+                if (groupItems.length === 0) return null;
                 return (
-                  <Link key={item.href} href={item.href}
-                    onClick={() => { setSidebarOpen(false); }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
-                    }`}>
-                    <span className="text-base">{item.icon}</span>
-                    {item.label}
-                  </Link>
+                  <CollapsibleGroup key={group} title={group} defaultOpen={DEFAULT_OPEN.has(group)} storageKey={`ts-sidebar-${group}`}>
+                    {groupItems.map(item => renderNavLink(item, () => setSidebarOpen(false)))}
+                  </CollapsibleGroup>
                 );
               })}
             </nav>
             <div className="p-4 border-t border-[var(--border-subtle)]">
               <button onClick={handleLogout}
-                className="w-full text-sm text-[var(--text-secondary)] hover:text-red-400 py-3 rounded-lg hover:bg-red-500/10 transition-all">
-                🚪 Sign Out
+                className="w-full text-sm text-[var(--text-secondary)] hover:text-red-400 py-3 rounded-lg hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
+                <LogOut size={14} /> Sign Out
               </button>
             </div>
           </div>
@@ -261,7 +347,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
               style={{ background: 'linear-gradient(135deg, #FF9933, #6366f1, #138808)' }}>
-              🛡️
+              ðŸ›¡ï¸
             </div>
             <div>
               <span className="font-display font-bold text-lg bg-clip-text text-transparent"
@@ -275,20 +361,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </div>
 
-        {/* Nav Links */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navItems.filter(item => (item.visible as boolean) !== false && (!mounted || !user?.role || item.roles.includes(user.role)) && canAccessRoute((user?.role || 'OFFICER') as Role, item.href)).map(item => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+        {/* Nav Links â€” Collapsible Groups */}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {SIDEBAR_GROUPS.map(group => {
+            const groupItems = visibleItems.filter(i => i.group === group);
+            if (groupItems.length === 0) return null;
             return (
-              <Link key={item.href} href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
-                }`}>
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-              </Link>
+              <CollapsibleGroup key={group} title={group} defaultOpen={DEFAULT_OPEN.has(group)} storageKey={`ts-sidebar-${group}`}>
+                {groupItems.map(item => renderNavLink(item))}
+              </CollapsibleGroup>
             );
           })}
         </nav>
@@ -302,19 +383,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{displayName}</p>
-              <p className="text-xs text-[var(--text-secondary)]">{displayRole}</p>
+              <p className="text-xs text-[var(--text-secondary)] flex items-center gap-1">
+                <RoleIcon size={11} /> {displayRole}
+              </p>
             </div>
           </div>
 
           <div className="mb-2 px-2 py-1.5 rounded-lg text-center"
             style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <p className="text-[9px] font-semibold text-indigo-400 uppercase tracking-wider">🔐 Sandbox Auth</p>
-            <p className="text-[8px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-              Production: Supabase JWT + RLS + Fabric CA
+            <p className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">ðŸ” Sandbox Auth</p>
+            <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
+              Production: Supabase JWT + RLS + Hash Chain
             </p>
           </div>
 
-          {/* Language Toggle — EN/हिं */}
+          {/* Language Toggle â€” EN/à¤¹à¤¿à¤‚ */}
           <div className="mb-2 flex justify-center">
             <LanguageToggle />
           </div>
@@ -330,21 +413,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               background: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
               animation: backendStatus === 'waking' ? 'pulse 1.5s infinite' : undefined,
             }} />
-            <span className="text-[9px] font-medium" style={{
+            <span className="text-[11px] font-medium" style={{
               color: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
             }}>
-              {backendStatus === 'online' ? 'Backend Online' : backendStatus === 'waking' ? 'Backend Waking…' : backendStatus === 'offline' ? 'Backend Offline' : ''}
+              {backendStatus === 'online' ? 'Backend Online' : backendStatus === 'waking' ? 'Backend Wakingâ€¦' : backendStatus === 'offline' ? 'Backend Offline' : ''}
             </span>
           </div>
 
           <button onClick={handleLogout}
-            className="w-full text-sm text-[var(--text-secondary)] hover:text-red-400 py-2 rounded-lg hover:bg-red-500/10 transition-all">
-            🚪 Sign Out
+            className="w-full text-sm text-[var(--text-secondary)] hover:text-red-400 py-2 rounded-lg hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content — responsive padding */}
+      {/* Main Content â€” responsive padding */}
       <main className="main-content-desktop flex-1 ml-0 md:ml-64 p-3 md:p-6 pt-16 md:pt-6 pb-20 md:pb-6 relative z-[1]">
         {children}
       </main>
@@ -353,10 +436,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="mobile-bottom-nav">
         {mobileNav.map(item => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
+          const MobileIcon = item.Icon;
           return (
             <Link key={item.href} href={item.href}
               className={isActive ? 'active' : ''}>
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon"><MobileIcon size={18} /></span>
               <span>{item.label}</span>
             </Link>
           );

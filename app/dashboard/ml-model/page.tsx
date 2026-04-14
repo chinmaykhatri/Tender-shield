@@ -25,7 +25,20 @@ interface Metrics {
     trainingSize: number;
     oobScore: number;
     trainedAt: string;
-    datasetInfo: {
+    dataSource?: 'REAL' | 'HYBRID' | 'SYNTHETIC';
+    // train-model.ts outputs dataStats; legacy metrics.json uses datasetInfo
+    dataStats?: {
+      totalSamples: number;
+      trainSamples: number;
+      testSamples: number;
+      fraudRatio: string;
+      featureCount: number;
+      features: string[];
+      realTenderCount?: number;
+      dateRange?: { earliest: string; latest: string };
+      ministries?: string[];
+    };
+    datasetInfo?: {
       totalSamples: number;
       trainSamples: number;
       testSamples: number;
@@ -223,20 +236,50 @@ export default function MLModelPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(99,102,241,0.12))',
-        border: '1px solid rgba(239,68,68,0.25)',
-        borderRadius: 20, padding: '28px 36px', marginBottom: 24,
-      }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 }}>
-          🧠 ML Fraud Detection Model
-        </h1>
-        <p style={{ color: '#94a3b8', fontSize: 13 }}>
-          Random Forest classifier trained on {metrics.modelInfo.datasetInfo.totalSamples.toLocaleString()} synthetic GeM procurement records •{' '}
-          {metrics.modelInfo.numTrees} trees • {metrics.modelInfo.datasetInfo.featureCount} features • Trained {new Date(metrics.modelInfo.trainedAt).toLocaleDateString()}
-        </p>
-      </div>
+      {/* Data source badge + Header */}
+      {(() => {
+        const ds = metrics.modelInfo.dataStats || metrics.modelInfo.datasetInfo;
+        const dataSource = metrics.modelInfo.dataSource || 'SYNTHETIC';
+        const dsColor = dataSource === 'REAL' ? '#22c55e' : dataSource === 'HYBRID' ? '#f59e0b' : '#6366f1';
+        const dsLabel = dataSource === 'REAL'
+          ? `REAL DATA — ${metrics.modelInfo.dataStats?.realTenderCount || ds?.totalSamples || 0} Supabase tenders`
+          : dataSource === 'HYBRID'
+            ? `HYBRID — ${metrics.modelInfo.dataStats?.realTenderCount || 0} real + synthetic augmentation`
+            : 'SYNTHETIC DATA — calibrated fraud patterns';
+        return (
+          <>
+            <div style={{
+              padding: '8px 16px', borderRadius: 10, marginBottom: 12,
+              background: `${dsColor}0d`,
+              border: `1px solid ${dsColor}33`,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: dsColor }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: dsColor }}>
+                ● {dsLabel}
+              </span>
+              {metrics.modelInfo.dataStats?.dateRange && dataSource !== 'SYNTHETIC' && (
+                <span style={{ fontSize: 10, color: '#64748b', marginLeft: 'auto' }}>
+                  {metrics.modelInfo.dataStats.dateRange.earliest} → {metrics.modelInfo.dataStats.dateRange.latest}
+                </span>
+              )}
+            </div>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(99,102,241,0.12))',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 20, padding: '28px 36px', marginBottom: 24,
+            }}>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 }}>
+                🧠 ML Fraud Detection Model
+              </h1>
+              <p style={{ color: '#94a3b8', fontSize: 13 }}>
+                Random Forest classifier trained on {(ds?.totalSamples || 0).toLocaleString()} {dataSource === 'SYNTHETIC' ? 'synthetic' : dataSource === 'HYBRID' ? 'hybrid' : 'real'} GeM procurement records •{' '}
+                {metrics.modelInfo.numTrees} trees • {ds?.featureCount || 14} features • Trained {new Date(metrics.modelInfo.trainedAt).toLocaleDateString()}
+              </p>
+            </div>
+          </>
+        );
+      })()}
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
@@ -391,16 +434,26 @@ export default function MLModelPage() {
           {/* Training Info */}
           <div style={{ marginTop: 20, padding: '12px 16px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 6 }}>TRAINING CONFIG</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 11, color: '#94a3b8' }}>
-              <span>Algorithm: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.algorithm}</strong></span>
-              <span>Trees: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.numTrees}</strong></span>
-              <span>Max Depth: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.maxDepth}</strong></span>
-              <span>Features/split: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.numFeatures}</strong></span>
-              <span>Train: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.datasetInfo.trainSamples}</strong></span>
-              <span>Test: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.datasetInfo.testSamples}</strong></span>
-              <span>OOB Score: <strong style={{ color: '#22c55e' }}>{(metrics.modelInfo.oobScore * 100).toFixed(1)}%</strong></span>
-              <span>Fraud ratio: <strong style={{ color: '#ef4444' }}>{metrics.modelInfo.datasetInfo.fraudRatio}</strong></span>
-            </div>
+            {(() => {
+              const ds = metrics.modelInfo.dataStats || metrics.modelInfo.datasetInfo;
+              const dataSource = metrics.modelInfo.dataSource || 'SYNTHETIC';
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 11, color: '#94a3b8' }}>
+                  <span>Algorithm: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.algorithm}</strong></span>
+                  <span>Trees: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.numTrees}</strong></span>
+                  <span>Max Depth: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.maxDepth}</strong></span>
+                  <span>Features/split: <strong style={{ color: '#e2e8f0' }}>{metrics.modelInfo.numFeatures}</strong></span>
+                  <span>Train: <strong style={{ color: '#e2e8f0' }}>{ds?.trainSamples}</strong></span>
+                  <span>Test: <strong style={{ color: '#e2e8f0' }}>{ds?.testSamples}</strong></span>
+                  <span>OOB Score: <strong style={{ color: '#22c55e' }}>{(metrics.modelInfo.oobScore * 100).toFixed(1)}%</strong></span>
+                  <span>Fraud ratio: <strong style={{ color: '#ef4444' }}>{ds?.fraudRatio}</strong></span>
+                  <span>Data source: <strong style={{ color: dataSource === 'REAL' ? '#22c55e' : dataSource === 'HYBRID' ? '#f59e0b' : '#6366f1' }}>{dataSource}</strong></span>
+                  {metrics.modelInfo.dataStats?.realTenderCount !== undefined && metrics.modelInfo.dataStats.realTenderCount > 0 && (
+                    <span>Real tenders: <strong style={{ color: '#22c55e' }}>{metrics.modelInfo.dataStats.realTenderCount}</strong></span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

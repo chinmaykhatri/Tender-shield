@@ -11,6 +11,11 @@ interface BidEntry { name: string; amount: number; }
 
 type Stage = 'input' | 'encrypting' | 'encrypted' | 'comparing' | 'result';
 
+interface EncryptedBid { bidder: string; ciphertext_preview: string; original: number; }
+interface EncryptedResponse { encrypted_bids: EncryptedBid[]; publicKey: PublicKeyInfo; }
+interface ComparisonResult { winner: string; ranking: { bidder: string; rank: number }[]; homomorphic_sum: { decrypted_sum: number; expected_sum: number; matches: boolean } | null; comparison_time_ms: number; }
+interface PublicKeyInfo { bits: number; n: string; g: string; }
+
 export default function PaillierDemoPage() {
   const [bids, setBids] = useState<BidEntry[]>([
     { name: 'Alpha Infrastructure Ltd', amount: 115 },
@@ -18,9 +23,9 @@ export default function PaillierDemoPage() {
     { name: 'Gamma Solutions Corp', amount: 112 },
   ]);
   const [stage, setStage] = useState<Stage>('input');
-  const [encryptedData, setEncryptedData] = useState<any>(null);
-  const [result, setResult] = useState<any>(null);
-  const [publicKey, setPublicKey] = useState<any>(null);
+  const [encryptedData, setEncryptedData] = useState<EncryptedResponse | null>(null);
+  const [result, setResult] = useState<ComparisonResult | null>(null);
+  const [publicKey, setPublicKey] = useState<PublicKeyInfo | null>(null);
 
   const addBidder = () => setBids([...bids, { name: `Bidder ${bids.length + 1}`, amount: 100 }]);
   const removeBidder = (i: number) => setBids(bids.filter((_, idx) => idx !== i));
@@ -73,10 +78,22 @@ export default function PaillierDemoPage() {
     <div>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>🔐 Paillier Homomorphic Encryption</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>🔐 Paillier Encryption (64-bit Demo)</h1>
         <p style={{ fontSize: 13, color: '#94a3b8' }}>
           Compare sealed bids without decrypting them — preserving bid confidentiality during evaluation
         </p>
+      </div>
+
+      {/* Honest disclaimer */}
+      <div style={{
+        padding: '10px 16px', borderRadius: 10, marginBottom: 20,
+        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ fontSize: 14 }}>⚠️</span>
+        <span style={{ fontSize: 11, color: '#f59e0b' }}>
+          <strong>Educational Demo</strong> — Uses 64-bit keys for fast browser execution. Production requires 2048-bit minimum (NIST SP 800-56B).
+        </span>
       </div>
 
       {/* Math explainer */}

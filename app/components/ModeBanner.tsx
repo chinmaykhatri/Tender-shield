@@ -11,9 +11,9 @@ export default function ModeBanner() {
       style={{ backgroundColor: modeBg, color: modeColor, borderBottom: `1px solid ${modeColor}30` }}
     >
       {isDemoMode ? (
-        <span>{modeIcon} <strong>MVP SANDBOX</strong> — Blockchain India Challenge 2026 · MeitY + C-DAC · e-Procurement Track</span>
+        <span>{modeIcon} <strong>DEMO MODE</strong> — Blockchain India Challenge 2026 · MeitY + C-DAC · e-Procurement Track</span>
       ) : (
-        <span>{modeIcon} <strong>LIVE PRODUCTION</strong> — Connected to Hyperledger Fabric network + Supabase</span>
+        <span>{modeIcon} <strong>LIVE PRODUCTION</strong> — SHA-256 Hash Chain Audit + Supabase RLS</span>
       )}
     </div>
   );

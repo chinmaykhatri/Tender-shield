@@ -1,33 +1,75 @@
 /**
  * TenderShield — ML Model Training Script
  * 
- * Generates synthetic GeM procurement data → Feature engineering →
- * Trains Random Forest → Evaluates → Saves model + metrics to JSON
+ * Supports TWO training modes:
+ *   --use-real-data  → Fetches labeled tenders from Supabase (scraped by GeM pipeline)
+ *   (default)        → Uses synthetic data (2000 samples, 5 fraud patterns)
  * 
- * Run: npx tsx scripts/train-model.ts
+ * Automatic fallback:
+ *   Real tenders >= 200  → REAL mode (100% real data)
+ *   Real tenders 50-199  → HYBRID mode (real + synthetic augmentation)
+ *   Real tenders < 50    → SYNTHETIC mode (falls back to synthetic)
+ * 
+ * Run:
+ *   npx tsx scripts/train-model.ts
+ *   npx tsx scripts/train-model.ts --use-real-data
  */
 
 import { generateDataset, trainTestSplit } from '../lib/ml/dataset';
+import { loadTrainingData, type RealDataStats } from '../lib/ml/realDataLoader';
 import { trainRandomForest, evaluateModel, type ClassificationMetrics, type RandomForestModel } from '../lib/ml/randomForest';
 import * as fs from 'fs';
 import * as path from 'path';
+
+const USE_REAL_DATA = process.argv.includes('--use-real-data');
 
 async function main() {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log('║  TenderShield — ML Model Training Pipeline              ║');
   console.log('║  Random Forest for Procurement Fraud Detection          ║');
+  console.log('╠══════════════════════════════════════════════════════════╣');
+  console.log(`║  Mode: ${USE_REAL_DATA ? '📡 REAL DATA (Supabase → GeM pipeline)' : '🧪 SYNTHETIC DATA (calibrated patterns)'}   ║`);
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
-  // ── Step 1: Generate Dataset ──────────────────────────
-  console.log('📊 Step 1: Generating synthetic GeM procurement dataset...');
-  const dataset = generateDataset(2000, 42);
+  // ── Step 1: Load Dataset ──────────────────────────────
+  console.log('📊 Step 1: Loading training data...');
+
+  let dataset;
+  let dataStats: RealDataStats;
+
+  if (USE_REAL_DATA) {
+    const result = await loadTrainingData({
+      preferReal: true,
+      syntheticSize: 2000,
+      seed: 42,
+    });
+    dataset = result.samples;
+    dataStats = result.stats;
+  } else {
+    dataset = generateDataset(2000, 42);
+    dataStats = {
+      totalTenders: dataset.length,
+      fraudCount: dataset.filter(s => s.label === 1).length,
+      cleanCount: dataset.filter(s => s.label === 0).length,
+      ministries: [...new Set(dataset.map(s => s.ministry))],
+      dateRange: { earliest: 'N/A (synthetic)', latest: 'N/A (synthetic)' },
+      dataSource: 'SYNTHETIC',
+    };
+  }
+
   const fraudCount = dataset.filter(s => s.label === 1).length;
   const cleanCount = dataset.filter(s => s.label === 0).length;
+
+  console.log(`  Data Source: ${dataStats.dataSource}`);
   console.log(`  Total samples: ${dataset.length}`);
   console.log(`  Fraud: ${fraudCount} (${(fraudCount / dataset.length * 100).toFixed(1)}%)`);
   console.log(`  Clean: ${cleanCount} (${(cleanCount / dataset.length * 100).toFixed(1)}%)`);
+  if (dataStats.dataSource !== 'SYNTHETIC') {
+    console.log(`  Date range: ${dataStats.dateRange.earliest} → ${dataStats.dateRange.latest}`);
+    console.log(`  Ministries: ${dataStats.ministries.join(', ')}`);
+  }
   console.log('');
 
   // ── Step 2: Train/Test Split ──────────────────────────
@@ -76,6 +118,8 @@ async function main() {
   console.log('║  CLASS REPORT                                          ║');
   console.log(`║  Clean:  P=${(metrics.classReport.clean.precision * 100).toFixed(0)}%  R=${(metrics.classReport.clean.recall * 100).toFixed(0)}%  F1=${(metrics.classReport.clean.f1 * 100).toFixed(0)}%  n=${metrics.classReport.clean.support}       ║`);
   console.log(`║  Fraud:  P=${(metrics.classReport.fraud.precision * 100).toFixed(0)}%  R=${(metrics.classReport.fraud.recall * 100).toFixed(0)}%  F1=${(metrics.classReport.fraud.f1 * 100).toFixed(0)}%  n=${metrics.classReport.fraud.support}        ║`);
+  console.log('╠══════════════════════════════════════════════════════════╣');
+  console.log(`║  DATA SOURCE: ${dataStats.dataSource.padEnd(41)}║`);
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
@@ -118,13 +162,17 @@ async function main() {
       trainingSize: model.trainingSize,
       oobScore: model.oobScore,
       trainedAt: model.trainedAt,
-      datasetInfo: {
+      dataSource: dataStats.dataSource,
+      dataStats: {
         totalSamples: dataset.length,
         trainSamples: train.length,
         testSamples: test.length,
         fraudRatio: `${(fraudCount / dataset.length * 100).toFixed(1)}%`,
         featureCount: featureNames.length,
         features: featureNames,
+        realTenderCount: dataStats.dataSource !== 'SYNTHETIC' ? dataStats.totalTenders : 0,
+        dateRange: dataStats.dateRange,
+        ministries: dataStats.ministries,
       },
     },
   };
@@ -136,7 +184,6 @@ async function main() {
   console.log(`  ✅ Metrics saved to public/model/metrics.json`);
 
   // Save model (larger file, needed for predictions)
-  // Strip down tree nodes for size
   function pruneTree(node: any): any {
     const pruned: any = {};
     if (node.prediction !== undefined) {
@@ -156,6 +203,7 @@ async function main() {
     trees: model.trees.map(t => pruneTree(t)),
     featureNames: model.featureNames,
     numTrees: model.numTrees,
+    dataSource: dataStats.dataSource,
   };
 
   fs.writeFileSync(
@@ -168,6 +216,11 @@ async function main() {
 
   console.log('');
   console.log('🎉 Training pipeline complete!');
+  console.log(`   Data source: ${dataStats.dataSource}`);
+  if (dataStats.dataSource === 'SYNTHETIC') {
+    console.log('   💡 Run the GeM pipeline first, then re-train with --use-real-data');
+    console.log('      python backend/services/data_pipeline/pipeline_runner.py');
+  }
 }
 
 function pad(n: number): string {

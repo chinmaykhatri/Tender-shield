@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 
 // ═══════════════════════════════════════════════════════════
-// TenderShield — AI Analyst Chat (RAG + Gemini)
+// TenderShield — AI Analyst Chat (RAG + OpenAI GPT / Gemini)
 // Natural language querying of the procurement database
 // ═══════════════════════════════════════════════════════════
 
@@ -161,15 +161,38 @@ export default function ChatPage() {
                   color: msg.role === 'user' ? '#fff' : '#e2e8f0',
                   whiteSpace: 'pre-wrap',
                 }}
-                dangerouslySetInnerHTML={{
-                  __html: msg.content
-                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#a5b4fc">$1</strong>')
-                    .replace(/^- /gm, '• ')
-                    .replace(/\n/g, '<br/>'),
-                }}
-              />
-              <p style={{ fontSize: 9, color: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : '#475569', marginTop: 8 }}>
+              >
+                {msg.content.split('\n').map((line, li) => {
+                  const bulletLine = line.startsWith('- ') ? line.slice(2) : null;
+                  const renderBold = (text: string) => {
+                    const parts = text.split(/\*\*(.*?)\*\*/g);
+                    return parts.map((part, pi) =>
+                      pi % 2 === 1
+                        ? <strong key={pi} style={{ color: '#a5b4fc' }}>{part}</strong>
+                        : <span key={pi}>{part}</span>
+                    );
+                  };
+                  return (
+                    <span key={li}>
+                      {bulletLine !== null ? <>• {renderBold(bulletLine)}</> : renderBold(line)}
+                      {li < msg.content.split('\n').length - 1 && <br />}
+                    </span>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: 9, color: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : '#475569', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {new Date(msg.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                {msg.source && msg.role === 'assistant' && (
+                  <span style={{
+                    padding: '1px 6px', borderRadius: 4, fontSize: 8, fontWeight: 700, letterSpacing: '0.03em',
+                    background: msg.source.includes('gpt') ? 'rgba(16,163,127,0.15)' : msg.source.includes('gemini') ? 'rgba(66,133,244,0.15)' : 'rgba(148,163,184,0.15)',
+                    color: msg.source.includes('gpt') ? '#10a37f' : msg.source.includes('gemini') ? '#4285f4' : '#94a3b8',
+                    border: `1px solid ${msg.source.includes('gpt') ? 'rgba(16,163,127,0.3)' : msg.source.includes('gemini') ? 'rgba(66,133,244,0.3)' : 'rgba(148,163,184,0.2)'}`,
+                    textTransform: 'uppercase',
+                  }}>
+                    {msg.source}
+                  </span>
+                )}
               </p>
             </div>
           </div>

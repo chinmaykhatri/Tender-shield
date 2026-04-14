@@ -8,8 +8,15 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 // Z-score analysis on tender/bid volumes over time
 // ═══════════════════════════════════════════════════════════
 
+interface AnomalyData {
+  success: boolean;
+  time_series: Record<string, number>[];
+  anomalies: { zscore: number; type: string; detail: string; week: string }[];
+  summary: { total_weeks: number; total_anomalies: number; highest_zscore: number; total_tenders: number; total_bids: number };
+}
+
 export default function AnomalyPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnomalyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<'tenders' | 'bids' | 'totalValue'>('tenders');
 
