@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { validateComplete } from '@/lib/validation/tenderValidation';
 import { requirePermission } from '@/lib/rbac';
+import { extractVerifiedRole } from '@/lib/auth/extractRole';
 
 // ============================================================================
 // TenderShield — End-to-End Live Tender Flow
@@ -32,11 +33,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // ─── SERVER-SIDE RBAC CHECK (centralized) ───
-    const cookie = req.cookies.get('tendershield-demo-user');
-    let userRole: string | undefined;
-    if (cookie?.value) { try { userRole = JSON.parse(cookie.value).role; } catch { /* */ } }
-    userRole = userRole || body._user_role || req.headers.get('x-user-role') || undefined;
+    // ─── SERVER-SIDE RBAC CHECK (centralized, HMAC-verified) ───
+    // SECURITY: Role extracted ONLY from HMAC-signed ts_session cookie
+    // Never trusts x-user-role headers or unsigned cookies
+    const userRole = await extractVerifiedRole(req);
     const denied = requirePermission(userRole, 'create_tender');
     if (denied) return denied;
 

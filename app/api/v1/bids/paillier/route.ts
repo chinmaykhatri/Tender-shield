@@ -5,19 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { generateKeyPair, encrypt, decrypt, addEncrypted, compareEncryptedBids } from '@/lib/crypto/paillier';
+import { generateKeyPair, encrypt, decrypt } from '@/lib/crypto/paillier';
 import { requirePermission } from '@/lib/rbac';
+import { extractVerifiedRole } from '@/lib/auth/extractRole';
 
 export const dynamic = 'force-dynamic';
-
-/** Extract role from cookie/header */
-function extractRole(req: NextRequest): string | undefined {
-  const cookie = req.cookies.get('tendershield-demo-user');
-  if (cookie?.value) {
-    try { return JSON.parse(cookie.value).role; } catch { /* */ }
-  }
-  return req.headers.get('x-user-role') || undefined;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +18,8 @@ export async function POST(req: NextRequest) {
 
     // ── ACTION: ENCRYPT & SUBMIT BID ──
     if (action === 'submit-encrypted') {
-      const role = extractRole(req);
+      // SECURITY: Role extracted ONLY from HMAC-signed ts_session cookie
+      const role = await extractVerifiedRole(req);
       const denied = requirePermission(role, 'submit_bid');
       if (denied) return denied;
 
@@ -157,15 +150,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── ACTION: COMPARE ENCRYPTED BIDS (L1 determination) ──
+    // ── ACTION: COMPARE BIDS (L1 determination) ──
+    // HONESTY NOTE: This performs server-side decryption, NOT homomorphic comparison.
+    // True homomorphic comparison requires threshold Paillier with MPC (not yet implemented).
     if (action === 'compare-encrypted') {
       const { tender_id } = body;
       if (!tender_id) {
         return NextResponse.json({ error: 'tender_id required' }, { status: 400 });
       }
 
-      // Only auditors can compare
-      const role = extractRole(req);
+      // Only auditors can compare — role from HMAC-signed session
+      const role = await extractVerifiedRole(req);
       const denied = requirePermission(role, 'ai_analyze');
       if (denied) return denied;
 
@@ -179,7 +174,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No encrypted bids found for this tender' }, { status: 404 });
       }
 
-      // For demo: decrypt and compare (production: use MPC / threshold Paillier)
+      // HONEST: Server-side decryption for ranking (NOT homomorphic comparison)
+      // Production path: threshold Paillier + MPC so no single party decrypts
       const results = bids.map(b => ({
         bid_id: b.bid_id,
         bidder: b.bidder_did || b.bid_id,
@@ -201,7 +197,7 @@ export async function POST(req: NextRequest) {
           amount_crore: r.amount_paise / 10_000_000,
         })),
         winner: results[0],
-        method: 'Paillier HE comparison (demo mode: server-side decryption)',
+        method: 'Server-side decryption + ranking (demo mode)',
         _production_note: 'Production uses threshold Paillier with MPC — no single party can decrypt',
       });
     }

@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { bidCommitSchema } from '@/lib/validation/schemas';
 import { requirePermission } from '@/lib/rbac';
+import { extractVerifiedRole } from '@/lib/auth/extractRole';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   // ── RBAC: Only Bidders can submit bids ──
-  const cookie = req.cookies.get('tendershield-demo-user');
-  let role: string | undefined;
-  if (cookie?.value) { try { role = JSON.parse(cookie.value).role; } catch { /* */ } }
-  role = role || req.headers.get('x-user-role') || undefined;
+  // SECURITY: Role extracted ONLY from HMAC-signed ts_session cookie (server-verified)
+  const role = await extractVerifiedRole(req);
   const denied = requirePermission(role, 'submit_bid');
   if (denied) return denied;
 

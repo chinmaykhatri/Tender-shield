@@ -12,7 +12,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // ── HMAC Session Cookie Verification (Web Crypto API — Edge Runtime) ──
-const SESSION_KEY = process.env.SESSION_SIGNING_KEY || 'ts-dev-signing-key-change-in-prod-2026';
+// SECURITY: In production, SESSION_SIGNING_KEY MUST be set via environment variable.
+// A hardcoded fallback is only used in development with a loud console warning.
+const SESSION_KEY = process.env.SESSION_SIGNING_KEY || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[SECURITY] ⛔ SESSION_SIGNING_KEY not set in production! Sessions will not persist across restarts.');
+  }
+  // Generate a per-instance random key as fallback (safer than a hardcoded string)
+  return 'dev-' + Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
+})();
 
 async function verifySessionCookie(cookieValue: string): Promise<{ valid: boolean; role: string }> {
   try {
@@ -390,8 +398,12 @@ export async function middleware(req: NextRequest) {
           }
         }
       }
-    } catch {
-      // Verification check failed — fail open for usability
+    } catch (verifyErr) {
+      // SECURITY: Fail CLOSED — verification errors deny access (never fail open)
+      console.error('[SECURITY] Verification check failed — blocking access:', verifyErr);
+      if (!pathname.startsWith('/login') && !pathname.startsWith('/api/auth')) {
+        return NextResponse.redirect(new URL('/login', req.url));
+      }
     }
   }
 

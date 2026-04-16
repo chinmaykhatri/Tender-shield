@@ -65,7 +65,7 @@ async function redirectByVerificationStatus(userEmail: string, router: ReturnTyp
       router.push('/dashboard');
     }
   } catch {
-    // If check fails, go to dashboard (fail open for demo)
+    // If verification check fails, redirect to dashboard (middleware enforces actual auth)
     router.push('/dashboard');
   }
 }

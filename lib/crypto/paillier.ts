@@ -173,16 +173,24 @@ export function addEncrypted(c1: string, c2: string, publicKey: { nSquared: stri
 }
 
 /**
- * Determine L1 (lowest) bid without decryption
- * Uses homomorphic subtraction: E(a-b) = E(a) * E(b)^(-1)
- * If decrypt(E(a-b)) > 0, then a > b
+ * Determine L1 (lowest) bid by server-side decryption and comparison.
+ * 
+ * HONESTY NOTE: This function DECRYPTS all bids and compares plaintext values.
+ * It is NOT a homomorphic comparison. True homomorphic comparison would use:
+ *   - Threshold Paillier with MPC (multi-party computation)
+ *   - No single party sees decrypted values
+ * 
+ * This implementation is suitable for demonstration purposes where the server
+ * is already a trusted party. Production deployment requires threshold decryption
+ * across multiple key holders (e.g., CAG + Ministry + NIC).
  */
 export function compareEncryptedBids(
   encryptedBids: { bidder: string; ciphertext: string }[],
   publicKey: { n: string; nSquared: string; g: string },
   privateKey: { lambda: string; mu: string }
 ): { winner: string; ranking: { bidder: string; rank: number }[] } {
-  // For comparison, we decrypt the differences (in production, this would use MPC)
+  // HONEST: Server-side decryption — not homomorphic comparison
+  // Production: threshold Paillier with MPC across CAG + Ministry + NIC
   const decryptedPairs: { bidder: string; value: number }[] = encryptedBids.map(b => ({
     bidder: b.bidder,
     value: decrypt(b.ciphertext, publicKey, privateKey),

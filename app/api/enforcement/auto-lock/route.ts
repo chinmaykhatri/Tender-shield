@@ -6,16 +6,22 @@ import { logger } from '@/lib/logger';
 import { determineLockLevel, generateTxHash } from '@/lib/enforcement/autoLock';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { requirePermission } from '@/lib/rbac';
+import { NextRequest } from 'next/server';
+import { extractVerifiedRole, extractInternalSystemRole } from '@/lib/auth/extractRole';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request) {
-  // ── RBAC: Only Auditors and Admins can lock tenders ──
-  // Note: auto-lock is called by AI system, so we accept AI_SYSTEM via header
-  const roleHeader = (req as any).headers?.get?.('x-user-role') || 'AI_SYSTEM';
-  // AI_SYSTEM bypasses RBAC (it's the system itself), but human callers need freeze_tender
-  if (roleHeader !== 'AI_SYSTEM') {
-    const denied = requirePermission(roleHeader, 'freeze_tender');
+export async function POST(req: NextRequest) {
+  // ── RBAC: Only AI system (via internal secret) or Auditors/Admins can lock tenders ──
+  // SECURITY: Internal system calls use a shared secret (not a client header)
+  // Human callers are verified via HMAC-signed session cookie
+  const internalRole = extractInternalSystemRole(req);
+  let effectiveRole: string | undefined = internalRole;
+
+  if (!effectiveRole) {
+    // Not an internal call — verify human session
+    effectiveRole = await extractVerifiedRole(req);
+    const denied = requirePermission(effectiveRole, 'freeze_tender');
     if (denied) return denied;
   }
 

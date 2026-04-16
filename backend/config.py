@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "TenderShield"
     APP_VERSION: str = "1.0.0"
     APP_ENV: str = "development"
-    APP_DEBUG: bool = True
+    APP_DEBUG: bool = False  # SECURITY: Never default to True — leaks stack traces in production
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
 

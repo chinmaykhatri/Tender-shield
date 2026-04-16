@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { requirePermission } from '@/lib/rbac';
+import { extractVerifiedRole } from '@/lib/auth/extractRole';
 
 // ═══════════════════════════════════════════════════════════
-// RAG Chat API — OpenAI GPT + Supabase Context
+// RAG Chat API — NVIDIA NIM + OpenAI + Gemini + Template
 // Natural language querying of the procurement database
-// Priority: OpenAI → Gemini → Template fallback
+// Priority: NVIDIA NIM → OpenAI → Gemini → Template fallback
 // ═══════════════════════════════════════════════════════════
 
 export const dynamic = 'force-dynamic';
 
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -59,6 +61,36 @@ async function querySupabaseContext(question: string) {
   }
 
   return context.join('\n\n');
+}
+
+// ── NVIDIA NIM (OpenAI-compatible) ─────────────────────────
+async function callNvidiaNIM(systemPrompt: string, userMessage: string): Promise<string> {
+  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 1024,
+      temperature: 0.3,
+      top_p: 0.7,
+      stream: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`NVIDIA NIM API error: ${res.status} - ${error.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || 'No response generated.';
 }
 
 // ── OpenAI GPT-4o-mini ──────────────────────────────────
@@ -118,20 +150,18 @@ async function callGemini(systemPrompt: string, userMessage: string): Promise<st
 function templateFallback(question: string, context: string): string {
   const q = question.toLowerCase();
   if (q.includes('high risk') || q.includes('risky')) {
-    return `Based on the current database:\n\n${context.split('\n').filter(l => l.includes('Risk:')).join('\n') || 'No risk data available.'}\n\n_Note: AI analyst is in template mode. Set OPENAI_API_KEY or GEMINI_API_KEY for full natural language analysis._`;
+    return `Based on the current database:\n\n${context.split('\n').filter(l => l.includes('Risk:')).join('\n') || 'No risk data available.'}\n\n_Note: AI analyst is in template mode. Set NVIDIA_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY for full natural language analysis._`;
   }
   if (q.includes('flagged') || q.includes('fraud')) {
     return `Flagged items from database:\n\n${context.split('\n').filter(l => l.includes('FLAGGED') || l.includes('FRAUD')).join('\n') || 'No flagged items found.'}\n\n_Template mode active._`;
   }
-  return `Here is the current database context:\n\n${context.slice(0, 800)}\n\n_Set OPENAI_API_KEY or GEMINI_API_KEY for intelligent analysis._`;
+  return `Here is the current database context:\n\n${context.slice(0, 800)}\n\n_Set NVIDIA_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY for intelligent analysis._`;
 }
 
 export async function POST(req: NextRequest) {
   // ── RBAC: Only Officers, Auditors, and Admins can use AI chat ──
-  const cookie = req.cookies.get('tendershield-demo-user');
-  let role: string | undefined;
-  if (cookie?.value) { try { role = JSON.parse(cookie.value).role; } catch { /* */ } }
-  role = role || req.headers.get('x-user-role') || undefined;
+  // SECURITY: Role extracted ONLY from HMAC-signed ts_session cookie (server-verified)
+  const role = await extractVerifiedRole(req);
   const denied = requirePermission(role, 'ai_analyze');
   if (denied) return denied;
 
@@ -164,8 +194,35 @@ RULES:
     let response: string;
     let source: string;
 
-    // Priority: OpenAI → Gemini → Template (with graceful fallback)
-    if (OPENAI_API_KEY) {
+    // Priority: NVIDIA NIM → OpenAI → Gemini → Template (with graceful fallback)
+    if (NVIDIA_API_KEY) {
+      try {
+        response = await callNvidiaNIM(systemPrompt, message);
+        source = 'nvidia-nemotron-ultra-253b';
+      } catch (e: any) {
+        console.warn('[AI Chat] NVIDIA NIM failed, falling back:', e.message?.slice(0, 100));
+        if (OPENAI_API_KEY) {
+          try {
+            response = await callOpenAI(systemPrompt, message);
+            source = 'gpt-4o-mini';
+          } catch {
+            if (GEMINI_API_KEY) {
+              response = await callGemini(systemPrompt, message);
+              source = 'gemini-2.0-flash';
+            } else {
+              response = templateFallback(message, context);
+              source = 'template-engine';
+            }
+          }
+        } else if (GEMINI_API_KEY) {
+          response = await callGemini(systemPrompt, message);
+          source = 'gemini-2.0-flash';
+        } else {
+          response = templateFallback(message, context);
+          source = 'template-engine';
+        }
+      }
+    } else if (OPENAI_API_KEY) {
       try {
         response = await callOpenAI(systemPrompt, message);
         source = 'gpt-4o-mini';
