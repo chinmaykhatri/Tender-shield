@@ -106,7 +106,7 @@ export default function ImpactPage() {
 
   const statCards = [
     { icon: '🏫', value: stats.schools_equivalent, label: 'Schools Equivalent', sub: 'New primary schools that could be built', suffix: '' },
-    { icon: '⛓️', value: stats.blockchain_transactions, label: 'Blockchain TXs', sub: 'Immutable records on Hyperledger Fabric', suffix: '' },
+    { icon: '⛓️', value: stats.blockchain_transactions, label: 'Audit Chain TXs', sub: 'Tamper-evident records on SHA-256 audit chain', suffix: '' },
     { icon: '🏛️', value: stats.ministries_protected, label: 'Ministries Protected', sub: 'Central government ministries monitored', suffix: '' },
     { icon: '⚡', value: stats.avg_detection_seconds, label: 'Detection Speed', sub: 'Average time to detect fraud', suffix: ' sec', decimals: 1 },
     { icon: '🏢', value: stats.shell_companies_caught, label: 'Shell Companies', sub: 'Fake companies identified and flagged', suffix: '' },

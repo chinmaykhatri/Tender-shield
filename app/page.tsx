@@ -207,7 +207,7 @@ export default function LoginPage() {
         <NetworkHero />
         {/* Government of India label */}
         <p style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#666', fontWeight: 500, position: 'relative', zIndex: 2 }}>
-          Government of India · Blockchain India Challenge 2026 · MeitY + C-DAC
+          TenderShield — AI-Powered Government Procurement Platform
         </p>
 
         {/* Main headline */}
@@ -301,7 +301,7 @@ export default function LoginPage() {
             <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.1)' }}>
               <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 700, marginBottom: '8px', letterSpacing: '0.1em' }}>WHAT THIS IS NOT (YET)</div>
               {[
-                'Hyperledger Fabric (arch ready)',
+                'SHA-256 Audit Chain',
                 'Real Aadhaar eKYC',
                 'Live GeM portal connection',
                 'Production government users',

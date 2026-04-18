@@ -21,8 +21,8 @@ interface DemoStep {
 }
 
 const INITIAL_STEPS: DemoStep[] = [
-  { id: 1, icon: '📝', title: 'Officer Creates Tender', description: 'Ministry of Health creates ₹120 Cr medical equipment tender. GFR Rule 149 validated. Recorded on Hyperledger Fabric.', action: 'CreateTender', status: 'pending' },
-  { id: 2, icon: '⛓️', title: 'Recorded on Blockchain', description: 'Tender details hashed (SHA-256) and committed to Fabric ledger with 3-org endorsement (MinistryOrg + NICOrg + CAGOrg).', action: 'RecordBlock', status: 'pending' },
+  { id: 1, icon: '📝', title: 'Officer Creates Tender', description: 'Ministry of Health creates ₹120 Cr medical equipment tender. GFR Rule 149 validated. Recorded on SHA-256 audit chain.', action: 'CreateTender', status: 'pending' },
+  { id: 2, icon: '⛓️', title: 'Recorded on Audit Chain', description: 'Tender details hashed (SHA-256) and committed to tamper-evident audit chain in Supabase.', action: 'RecordBlock', status: 'pending' },
   { id: 3, icon: '🔐', title: 'Bidder A Submits Sealed Bid', description: 'MedTech Solutions submits ₹118.5 Cr via SHA-256 commitment. Amount is cryptographically hidden on-chain: C = SHA-256(amount || randomness).', action: 'SubmitBid', status: 'pending' },
   { id: 4, icon: '🔐', title: 'Bidder B Submits Sealed Bid', description: 'BioMed Corp submits ₹119.2 Cr via SHA-256 commitment. Both bids are on-chain but amounts are invisible to each other.', action: 'SubmitBid2', status: 'pending' },
   { id: 5, icon: '🤖', title: 'AI Fraud Detection Triggers', description: '5 detectors run in parallel: Shell Company, Bid Rigging, Cartel Rotation, Front-Running, Timing Collusion.', action: 'AIDetect', status: 'pending' },
@@ -144,7 +144,7 @@ export default function DemoPage() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.15em', color: '#FF9933', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Blockchain India Challenge 2026 · Live Demonstration
+            TenderShield · Live Fraud Detection Demonstration
           </p>
           <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'white', fontFamily: "'Outfit', 'Rajdhani', sans-serif", marginBottom: '8px' }}>
             🎬 Live Fraud Detection Demo
@@ -268,7 +268,7 @@ export default function DemoPage() {
               🚨 ₹120 Crore Fraud Detected & Prevented in {(totalTime / 1000).toFixed(1)} seconds
             </p>
             <p style={{ fontSize: '13px', color: '#888' }}>
-              AI detected shell company cartel · Tender frozen on Hyperledger Fabric · CAG notified · All evidence recorded on blockchain
+              AI detected shell company cartel · Tender frozen on audit chain · CAG notified · All evidence recorded with SHA-256 hashes
             </p>
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <Link href="/dashboard/tenders/TDR-MoH-2025-000003" style={{

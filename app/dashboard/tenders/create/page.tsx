@@ -271,7 +271,7 @@ export default function CreateTenderPage() {
             <p className="text-[var(--text-secondary)] text-sm">
               {isFrozen
                 ? `AI detected risk score ${summary.risk_score}% — auto-frozen for CAG review`
-                : 'Submitted to Hyperledger Fabric blockchain'}
+                : 'Submitted to SHA-256 audit chain'}
             </p>
           </div>
 
@@ -485,7 +485,7 @@ export default function CreateTenderPage() {
             </div>
             <div className="p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
               <h4 className="text-sm font-semibold mb-2">⛓️ Blockchain Preview</h4>
-              <p className="text-xs text-[var(--text-secondary)]">Transaction will be recorded on Hyperledger Fabric &apos;TenderChannel&apos;</p>
+              <p className="text-xs text-[var(--text-secondary)]">Transaction will be recorded on SHA-256 audit chain</p>
               <p className="text-xs text-[var(--text-secondary)]">Endorsed by: MinistryOrg, AuditorOrg, NICOrg</p>
             </div>
           </div>

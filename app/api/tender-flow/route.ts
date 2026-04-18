@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { validateComplete } from '@/lib/validation/tenderValidation';
 import { requirePermission } from '@/lib/rbac';
 import { extractVerifiedRole } from '@/lib/auth/extractRole';
+import { computeContentHash, documentFingerprint } from '@/lib/crypto/contentHash';
 
 // ============================================================================
 // TenderShield — End-to-End Live Tender Flow
@@ -87,6 +88,34 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // ─── Step 1b: Compute document fingerprint (CIDv1) ───
+    // Generates a tamper-evident hash of the tender specification.
+    // This CID is recorded in the audit chain so anyone can verify
+    // the document was not modified after submission.
+    const tenderSpecPayload = JSON.stringify({
+      tender_id,
+      title: tenderData.title,
+      ministry: tenderData.ministry_code,
+      estimated_value_crore: tenderData.estimated_value_crore,
+      category: tenderData.category,
+      description: tenderData.description,
+      created_at: new Date().toISOString(),
+    });
+    const contentHash = computeContentHash(tenderSpecPayload);
+    const fingerprint = documentFingerprint(tenderSpecPayload);
+
+    results.push({
+      step: 'DOCUMENT_HASH',
+      status: 'SUCCESS',
+      data: {
+        cid: contentHash.cid,
+        sha256: contentHash.sha256,
+        size_bytes: contentHash.sizeBytes,
+        fingerprint,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
     // ─── Step 2: REAL Chaincode Invoke on Fabric Peer ───
     const txHash = generateTxHash(); // fallback hash if peer unavailable
     let peerTxHash = txHash;
@@ -157,6 +186,8 @@ export async function POST(req: NextRequest) {
           fabric_source: chaincodeSource,
           block_number: 1340 + (parseInt(crypto.randomUUID().slice(0, 2), 16) % 100),
           description: `${tenderData.title} created via live demo — ₹${tenderData.estimated_value_crore} Cr`,
+          document_cid: contentHash.cid,
+          document_sha256: contentHash.sha256,
         },
       });
 

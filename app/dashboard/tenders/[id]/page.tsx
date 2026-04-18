@@ -5,11 +5,19 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { getTenderById, getAuditTrail } from '@/lib/dataLayer';
 import { getStatusBadge } from '@/lib/api';
+import { sha256Hex } from '@/lib/zkp';
 import StreamingAnalysis from '@/components/StreamingAnalysis';
 import AgentInvestigation from '@/app/tenders/[id]/AgentInvestigation';
 import PredictiveCartelGraph from '@/components/PredictiveCartelGraph';
 import BlockchainQRCode from '@/components/BlockchainQRCode';
 import GlowStripes from '@/components/GlowStripes';
+
+/** Generate a deterministic integrity hash for tenders missing blockchain_tx */
+function getTenderTxHash(tender: any): string {
+  if (tender.blockchain_tx) return tender.blockchain_tx;
+  // Deterministic: same tender always produces the same hash
+  return '0x' + sha256Hex(`${tender.id}|${tender.ministry_code || tender.ministry || ''}|${tender.title || ''}|${tender.estimated_value_crore || 0}`);
+}
 
 // ═══════════════════════════════════════════════
 // TENDER DETAIL — Competition Demo Page
@@ -128,16 +136,18 @@ export default function TenderDetailPage() {
             )}
           </div>
         </div>
-        {tender.blockchain_tx && (
-          <div style={{ marginTop: '16px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ marginTop: '16px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>⛓️</span>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '10px', color: '#666' }}>Blockchain Transaction</p>
-              <p style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#a5b4fc' }}>{tender.blockchain_tx}</p>
+              <p style={{ fontSize: '10px', color: '#666' }}>
+                {tender.blockchain_tx ? 'Blockchain Transaction' : 'Integrity Hash (SHA-256)'}
+              </p>
+              <p style={{ fontSize: '11px', fontFamily: "'JetBrains Mono', monospace", color: '#a5b4fc' }}>{getTenderTxHash(tender)}</p>
             </div>
-            <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", color: '#666' }}>Block #{tender.block_number}</span>
+            {tender.block_number && (
+              <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", color: '#666' }}>Block #{tender.block_number}</span>
+            )}
           </div>
-        )}
         {ipfsData && (
           <div style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>📎</span>
@@ -350,16 +360,19 @@ export default function TenderDetailPage() {
       {/* ═══ BLOCKCHAIN TAB ═══ */}
       {activeTab === 'blockchain' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* QR Code for verification */}
-          {tender.blockchain_tx && (
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <BlockchainQRCode
-                txHash={tender.blockchain_tx}
-                blockNumber={tender.block_number || 1289}
-                label="Tender Creation — Scan to Verify"
-                tenderId={tender.id || tender.tender_id}
-              />
-            </div>
+          {/* QR Code for verification — always shown, uses computed hash as fallback */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <BlockchainQRCode
+              txHash={getTenderTxHash(tender)}
+              blockNumber={tender.block_number || 0}
+              label={tender.blockchain_tx ? 'Tender Creation — Scan to Verify' : 'Integrity Verification — SHA-256 Hash'}
+              tenderId={tender.id || tender.tender_id}
+            />
+          </div>
+          {!tender.blockchain_tx && (
+            <p style={{ textAlign: 'center', fontSize: '10px', color: '#666', marginTop: '-12px' }}>
+              ℹ️ Hash computed from tender metadata (ID + ministry + title + value)
+            </p>
           )}
 
           {/* Blockchain history from audit trail */}

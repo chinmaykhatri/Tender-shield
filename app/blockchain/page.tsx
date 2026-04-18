@@ -138,7 +138,7 @@ export default function BlockchainExplorer() {
 
               <div className="flex items-center gap-2">
                 <span className="font-semibold">
-                  TenderShield Hyperledger Fabric
+                  TenderShield SHA-256 Audit Chain
                 </span>
 
                 {/* Mode Chip */}
@@ -225,7 +225,7 @@ export default function BlockchainExplorer() {
           {isLive && (
             <div className="mt-3 pt-3 border-t border-green-500/10 flex flex-wrap gap-4 text-xs text-green-300/70">
               <span>📡 gRPC: localhost:7051</span>
-              <span>📜 Channel: tenderchannel</span>
+              <span>📜 Chain: SHA-256 Audit Ledger</span>
               <span>⛓️ Chaincode: tendershield v1.0</span>
               <span>🔐 Mutual TLS: Enabled</span>
               <span>💾 State DB: CouchDB</span>
@@ -391,10 +391,10 @@ export default function BlockchainExplorer() {
         <div className="text-center mt-8">
           <p className="text-sm text-[var(--text-secondary)]">
             {isLive
-              ? '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
+              ? '🔗 All records are tamper-evident and independently verifiable on SHA-256 audit chain'
               : blockchainMode === 'SHA256_AUDIT_LOG'
                 ? '🔐 Records hashed with SHA-256 chained audit log. Connect Fabric for distributed immutability.'
-                : '🔗 All records are immutable and independently verifiable on Hyperledger Fabric'
+                : '🔗 All records are tamper-evident and independently verifiable on SHA-256 audit chain'
             }
           </p>
           <a href="/dashboard" className="text-[var(--accent)] text-sm hover:underline mt-2 inline-block">← Back to Dashboard</a>

@@ -22,13 +22,13 @@ const LAYERS = [
   {
     id: 'blockchain',
     icon: '⛓️',
-    title: 'Hyperledger Fabric Network',
+    title: 'SHA-256 Audit Chain',
     color: '#3b82f6',
     items: [
-      { name: '4-Org Network', detail: 'MinistryOrg, BidderOrg, CAGOrg, AdminOrg', status: 'active' },
-      { name: '8 Peer Nodes', detail: 'Crash-fault tolerant ordering service (Raft)', status: 'active' },
-      { name: 'TenderContract Chaincode', detail: 'Go — manages tender lifecycle + state transitions', status: 'active' },
-      { name: 'Private Data Collections', detail: 'Bid amounts encrypted per-org, only revealed on-chain post-deadline', status: 'active' },
+      { name: 'SHA-256 Hash Chain', detail: 'Tamper-evident audit trail stored in Supabase PostgreSQL', status: 'active' },
+      { name: 'Block Structure', detail: 'Each block contains: dataHash, previousHash, timestamp, transaction', status: 'active' },
+      { name: 'Integrity Verification', detail: 'Chain can be independently verified by recomputing all hashes', status: 'active' },
+      { name: 'Audit Events', detail: 'Every tender action (create, bid, freeze) is chained with SHA-256', status: 'active' },
     ],
   },
   {
@@ -84,7 +84,7 @@ const LAYERS = [
 
 const FLOW_STEPS = [
   { icon: '📝', label: 'Officer creates tender', detail: 'GFR-validated, blockchain-anchored' },
-  { icon: '⛓️', label: 'Recorded on Fabric', detail: 'Immutable, timestamped, 4-org consensus' },
+  { icon: '⛓️', label: 'Recorded on audit chain', detail: 'SHA-256 hashed, timestamped, tamper-evident' },
   { icon: '🔐', label: 'Bidder commits sealed bid', detail: 'SHA-256 commitment — amount hidden on-chain' },
   { icon: '🤖', label: 'AI analyzes in real-time', detail: '5 detectors scan for fraud patterns' },
   { icon: '🚨', label: 'Risk > 85? Auto-freeze', detail: 'AI freezes tender, notifies CAG' },
@@ -92,8 +92,8 @@ const FLOW_STEPS = [
 ];
 
 const TECH_STACK = [
-  { category: 'Blockchain', items: ['Hyperledger Fabric 2.5', 'Raft Consensus', 'Go Chaincode', 'Private Data Collections'] },
-  { category: 'AI/ML', items: ['Claude 3.5 Sonnet', '5 Fraud Detectors', 'Constitutional AI Safety', 'Real-time Analysis'] },
+  { category: 'Audit Chain', items: ['SHA-256 Hash Chain', 'Supabase PostgreSQL', 'Tamper-Evident Blocks', 'Independent Verification'] },
+  { category: 'AI/ML', items: ['NVIDIA NIM (Llama 3.1)', '5 Fraud Detectors', 'Constitutional AI Safety', 'Real-time Analysis'] },
   { category: 'Cryptography', items: ['SHA-256 Commitments', 'Commit-Reveal Protocol', 'Merkle Trees', 'Bid Verification'] },
   { category: 'Backend', items: ['Python FastAPI', 'Supabase PostgreSQL', 'Redis Cache', 'Apache Kafka'] },
   { category: 'Frontend', items: ['Next.js 14', 'React 18', 'TypeScript', 'Vercel Edge'] },
@@ -110,7 +110,7 @@ export default function ArchitecturePage() {
         
         <div style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.15em', color: '#FF9933', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Blockchain India Challenge 2026 · MeitY + C-DAC · e-Procurement Track
+            TenderShield · System Architecture Overview
           </p>
           <h1 style={{ fontSize: '42px', fontWeight: 700, color: 'white', fontFamily: "'Outfit', 'Rajdhani', sans-serif", marginBottom: '8px' }}>
             System Architecture
@@ -231,7 +231,7 @@ export default function ArchitecturePage() {
         {/* Footer */}
         <div style={{ textAlign: 'center', paddingBottom: '40px' }}>
           <p style={{ fontSize: '12px', color: '#555' }}>
-            Built for 🇮🇳 India · Hyperledger Fabric · GFR 2017 Compliant · Aadhaar Act §29 Privacy
+            Built for 🇮🇳 India · SHA-256 Audit Chain · GFR 2017 Compliant · Aadhaar Act §29 Privacy
           </p>
         </div>
       </div>

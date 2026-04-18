@@ -11,8 +11,8 @@ assertEnvironment();
 
 export const metadata: Metadata = {
   title: 'TenderShield — AI-Secured Government Procurement',
-  description: 'India\'s First AI-Secured, Blockchain-Based Government Procurement System. Powered by Hyperledger Fabric, Cryptographic Bid Commitments, and Real-time Fraud Detection.',
-  keywords: ['TenderShield', 'blockchain', 'government procurement', 'fraud detection', 'Hyperledger Fabric', 'bid commitment', 'India', 'GFR 2017'],
+  description: 'India\'s First AI-Secured Government Procurement System. Powered by SHA-256 Audit Chains, Cryptographic Bid Commitments, and Real-time Fraud Detection.',
+  keywords: ['TenderShield', 'procurement', 'government procurement', 'fraud detection', 'SHA-256 audit chain', 'bid commitment', 'India', 'GFR 2017'],
   manifest: '/manifest.json',
   themeColor: '#003f88',
   viewport: {

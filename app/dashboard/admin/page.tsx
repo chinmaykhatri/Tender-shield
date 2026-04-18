@@ -144,7 +144,7 @@ export default function AdminPage() {
   const healthEntries = health ? [
     { label: 'Supabase', ...health.supabase },
     { label: 'AI Engine', ...health.aiEngine },
-    { label: 'Hyperledger Fabric', ...health.fabric },
+    { label: 'SHA-256 Audit Chain', ...health.fabric },
     { label: 'Polygon Anchoring', ...health.polygon },
     { label: 'Frontend (Vercel)', ...health.frontend },
   ] : [];
@@ -164,7 +164,7 @@ export default function AdminPage() {
           <div>
             <p className="font-medium">{DEMO_MODE ? '🟡 MVP SANDBOX' : '✅ LIVE PRODUCTION'}</p>
             <p className="text-xs text-[var(--text-secondary)]">
-              {DEMO_MODE ? 'Blockchain India Challenge 2026 · Pre-loaded procurement data for evaluation' : 'Connected to real Supabase database'}
+              {DEMO_MODE ? 'TenderShield Demo · Pre-loaded procurement data for evaluation' : 'Connected to real Supabase database'}
             </p>
           </div>
         </div>

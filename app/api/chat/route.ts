@@ -16,8 +16,7 @@ const AWS_BEDROCK_ACCESS_KEY = process.env.AWS_BEDROCK_ACCESS_KEY || '';
 const AWS_BEDROCK_SECRET_KEY = process.env.AWS_BEDROCK_SECRET_KEY || '';
 const AWS_BEDROCK_SESSION_KEY = process.env.AWS_BEDROCK_SESSION_KEY || '';
 const AWS_BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || 'eu-north-1';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+// NOTE: GEMINI_API_KEY is read by lib/ai/geminiClient.ts — no need to read it here.
 
 // ── Supabase Context Fetcher ───────────────────────────────
 async function querySupabaseContext(question: string) {
@@ -162,29 +161,17 @@ async function callBedrock(systemPrompt: string, userMessage: string): Promise<s
   }
 }
 
-// ── Gemini fallback ────────────────────────────────────
-async function callGemini(systemPrompt: string, userMessage: string): Promise<string> {
-  const res = await fetch(GEMINI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        { role: 'user', parts: [{ text: `${systemPrompt}\n\nUser Question: ${userMessage}` }] },
-      ],
-      generationConfig: {
-        maxOutputTokens: 1024,
-        temperature: 0.3,
-      },
-    }),
-  });
+// ── Gemini (via universal client) ──────────────────────────
+// Delegated to lib/ai/geminiClient.ts — single shared implementation.
+// See that module for model selection, timeout, and safety filter handling.
+import { callGemini as callGeminiClient, isGeminiAvailable } from '@/lib/ai/geminiClient';
 
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(`Gemini API error: ${res.status} - ${error.slice(0, 200)}`);
+async function callGeminiWrapper(systemPrompt: string, userMessage: string): Promise<string> {
+  const result = await callGeminiClient({ systemPrompt, userMessage });
+  if (!result.success) {
+    throw new Error(result.error || 'Gemini call failed');
   }
-
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+  return result.text;
 }
 
 // ── Template fallback (no API key) ─────────────────────
@@ -248,16 +235,16 @@ RULES:
             source = 'aws-bedrock-claude-3.5-sonnet';
           } catch (e2: any) {
             console.warn('[AI Chat] Bedrock failed:', e2.message?.slice(0, 100));
-            if (GEMINI_API_KEY) {
-              response = await callGemini(systemPrompt, message);
+            if (isGeminiAvailable()) {
+              response = await callGeminiWrapper(systemPrompt, message);
               source = 'gemini-2.0-flash';
             } else {
               response = templateFallback(message, context);
               source = 'template-engine';
             }
           }
-        } else if (GEMINI_API_KEY) {
-          response = await callGemini(systemPrompt, message);
+        } else if (isGeminiAvailable()) {
+          response = await callGeminiWrapper(systemPrompt, message);
           source = 'gemini-2.0-flash';
         } else {
           response = templateFallback(message, context);
@@ -270,16 +257,16 @@ RULES:
         source = 'aws-bedrock-claude-3.5-sonnet';
       } catch (e: any) {
         console.warn('[AI Chat] Bedrock failed:', e.message?.slice(0, 100));
-        if (GEMINI_API_KEY) {
-          response = await callGemini(systemPrompt, message);
+        if (isGeminiAvailable()) {
+          response = await callGeminiWrapper(systemPrompt, message);
           source = 'gemini-2.0-flash';
         } else {
           response = templateFallback(message, context);
           source = 'template-engine';
         }
       }
-    } else if (GEMINI_API_KEY) {
-      response = await callGemini(systemPrompt, message);
+    } else if (isGeminiAvailable()) {
+      response = await callGeminiWrapper(systemPrompt, message);
       source = 'gemini-2.0-flash';
     } else {
       response = templateFallback(message, context);

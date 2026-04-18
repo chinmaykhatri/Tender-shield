@@ -228,7 +228,7 @@ export default function WhistleblowerPage() {
         {/* Footer */}
         <div style={{ marginTop: '40px', textAlign: 'center' }}>
           <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>
-            Evidence is permanently recorded on Hyperledger Fabric • Zero identifying data stored
+            Evidence is permanently recorded on SHA-256 audit chain • Zero identifying data stored
           </p>
         </div>
       </div>

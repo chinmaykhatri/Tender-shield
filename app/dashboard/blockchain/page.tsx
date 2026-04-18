@@ -206,7 +206,7 @@ export default function BlockchainExplorer() {
           fontSize: 11, color: '#94a3b8', lineHeight: 1.6,
         }}>
           <strong style={{ color: '#a5b4fc' }}>🏗️ Architecture:</strong> Running on <strong style={{ color: '#22c55e' }}>SHA-256 hash chain</strong> (FIPS 180-4) backed by Supabase PostgreSQL.
-          {' '}Production target: <strong style={{ color: '#c4b5fd' }}>Hyperledger Fabric 2.5</strong> (requires Docker infrastructure with 4+ containers).
+          {' '}Currently running: <strong style={{ color: '#c4b5fd' }}>SHA-256 audit chain on Supabase PostgreSQL</strong>. Production upgrade path: Hyperledger Fabric 2.5.
           {' '}The cryptographic integrity is identical — both use SHA-256 chained blocks with immutable audit trails.
         </div>
       </div>

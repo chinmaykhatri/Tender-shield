@@ -14,7 +14,7 @@ const PROBLEM_STATS = [
 ];
 
 const SOLUTION_POINTS = [
-  { icon: '⛓️', title: 'Hyperledger Fabric', detail: 'Every tender state change is immutable. 4-org consensus ensures no single point of corruption.' },
+  { icon: '⛓️', title: 'SHA-256 Audit Chain', detail: 'Every tender state change is hashed and chained. Tamper-evident audit trail ensures no single point of corruption.' },
   { icon: '🔐', title: 'Cryptographic Commitments', detail: 'SHA-256 commitment scheme hides bid amounts cryptographically — verified without revealing values until deadline.' },
   { icon: '🤖', title: 'AI Fraud Detection', detail: '5 detectors analyze every bid in <3 seconds. Shell companies, bid rigging, cartel rotation — caught in real-time.' },
   { icon: '❄️', title: 'Auto-Freeze Engine', detail: 'Risk > 85/100 → tender frozen automatically on-chain. No human delay. CAG notified instantly.' },
@@ -29,7 +29,7 @@ const IMPACT_METRICS = [
 
 const DIFFERENTIATORS = [
   { icon: '🇮🇳', text: 'India-first: Aadhaar eKYC, GSTIN, GFR 2017, GeM integration' },
-  { icon: '🔒', text: 'Non-crypto blockchain (Hyperledger) — MeitY compliant' },
+  { icon: '🔒', text: 'SHA-256 hash chain audit trail — tamper-evident, verifiable' },
   { icon: '🧠', text: 'Constitutional AI with safety logging — no hallucinated accusations' },
   { icon: '📋', text: 'GFR Rule 149/166 auto-validation on every tender' },
   { icon: '🌍', text: 'Works offline-first with sync — for rural government offices' },
@@ -44,8 +44,8 @@ export default function PitchPage() {
         {/* Title */}
         <div style={{ textAlign: 'center', marginBottom: '48px', paddingTop: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '16px' }}>
-            <span style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: 'rgba(255,153,51,0.1)', color: '#FF9933' }}>MeitY + C-DAC</span>
-            <span style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>e-Procurement Track</span>
+            <span style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: 'rgba(255,153,51,0.1)', color: '#FF9933' }}>Open Source</span>
+            <span style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>AI + Cryptographic Audit</span>
           </div>
           <h1 style={{ fontSize: '52px', fontWeight: 700, color: 'white', fontFamily: "'Outfit', 'Rajdhani', sans-serif", lineHeight: 1.1 }}>
             <span style={{ color: '#FF9933' }}>Tender</span>Shield
@@ -54,7 +54,7 @@ export default function PitchPage() {
             AI + Blockchain = Zero Fraud in Government Procurement
           </p>
           <p style={{ fontSize: '13px', color: '#555', marginTop: '8px' }}>
-            Blockchain India Challenge 2026 · MVP Submission
+            TenderShield · MVP Demonstration
           </p>
         </div>
 
@@ -176,7 +176,7 @@ export default function PitchPage() {
         {/* Footer */}
         <div style={{ textAlign: 'center', paddingBottom: '40px' }}>
           <p style={{ fontSize: '12px', color: '#555' }}>
-            Built for 🇮🇳 India · Hyperledger Fabric · GFR 2017 Compliant · Aadhaar Act §29 Privacy · Constitutional AI Safety
+            Built for 🇮🇳 India · SHA-256 Audit Chain · GFR 2017 Compliant · Aadhaar Act §29 Privacy · Constitutional AI Safety
           </p>
         </div>
       </div>

@@ -31,8 +31,8 @@ const TOUR_STEPS: TourStep[] = [
     apiEndpoint: '/api/health', status: 'pending',
   },
   {
-    id: 2, category: 'BLOCKCHAIN', icon: '⛓️', title: 'Fabric Network — 2-Org Consensus',
-    description: 'Query live blockchain. Verify both MinistryOrg + NICOrg peers are RUNNING with synced ledger height',
+    id: 2, category: 'BLOCKCHAIN', icon: '⛓️', title: 'SHA-256 Audit Chain — Tamper-Evident Ledger',
+    description: 'Query the audit chain. Verify blocks are hash-linked (SHA-256) with tamper-evident integrity checks.',
     apiEndpoint: '/api/blockchain', status: 'pending',
   },
   {
@@ -56,13 +56,13 @@ const TOUR_STEPS: TourStep[] = [
     apiEndpoint: '/api/zkp-verify', status: 'pending',
   },
   {
-    id: 7, category: 'BLOCKCHAIN', icon: '🔗', title: 'Chaincode Invoke — CreateTender',
-    description: 'Invoke Go chaincode on Fabric with 2-org endorsement policy: AND(MinistryOrgMSP.peer, NICOrgMSP.peer)',
+    id: 7, category: 'BLOCKCHAIN', icon: '🔗', title: 'SHA-256 Audit Chain — Record Tender',
+    description: 'Record tender data on SHA-256 audit chain: hash(data + previousHash) creates tamper-evident block.',
     apiEndpoint: '/api/chaincode-invoke', status: 'pending',
   },
   {
-    id: 8, category: 'AI', icon: '🧠', title: 'AI Analysis (Claude + Fallback)',
-    description: 'Claude API analyzes tender for fraud patterns. Falls back to deterministic engine if API unavailable',
+    id: 8, category: 'AI', icon: '🧠', title: 'AI Analysis (NVIDIA NIM + Fallback)',
+    description: 'NVIDIA NIM (Llama 3.1 Nemotron Ultra) analyzes tender for fraud patterns. Falls back to deterministic engine if API unavailable.',
     apiEndpoint: '/api/ai-analyze', status: 'pending',
   },
 ];
@@ -109,7 +109,7 @@ async function executeStep(step: TourStep): Promise<{ result: string; proof: Rec
           ministry_code: 'MoHFW',
           estimated_value_crore: 175,
           category: 'GOODS',
-          description: 'Live demo for Blockchain India Challenge judges',
+          description: 'Live demo for TenderShield evaluation judges',
         }),
       });
       const data = await res.json();

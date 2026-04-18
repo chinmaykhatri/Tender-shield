@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import { FEATURES } from '@/lib/features';
 import { useRealtimeAlerts } from '@/lib/useRealtimeAlerts';
 import { canAccessRoute, type Role } from '@/lib/rbac';
 import LanguageToggle, { useTranslation } from '@/components/LanguageToggle';
+import ServiceHealthWidget from '@/components/ServiceHealthWidget';
 import {
   LayoutDashboard, FileText, FilePlus, Package, Lock, Link2,
   Brain, AlertTriangle, Cpu, MessageSquare, TrendingUp,
@@ -182,22 +183,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => { setMounted(true); }, []);
 
-  // â”€â”€ BACKEND WARMUP: Wake Render free-tier on dashboard load â”€â”€
-  const [backendStatus, setBackendStatus] = useState<'unknown' | 'online' | 'waking' | 'offline'>('unknown');
-  useEffect(() => {
-    const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'https://tendershield-api.onrender.com';
-    setBackendStatus('waking');
-    // Try /health first, fall back to root endpoint
-    fetch(`${BACKEND_URL}/health`, { signal: AbortSignal.timeout(15_000) })
-      .then(r => { if (r.ok) setBackendStatus('online'); else return fetch(BACKEND_URL, { signal: AbortSignal.timeout(10_000) }); })
-      .then(r => { if (r && r.ok) setBackendStatus('online'); })
-      .catch(() => setBackendStatus('offline'));
-  }, []);
+  // NOTE: Backend health probing moved to ServiceHealthWidget component
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  // ——————————————————————————————————————————————————————
   // AUTH GUARD: Wait for hydration, then check auth
   // Uses refs to avoid dependency-triggered infinite loops
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——————————————————————————————————————————————————————
   useEffect(() => {
     if (!mounted) return;
     // Check session expiry
@@ -402,23 +394,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <LanguageToggle />
           </div>
 
-          {/* Backend Status Indicator */}
-          <div className="mb-2 px-2 py-1.5 rounded-lg flex items-center gap-2 justify-center"
-            style={{
-              background: backendStatus === 'online' ? 'rgba(34,197,94,0.08)' : backendStatus === 'waking' ? 'rgba(234,179,8,0.08)' : 'rgba(239,68,68,0.08)',
-              border: `1px solid ${backendStatus === 'online' ? 'rgba(34,197,94,0.15)' : backendStatus === 'waking' ? 'rgba(234,179,8,0.15)' : 'rgba(239,68,68,0.15)'}`,
-            }}>
-            <span style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
-              animation: backendStatus === 'waking' ? 'pulse 1.5s infinite' : undefined,
-            }} />
-            <span className="text-[11px] font-medium" style={{
-              color: backendStatus === 'online' ? '#4ade80' : backendStatus === 'waking' ? '#facc15' : '#f87171',
-            }}>
-              {backendStatus === 'online' ? 'Backend Online' : backendStatus === 'waking' ? 'Backend Wakingâ€¦' : backendStatus === 'offline' ? 'Backend Offline' : ''}
-            </span>
-          </div>
+          {/* Granular Service Health Indicator */}
+          <ServiceHealthWidget />
 
           <button onClick={handleLogout}
             className="w-full text-sm text-[var(--text-secondary)] hover:text-red-400 py-2 rounded-lg hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">

@@ -63,7 +63,7 @@ export default function PolicyPage() {
           <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>🏛️ Approval Path</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {[
-              { step: 1, label: 'MeitY Recommendation', desc: 'Based on Blockchain India Challenge results', status: 'IN_PROGRESS' },
+              { step: 1, label: 'Platform Evaluation', desc: 'Based on TenderShield pilot results', status: 'IN_PROGRESS' },
               { step: 2, label: 'Finance Ministry Approval', desc: 'Budget allocation and policy clearance', status: 'PENDING' },
               { step: 3, label: 'GFR 2017 Amendment', desc: 'Rule 144 amendment for mandatory AI assessment', status: 'PENDING' },
               { step: 4, label: 'NIC Deployment', desc: 'Integration with existing NIC procurement platforms', status: 'PENDING' },

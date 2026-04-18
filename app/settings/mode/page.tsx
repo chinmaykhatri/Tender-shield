@@ -20,10 +20,10 @@ const SERVICE_META: Record<string, { icon: string; name: string; demoDesc: strin
   aadhaar: { icon: '🪪', name: 'Aadhaar eKYC', demoDesc: 'OTP = 123456', realDesc: 'Real UIDAI OTP', keyNeeded: 'SUREPASS_API_TOKEN', getFrom: 'surepass.io' },
   gstin: { icon: '🏢', name: 'GSTIN Verification', demoDesc: 'Pre-loaded companies', realDesc: 'Real GST database', keyNeeded: 'API_SETU_KEY', getFrom: 'apisetu.gov.in' },
   pan: { icon: '💳', name: 'PAN Verification', demoDesc: 'Pre-loaded PANs', realDesc: 'Real Income Tax DB', keyNeeded: 'API_SETU_KEY', getFrom: 'apisetu.gov.in' },
-  claude: { icon: '🤖', name: 'Claude AI Analysis', demoDesc: 'Pre-scripted analysis', realDesc: 'Real fraud analysis', keyNeeded: 'ANTHROPIC_API_KEY', getFrom: 'console.anthropic.com' },
+  claude: { icon: '🤖', name: 'AI Analysis (NIM/Gemini)', demoDesc: 'Pre-scripted analysis', realDesc: 'Real fraud analysis', keyNeeded: 'OPENAI_API_KEY', getFrom: 'build.nvidia.com' },
   whatsapp: { icon: '📱', name: 'WhatsApp Alerts', demoDesc: 'Logged, not sent', realDesc: 'Live WhatsApp messages', keyNeeded: 'TWILIO_*', getFrom: 'twilio.com' },
   email: { icon: '📧', name: 'Email Notifications', demoDesc: 'Logged, not sent', realDesc: 'Live emails', keyNeeded: 'RESEND_API_KEY', getFrom: 'resend.com' },
-  blockchain: { icon: '⛓', name: 'Blockchain', demoDesc: 'Mock TX hashes', realDesc: 'Fabric ledger', keyNeeded: 'FABRIC_CONNECTION_PROFILE', getFrom: 'hyperledger.org' },
+  blockchain: { icon: '⛓', name: 'SHA-256 Audit Chain', demoDesc: 'SHA-256 hashing active', realDesc: 'Tamper-evident audit trail', keyNeeded: 'SUPABASE_URL', getFrom: 'supabase.com' },
   supabase: { icon: '🗄', name: 'Supabase Database', demoDesc: 'Mock data', realDesc: 'Real database', keyNeeded: 'SUPABASE_URL', getFrom: 'supabase.com' },
 };
 
@@ -68,7 +68,7 @@ export default function ModeStatusPage() {
           }}>
             {mode.overall === 'REAL' ? '✅ FULL PRODUCTION MODE — All services connected' :
              mode.overall === 'PARTIAL' ? `🔵 PARTIAL MODE — ${realCount}/${totalCount} services real` :
-             '🟢 MVP SANDBOX — Blockchain India Challenge 2026 · All features operational'}
+             '🟢 MVP SANDBOX — TenderShield Demo · All features operational'}
           </p>
         </div>
 

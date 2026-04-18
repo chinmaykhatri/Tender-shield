@@ -59,7 +59,7 @@ export default function Error({
           {isNetwork ?
             'Unable to reach the server. Your data is safe on-chain. Check your connection and retry.' :
            isFabric ?
-            'The Hyperledger Fabric network is not responding. Supabase audit trail is being used as fallback.' :
+            'The SHA-256 audit chain API is not responding. Local audit trail is being used as fallback.' :
            isAI ?
             'The AI fraud detection engine encountered an error. Deterministic analysis is available as fallback.' :
             'An unexpected error occurred. Your progress has been saved.'}

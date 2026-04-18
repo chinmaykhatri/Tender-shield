@@ -31,7 +31,7 @@ export async function GET() {
       tenders: [
         { method: 'GET', path: '/api/v1/tenders', auth: true, description: 'List all tenders with filters' },
         { method: 'GET', path: '/api/v1/tenders/:id', auth: true, description: 'Get tender by ID' },
-        { method: 'POST', path: '/api/v1/tenders', auth: true, description: 'Create new tender (OFFICER role)', roles: ['OFFICER'] },
+        { method: 'POST', path: '/api/v1/tenders', auth: true, description: 'Create new tender with CIDv1 document hash (OFFICER role)', roles: ['OFFICER'] },
       ],
       bids: [
         { method: 'POST', path: '/api/v1/bids/commit', auth: true, description: 'Commit sealed bid (SHA-256 commitment)' },
@@ -49,8 +49,12 @@ export async function GET() {
         { method: 'GET', path: '/api/ai/judge-simulator', auth: true, description: 'Judge readiness score' },
       ],
       blockchain: [
-        { method: 'GET', path: '/api/blockchain/blocks', auth: true, description: 'List recent blocks' },
-        { method: 'POST', path: '/api/blockchain/submit', auth: true, description: 'Submit audit event to chain' },
+        { method: 'GET', path: '/api/blockchain/blocks', auth: true, description: 'List recent SHA-256 audit chain blocks' },
+        { method: 'POST', path: '/api/blockchain/submit', auth: true, description: 'Submit audit event to SHA-256 hash chain' },
+      ],
+      document_integrity: [
+        { method: 'INTERNAL', path: 'lib/crypto/contentHash.ts', auth: false, description: 'CIDv1-compatible SHA-256 document fingerprinting (no IPFS node required)' },
+        { method: 'POST', path: '/api/tender-flow', auth: true, description: 'End-to-end tender creation with auto document hashing, AI analysis, and audit chain recording' },
       ],
       enforcement: [
         { method: 'POST', path: '/api/enforcement/auto-lock', auth: true, description: 'AI-triggered tender freeze', roles: ['AI_SYSTEM'] },

@@ -292,7 +292,7 @@ export default function ProcurementLifecyclePage() {
           {/* Phase 1: Create Tender */}
           {!tender && (
             <PhaseCard title="Phase 1 — Create Tender" icon="📝" color="#6366f1"
-              description="Officer creates a new tender. Details are recorded on Hyperledger Fabric with 2-org endorsement.">
+              description="Officer creates a new tender. Details are recorded on SHA-256 audit chain with tamper-evident hashing.">
               <button onClick={createTender} disabled={loading} style={btnStyle('#6366f1', loading)}>
                 {loading && currentAction === 'create' ? '⏳ Creating...' : '📝 Create Tender'}
               </button>

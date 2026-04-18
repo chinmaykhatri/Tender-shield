@@ -222,7 +222,7 @@ export default function TransparencyPortal() {
         {/* Footer */}
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
           <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
-            Data updated in real-time from Hyperledger Fabric • All actions verified on blockchain
+            Data updated in real-time from SHA-256 audit chain • All actions verified with cryptographic hashes
           </p>
           <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '4px' }}>
             TenderShield — Government of India | Powered by AI + Blockchain
