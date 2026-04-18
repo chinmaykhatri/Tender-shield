@@ -130,14 +130,18 @@ export default function LoginPage() {
       setTransitionRole({ name: name || email.split('@')[0] || 'Dashboard', color: '#6366f1' });
       setTransitionVisible(true);
       if (isSignUp) {
+        // Sign-up: Create Supabase account, then redirect to verification
         const res = await register(email, password, name, role);
         storeLogin(res.access_token, res.role, res.org, res.name || name || email.split('@')[0]);
         await new Promise(r => setTimeout(r, 800));
+        // Redirect to full verification flow (Aadhaar, Gov ID, etc.)
         router.push('/register');
       } else {
+        // Sign-in: Authenticate with Supabase, then check verification status
         const res = await login(email, password);
         storeLogin(res.access_token, res.role, res.org, res.name);
         await new Promise(r => setTimeout(r, 800));
+        // Redirect based on verification status (pending → verify-pending, etc.)
         await redirectByVerificationStatus(email, router);
       }
     } catch (err: unknown) {
@@ -149,46 +153,60 @@ export default function LoginPage() {
     }
   };
 
+  // Safety timeout: auto-hide transition if login hangs
+  useEffect(() => {
+    if (!transitionVisible) return;
+    const t = setTimeout(() => {
+      setTransitionVisible(false);
+      setLoading(false);
+      setTypingRole('');
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [transitionVisible]);
+
   // Quick-login for demo shortcut buttons
+  // Uses /api/auth/validate directly — works in BOTH demo and production mode
   const demoQuickLogin = async (cred: typeof DEMO_CREDENTIALS[0]) => {
     setTypingRole(cred.role);
     setError('');
-
-    if (DEMO_MODE) {
-      const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
-      storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
-      setTransitionRole({ name: cred.label, color: cred.color });
-      setTransitionVisible(true);
-      const timeout = new Promise(r => setTimeout(r, 3000));
-      await Promise.race([
-        validateWithServer(cred.email).catch(() => {}),
-        timeout,
-      ]);
-      await new Promise(r => setTimeout(r, 400));
-      router.push('/dashboard');
-      return;
-    }
-
-    // Production mode: Show cinematic transition immediately, then authenticate
     setTransitionRole({ name: cred.label, color: cred.color });
     setTransitionVisible(true);
     setLoading(true);
 
-    // The demo accounts use a standardized password in Supabase
-    const DEMO_PASSWORD = 'TenderShield@2025';
-
     try {
-      const res = await login(cred.email, DEMO_PASSWORD);
-      storeLogin(res.access_token, res.role, res.org, res.name);
-      // Brief pause so animation feels intentional
+      const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
+      // Authenticate via /api/auth/validate (has hardcoded demo accounts)
+      const res = await fetch('/api/auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cred.email, role: r, token: 'demo-token-' + Date.now() }),
+      });
+      const data = await res.json();
+
+      if (data.valid && data.user) {
+        storeLogin(
+          data.token || 'demo-token-' + Date.now(),
+          data.user.role || r,
+          data.user.org || cred.org,
+          data.user.name || cred.name,
+          data.expiresAt
+        );
+        // Brief pause so animation feels intentional
+        await new Promise(r => setTimeout(r, 1200));
+        router.push('/dashboard');
+      } else {
+        // Fallback: set local auth and redirect anyway
+        storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
+        await validateWithServer(cred.email).catch(() => {});
+        await new Promise(r => setTimeout(r, 800));
+        router.push('/dashboard');
+      }
+    } catch {
+      // Network error fallback: set demo auth locally
+      const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
+      storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
       await new Promise(r => setTimeout(r, 800));
-      await redirectByVerificationStatus(cred.email, router);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Login failed';
-      setError(message);
-      setTransitionVisible(false);
-      setLoading(false);
-      setTypingRole('');
+      router.push('/dashboard');
     }
   };
 

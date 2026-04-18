@@ -81,6 +81,9 @@ const PUBLIC_ROUTES = [
   '/registration-rejected',
   '/architecture',
   '/demo',
+  '/playground',
+  '/pitch',
+  '/roadmap',
 ];
 
 // API routes that do NOT need authentication

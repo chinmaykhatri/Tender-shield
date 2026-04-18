@@ -86,21 +86,10 @@ export async function POST(request: NextRequest) {
     }
     const { token, email, password, role } = parsed.data;
 
-    // ── Demo Mode Validation ─────────────────────────────────────
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      if (!email) {
-        return NextResponse.json({ valid: false, error: 'Email required' }, { status: 400 });
-      }
-
+    // ── Demo Account Validation (works in ALL modes) ───────────
+    // Demo accounts are always available for competition/demo purposes
+    if (email && DEMO_ACCOUNTS[email]) {
       const account = DEMO_ACCOUNTS[email];
-      if (!account) {
-        // NEVER leak which accounts exist
-        await logSecurityEvent('AUTH_LOGIN_FAILED', ip, { email, message: 'Unknown account' });
-        return NextResponse.json(
-          { valid: false, error: 'Invalid credentials' },
-          { status: 401 }
-        );
-      }
 
       // Verify password with constant-time comparison if provided
       if (password) {
@@ -150,7 +139,7 @@ export async function POST(request: NextRequest) {
         sessionExpiresAt: session.expiresAt,
       });
 
-      await logSecurityEvent('AUTH_LOGIN_SUCCESS', ip, { email });
+      await logSecurityEvent('AUTH_LOGIN_SUCCESS', ip, { email, message: 'demo account' });
 
       const response = NextResponse.json({
         valid: true,
