@@ -126,26 +126,30 @@ export default function LoginPage() {
         router.push('/dashboard');
         return;
       }
+      // Show cinematic transition for all logins
+      setTransitionRole({ name: name || email.split('@')[0] || 'Dashboard', color: '#6366f1' });
+      setTransitionVisible(true);
       if (isSignUp) {
         const res = await register(email, password, name, role);
         storeLogin(res.access_token, res.role, res.org, res.name || name || email.split('@')[0]);
-        // New users need to complete verification
+        await new Promise(r => setTimeout(r, 800));
         router.push('/register');
       } else {
         const res = await login(email, password);
         storeLogin(res.access_token, res.role, res.org, res.name);
-        // Check verification status for real users
+        await new Promise(r => setTimeout(r, 800));
         await redirectByVerificationStatus(email, router);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong';
       setError(message);
+      setTransitionVisible(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Typing animation for demo login
+  // Quick-login for demo shortcut buttons
   const demoQuickLogin = async (cred: typeof DEMO_CREDENTIALS[0]) => {
     setTypingRole(cred.role);
     setError('');
@@ -153,55 +157,39 @@ export default function LoginPage() {
     if (DEMO_MODE) {
       const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
       storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
-
-      // Show cinematic transition immediately — user sees animation, not a blank wait
       setTransitionRole({ name: cred.label, color: cred.color });
       setTransitionVisible(true);
-
-      // Race: server validation (sets HMAC cookie) vs 3s timeout.
-      // If Vercel cold-starts the function, we don't block forever —
-      // middleware allows demo access via client-side auth as fallback.
       const timeout = new Promise(r => setTimeout(r, 3000));
       await Promise.race([
         validateWithServer(cred.email).catch(() => {}),
         timeout,
       ]);
-
-      // Brief pause so animation transition feels intentional
       await new Promise(r => setTimeout(r, 400));
       router.push('/dashboard');
       return;
     }
 
-    // Demo password — fetched server-side during auth, not exposed in client bundle
-    const demoPass = '••••••••';
+    // Production mode: Show cinematic transition immediately, then authenticate
+    setTransitionRole({ name: cred.label, color: cred.color });
+    setTransitionVisible(true);
+    setLoading(true);
 
-    // Real mode: typing animation
-    setEmail('');
-    setPassword('');
-    for (let i = 0; i <= cred.email.length; i++) {
-      await new Promise(r => setTimeout(r, 30));
-      setEmail(cred.email.slice(0, i));
+    // The demo accounts use a standardized password in Supabase
+    const DEMO_PASSWORD = 'TenderShield@2025';
+
+    try {
+      const res = await login(cred.email, DEMO_PASSWORD);
+      storeLogin(res.access_token, res.role, res.org, res.name);
+      // Brief pause so animation feels intentional
+      await new Promise(r => setTimeout(r, 800));
+      await redirectByVerificationStatus(cred.email, router);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
+      setTransitionVisible(false);
+      setLoading(false);
+      setTypingRole('');
     }
-    for (let i = 0; i <= demoPass.length; i++) {
-      await new Promise(r => setTimeout(r, 25));
-      setPassword(demoPass.slice(0, i));
-    }
-    // Auto-submit after delay
-    setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await login(cred.email, demoPass);
-        storeLogin(res.access_token, res.role, res.org, res.name);
-        // Demo credentials bypass verification
-        await redirectByVerificationStatus(cred.email, router);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Login failed';
-        setError(message);
-        setLoading(false);
-        setTypingRole('');
-      }
-    }, 500);
   };
 
   return (
