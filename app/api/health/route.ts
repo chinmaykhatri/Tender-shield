@@ -52,9 +52,9 @@ async function checkBackend(): Promise<HealthCheck> {
 }
 
 function checkAI(): HealthCheck {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return { status: 'degraded', message: 'No API key — using demo mode' };
-  return { status: 'ok', message: 'Claude API configured' };
+  const nimKey = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY;
+  if (!nimKey) return { status: 'degraded', message: 'No API key — using demo mode' };
+  return { status: 'ok', message: 'NVIDIA NIM configured' };
 }
 
 const startTime = Date.now();

@@ -28,7 +28,7 @@ export function getAppMode(): ModeStatus {
     aadhaar: !!process.env.SUREPASS_API_TOKEN,
     gstin: !!process.env.API_SETU_KEY,
     pan: !!process.env.API_SETU_KEY,
-    claude: !!process.env.ANTHROPIC_API_KEY,
+    claude: !!(process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY || process.env.ANTHROPIC_API_KEY),
     whatsapp: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
     email: !!process.env.RESEND_API_KEY,
     blockchain: !!process.env.FABRIC_CONNECTION_PROFILE,
@@ -38,7 +38,7 @@ export function getAppMode(): ModeStatus {
   const missingKeys: string[] = [];
   if (!keys.aadhaar) missingKeys.push('SUREPASS_API_TOKEN');
   if (!keys.gstin) missingKeys.push('API_SETU_KEY');
-  if (!keys.claude) missingKeys.push('ANTHROPIC_API_KEY');
+  if (!keys.claude) missingKeys.push('OPENAI_API_KEY / NVIDIA_API_KEY');
   if (!keys.whatsapp) missingKeys.push('TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN');
   if (!keys.email) missingKeys.push('RESEND_API_KEY');
   if (!keys.blockchain) missingKeys.push('FABRIC_CONNECTION_PROFILE');

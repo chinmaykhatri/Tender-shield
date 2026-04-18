@@ -26,18 +26,18 @@ export default function SettingsPage() {
   }, []);
 
   const features = [
-    { id: 'F1', name: 'AI Document Scanner', api: 'anthropic', icon: '📄' },
+    { id: 'F1', name: 'AI Document Scanner', api: 'nvidia-nim', icon: '📄' },
     { id: 'F2', name: 'WhatsApp Alerts', api: 'twilio', icon: '📱' },
     { id: 'F3', name: 'Email Notifications', api: 'resend', icon: '📧' },
     { id: 'F4', name: 'India Fraud Heatmap', api: 'mapbox', icon: '🗺️' },
-    { id: 'F5', name: 'Voice Audit Assistant', api: 'anthropic', icon: '🎤' },
+    { id: 'F5', name: 'Voice Audit Assistant', api: 'nvidia-nim', icon: '🎤' },
     { id: 'F6', name: 'Push Notifications', api: 'onesignal', icon: '🔔' },
-    { id: 'F7', name: 'AI Bid Price Predictor', api: 'anthropic', icon: '🤖' },
-    { id: 'F8', name: 'CAG Audit Reports', api: 'anthropic', icon: '📊' },
-    { id: 'F9', name: 'Natural Language Queries', api: 'anthropic', icon: '💬' },
+    { id: 'F7', name: 'AI Bid Price Predictor', api: 'nvidia-nim', icon: '🤖' },
+    { id: 'F8', name: 'CAG Audit Reports', api: 'nvidia-nim', icon: '📊' },
+    { id: 'F9', name: 'Natural Language Queries', api: 'nvidia-nim', icon: '💬' },
     { id: 'F10', name: 'Bidder Reputation Score', api: null, icon: '🏢' },
     { id: 'F11', name: 'Cartel Evolution Timeline', api: null, icon: '🕸️' },
-    { id: 'F12', name: 'Predictive Fraud Prevention', api: 'anthropic', icon: '🔮' },
+    { id: 'F12', name: 'Predictive Fraud Prevention', api: 'nvidia-nim', icon: '🔮' },
     { id: 'F13', name: 'Ministry Scorecard', api: null, icon: '🏛️' },
     { id: 'F14', name: 'Commitment Verification Portal', api: null, icon: '🔐' },
     { id: 'F15', name: 'RTI Citizen Portal', api: null, icon: '🇮🇳' },
@@ -50,10 +50,8 @@ export default function SettingsPage() {
 
   const getFeatureStatus = (api: string | null) => {
     if (!api) return { status: 'active', color: '#22c55e', label: '✅ Active' };
-    const isDemo = status?.demo_mode;
-    if (isDemo) return { status: 'demo', color: '#f59e0b', label: '📌 Demo Mode' };
     const configured = status?.services?.[api]?.configured;
-    if (configured) return { status: 'active', color: '#22c55e', label: '✅ Active' };
+    if (configured) return { status: 'active', color: '#22c55e', label: '✅ Live' };
     return { status: 'inactive', color: '#dc2626', label: '❌ Needs API Key' };
   };
 
@@ -82,7 +80,7 @@ export default function SettingsPage() {
                 <tr className="bg-[var(--bg-secondary)]">
                   <th className="p-3 text-left text-[10px] font-medium text-[var(--text-secondary)] uppercase">#</th>
                   <th className="p-3 text-left text-[10px] font-medium text-[var(--text-secondary)] uppercase">Feature</th>
-                  <th className="p-3 text-left text-[10px] font-medium text-[var(--text-secondary)] uppercase">API</th>
+                  <th className="p-3 text-left text-[10px] font-medium text-[var(--text-secondary)] uppercase">Provider</th>
                   <th className="p-3 text-left text-[10px] font-medium text-[var(--text-secondary)] uppercase">Status</th>
                 </tr>
               </thead>
@@ -93,7 +91,7 @@ export default function SettingsPage() {
                     <tr key={f.id} className="border-t border-[var(--border-subtle)]">
                       <td className="p-3 text-xs font-mono">{f.id}</td>
                       <td className="p-3 text-xs">{f.icon} {f.name}</td>
-                      <td className="p-3 text-xs font-mono text-[var(--text-secondary)]">{f.api || 'None'}</td>
+                      <td className="p-3 text-xs font-mono text-[var(--text-secondary)]">{f.api || 'Built-in'}</td>
                       <td className="p-3"><span className="text-xs" style={{ color: s.color }}>{s.label}</span></td>
                     </tr>
                   );
@@ -112,6 +110,7 @@ export default function SettingsPage() {
               { label: 'Row Level Security (RLS)', status: '✅ Configured', detail: 'Supabase RLS policies for all tables' },
               { label: 'Role-Based Access', status: '✅ Active', detail: '4 roles: Officer, Bidder, Auditor, Admin' },
               { label: 'GSTIN / PAN / Aadhaar Validation', status: '✅ Active', detail: 'Registration validation with Verhoeff check' },
+              { label: 'AI Provider', status: '✅ NVIDIA NIM', detail: 'Llama 3.1 Nemotron Ultra 253B via OpenAI-compatible API' },
             ].map(item => (
               <div key={item.label} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-secondary)]">
                 <span className="text-sm">{item.status}</span>

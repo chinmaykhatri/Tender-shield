@@ -1,6 +1,6 @@
 // FILE: app/api/ai/analyze/route.ts
 // SECURITY: SERVER ONLY
-// API KEYS USED: ANTHROPIC_API_KEY
+// API KEYS USED: NVIDIA NIM (via protectedClaudeCall → nimClient)
 // PURPOSE: Structured fraud analysis — returns guaranteed valid JSON FraudAnalysis, never crashes
 
 import { logger } from '@/lib/logger';
@@ -10,9 +10,9 @@ import { safeParseClaudeJSON } from '@/lib/ai/safeParser';
 import { FALLBACK_ANALYSIS, TenderData } from '@/lib/types/fraud';
 import { protectedClaudeCall } from '@/lib/ai/protectedClaudeCall';
 import { aiLimiter } from '@/lib/rateLimit';
+import { isNIMAvailable } from '@/lib/ai/nimClient';
 import { z } from 'zod';
 
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const NVIDIA_API_KEY = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY || '';
 const NVIDIA_BASE_URL = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
 
@@ -140,39 +140,41 @@ ${tenderData.bids.map((b, i) =>
 
 Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze submission timestamps. Check for front-running against the ₹${tenderData.value_crore} Cr estimate.`;
 
-    if (!ANTHROPIC_KEY || ANTHROPIC_KEY === 'bedrock-managed') {
-      // Try NVIDIA NIM (OpenAI-compatible) before falling back to demo
-      if (NVIDIA_API_KEY && !NVIDIA_API_KEY.startsWith('sk-placeholder')) {
-        try {
-          const nimRes = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${NVIDIA_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
-              messages: [
-                { role: 'system', content: STRUCTURE_PROMPT },
-                { role: 'user', content: userPrompt },
-              ],
-              max_tokens: 1024,
-              temperature: 0.3,
-              stream: false,
-            }),
-          });
-          if (nimRes.ok) {
-            const nimData = await nimRes.json();
-            const rawText = nimData.choices?.[0]?.message?.content || '';
-            const analysis = safeParseClaudeJSON(rawText);
-            analysis.detection_time_seconds = (Date.now() - startTime) / 1000;
-            logger.info('[TenderShield] NVIDIA NIM fraud analysis complete:', { tender: tenderData.tender_id, risk_score: analysis.risk_score });
-            return NextResponse.json({ ...analysis, _meta: { model_used: 'NVIDIA NIM (Llama 3.1 Nemotron Ultra 253B)', detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
-          }
-        } catch (nimErr) {
-          logger.warn('[TenderShield] NVIDIA NIM call failed, falling back to demo:', nimErr);
+    // ── NVIDIA NIM (primary AI path) ──────────────────────────
+    if (isNIMAvailable()) {
+      try {
+        const nimRes = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+            messages: [
+              { role: 'system', content: STRUCTURE_PROMPT },
+              { role: 'user', content: userPrompt },
+            ],
+            max_tokens: 1024,
+            temperature: 0.3,
+            stream: false,
+          }),
+        });
+        if (nimRes.ok) {
+          const nimData = await nimRes.json();
+          const rawText = nimData.choices?.[0]?.message?.content || '';
+          const analysis = safeParseClaudeJSON(rawText);
+          analysis.detection_time_seconds = (Date.now() - startTime) / 1000;
+          logger.info('[TenderShield] NVIDIA NIM fraud analysis complete:', { tender: tenderData.tender_id, risk_score: analysis.risk_score });
+          return NextResponse.json({ ...analysis, _meta: { model_used: 'NVIDIA NIM (Llama 3.1 Nemotron Ultra 253B)', detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
         }
+      } catch (nimErr) {
+        logger.warn('[TenderShield] NVIDIA NIM call failed, falling back to protectedCall:', nimErr);
       }
+    }
+
+    // ── Fallback: protectedClaudeCall (which also uses NIM now) ──
+    if (!isNIMAvailable()) {
       logger.info('[TenderShield] Analyze route: No AI provider available — returning demo analysis');
       return NextResponse.json({ ...DEMO_AIIMS_ANALYSIS, detection_time_seconds: 3.2, _meta: { model_used: 'LOCAL_5_DETECTORS (demo fallback)', detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
     }
@@ -215,7 +217,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
     return NextResponse.json({
       ...analysis,
       _meta: {
-        model_used: 'Claude claude-sonnet-4-20250514 (Anthropic API)',
+        model_used: 'NVIDIA NIM (Llama 3.1 Nemotron Ultra 253B) via protectedCall',
         detection_ms: Date.now() - startTime,
         timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
         endpoint: '/api/ai/analyze',

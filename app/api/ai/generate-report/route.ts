@@ -1,15 +1,14 @@
 // ─────────────────────────────────────────────────
 // FILE: app/api/ai/generate-report/route.ts
 // TYPE: SERVER API ROUTE
-// SECRET KEYS USED: ANTHROPIC_API_KEY
-// WHAT THIS FILE DOES: Generates CAG audit investigation report content via Claude AI
+// SECRET KEYS USED: NVIDIA NIM (via nimClient)
+// WHAT THIS FILE DOES: Generates CAG audit investigation report content via NVIDIA NIM AI
 // ─────────────────────────────────────────────────
 
 import { NextRequest, NextResponse } from 'next/server';
 import { CAG_REPORT_PROMPT } from '@/lib/aiPrompts';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
-
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+import { callNIMJSON, isNIMAvailable } from '@/lib/ai/nimClient';
 
 const DEMO_REPORT = {
   cover: {
@@ -48,7 +47,7 @@ Recommended actions: (1) Refer to CBI for criminal investigation under IT Act 20
     'RECOMMENDED: Enhanced AI monitoring for all MoH tenders above ₹50 Crore for 12 months',
   ],
   technical_appendix: {
-    ai_model: 'TenderShield Fraud Detection Engine v2.1',
+    ai_model: 'TenderShield Fraud Detection Engine v2.1 (NVIDIA NIM)',
     detectors_used: ['Bid Rigging Detector (weight: 30%)', 'Shell Company Detector (weight: 20%)', 'Timing Anomaly Detector (weight: 10%)', 'Collusion Graph Detector (weight: 25%)', 'Cartel Rotation Detector (weight: 15%)'],
     composite_score: 94,
     processing_time_ms: 3200,
@@ -61,23 +60,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tender_id } = body;
 
-    if (!ANTHROPIC_KEY || ANTHROPIC_KEY === 'REPLACE_THIS') {
+    if (!isNIMAvailable()) {
       return NextResponse.json({ ...DEMO_REPORT, demo: true });
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 4096,
-        system: TENDERSHIELD_CONSTITUTION + '\n\n' + CAG_REPORT_PROMPT,
-        messages: [{ role: 'user', content: `Generate CAG audit report for tender: ${tender_id || 'TDR-MoH-2025-000003'}. Use the AIIMS medical equipment tender data with risk score 94, shell company flags, bid rigging evidence.` }],
-      }),
+    const result = await callNIMJSON({
+      systemPrompt: TENDERSHIELD_CONSTITUTION + '\n\n' + CAG_REPORT_PROMPT,
+      userMessage: `Generate CAG audit report for tender: ${tender_id || 'TDR-MoH-2025-000003'}. Use the AIIMS medical equipment tender data with risk score 94, shell company flags, bid rigging evidence.`,
+      maxTokens: 4096,
+      temperature: 0.3,
     });
 
-    const data = await res.json();
-    const parsed = JSON.parse(data.content?.[0]?.text || '{}');
-    return NextResponse.json(parsed);
+    if (result.success && result.data) {
+      return NextResponse.json(result.data);
+    }
+
+    return NextResponse.json({ ...DEMO_REPORT, demo: true });
   } catch {
     return NextResponse.json({ ...DEMO_REPORT, demo: true });
   }

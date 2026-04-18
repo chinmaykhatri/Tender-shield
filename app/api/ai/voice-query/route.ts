@@ -1,15 +1,14 @@
 // ─────────────────────────────────────────────────
 // FILE: app/api/ai/voice-query/route.ts
 // TYPE: SERVER API ROUTE
-// SECRET KEYS USED: ANTHROPIC_API_KEY
+// SECRET KEYS USED: NVIDIA NIM (via nimClient)
 // WHAT THIS FILE DOES: Converts natural language to SQL, runs read-only query, returns results
 // ─────────────────────────────────────────────────
 
 import { NextRequest, NextResponse } from 'next/server';
 import { VOICE_QUERY_PROMPT } from '@/lib/aiPrompts';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
-
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+import { callNIMJSON, isNIMAvailable } from '@/lib/ai/nimClient';
 
 const SYSTEM_PROMPT = VOICE_QUERY_PROMPT;
 
@@ -63,41 +62,31 @@ export async function POST(request: NextRequest) {
 
     if (!transcript) return NextResponse.json({ error: 'No transcript provided' }, { status: 400 });
 
-    if (!ANTHROPIC_KEY || ANTHROPIC_KEY === 'REPLACE_THIS') {
+    if (!isNIMAvailable()) {
       const demo = findDemoResponse(transcript);
       return NextResponse.json({ ...demo, demo: true });
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
-        system: TENDERSHIELD_CONSTITUTION + '\n\n' + SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: `User role: ${user_role || 'CAG_AUDITOR'}\nQuestion: ${transcript}` }],
-      }),
+    const result = await callNIMJSON({
+      systemPrompt: TENDERSHIELD_CONSTITUTION + '\n\n' + SYSTEM_PROMPT,
+      userMessage: `User role: ${user_role || 'CAG_AUDITOR'}\nQuestion: ${transcript}`,
+      maxTokens: 2048,
+      temperature: 0.3,
     });
 
-    if (!res.ok) {
-      const demo = findDemoResponse(transcript);
-      return NextResponse.json({ ...demo, demo: true, fallback_reason: 'AI service error' });
+    if (result.success && result.data) {
+      const parsed = result.data as Record<string, unknown>;
+      return NextResponse.json({
+        answer: parsed.plain_answer || parsed.answer || '',
+        sql: parsed.sql || '',
+        show_as: parsed.show_as || 'TABLE',
+        data: (parsed.data as unknown[]) || [],
+      });
     }
 
-    const data = await res.json();
-    const text = data.content?.[0]?.text || '{}';
-    const parsed = JSON.parse(text);
-
-    return NextResponse.json({
-      answer: parsed.plain_answer,
-      sql: parsed.sql,
-      show_as: parsed.show_as,
-      data: [], // SQL execution would go here in production
-    });
+    // NIM failed — fallback to demo
+    const demo = findDemoResponse(transcript);
+    return NextResponse.json({ ...demo, demo: true, fallback_reason: result.error || 'AI parse error' });
   } catch (e: unknown) {
     const demo = findDemoResponse('');
     return NextResponse.json({ ...demo, demo: true, fallback_reason: 'Parse error' });

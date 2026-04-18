@@ -51,46 +51,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // PDF parse mode (simulated)
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    // PDF parse mode — NVIDIA NIM enhanced parsing
+    const { isNIMAvailable: nimReady } = await import('@/lib/ai/nimClient');
+    const { callNIMJSON } = await import('@/lib/ai/nimClient');
 
-    if (apiKey) {
-      // With Claude — enhanced parsing
+    if (nimReady()) {
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
-            messages: [{
-              role: 'user',
-              content: `You are analyzing Indian CAG (Comptroller and Auditor General) audit reports. Based on your knowledge of recent CAG reports, generate 3 NEW realistic procurement fraud cases that could appear in CAG reports. For each case return a JSON object with: id, year, ministry, title, fraud_types (array), amount_crore, state, description, outcome, cag_report. Return ONLY a valid JSON array.`,
-            }],
-          }),
+        const result = await callNIMJSON<Array<Record<string, unknown>>>({
+          systemPrompt: 'You are analyzing Indian CAG (Comptroller and Auditor General) audit reports. Generate realistic procurement fraud cases based on real CAG patterns.',
+          userMessage: 'Based on your knowledge of recent CAG reports, generate 3 NEW realistic procurement fraud cases that could appear in CAG reports. For each case return a JSON array with objects containing: id, year, ministry, title, fraud_types (array), amount_crore, state, description, outcome, cag_report. Return ONLY a valid JSON array.',
+          maxTokens: 2000,
+          temperature: 0.5,
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.content?.[0]?.text || '[]';
-          try {
-            const jsonMatch = text.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              const aiCases = JSON.parse(jsonMatch[0]);
-              return NextResponse.json({
-                success: true,
-                data: {
-                  cases: [...CAG_HISTORICAL_CASES, ...aiCases.map((c: any) => ({ ...c, patterns: {} }))],
-                  ai_generated: aiCases.length,
-                  source: 'CAG_REPORTS + Claude AI',
-                },
-              });
-            }
-          } catch {}
+        if (result.success && result.data) {
+          const aiCases = Array.isArray(result.data) ? result.data : [];
+          return NextResponse.json({
+            success: true,
+            data: {
+              cases: [...CAG_HISTORICAL_CASES, ...aiCases.map((c: any) => ({ ...c, patterns: {} }))],
+              ai_generated: aiCases.length,
+              source: 'CAG_REPORTS + NVIDIA NIM AI',
+            },
+          });
         }
       } catch {}
     }

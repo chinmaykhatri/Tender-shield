@@ -3,20 +3,15 @@
 import { useState, useEffect } from 'react';
 
 /**
- * ════════════════════════════════════════════════════════════
- * ServiceHealthWidget — Granular Multi-Service Status
- * ════════════════════════════════════════════════════════════
+ * ServiceHealthWidget - Granular Multi-Service Status
  *
- * Replaces the old "Backend Online/Offline" binary indicator
- * with honest, per-service health probes:
+ * Probes /api/health for Supabase + backend connectivity
+ * and /api/mode/status for AI engine & service mode.
  *
- *   🟢 Supabase  — Checks DB connectivity via /api/health
- *   🟢 AI Engine — Checks if any AI provider key is configured
- *   🟢 Audit Chain — Always online (SHA-256 runs locally)
- *
- * Each service shows independent status. No more misleading
- * "Backend Offline" when the frontend + DB are actually fine.
- * ════════════════════════════════════════════════════════════
+ * Shows independent per-service status:
+ *   Supabase  - DB connectivity
+ *   AI Engine - NVIDIA NIM availability
+ *   Audit Chain - Always online (SHA-256 local)
  */
 
 interface ServiceStatus {
@@ -50,17 +45,24 @@ export default function ServiceHealthWidget() {
     let cancelled = false;
 
     async function probe() {
-      // ── Probe 1: Supabase via /api/health ──
+      // -- Probe 1: Supabase via /api/health --
       let supabaseStatus: ServiceStatus = { name: 'Supabase', status: 'offline' };
       try {
         const res = await fetch('/api/health', { signal: AbortSignal.timeout(8_000) });
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          supabaseStatus = {
-            name: 'Supabase',
-            status: data.supabase === 'connected' || data.status === 'healthy' ? 'online' : 'degraded',
-            detail: data.supabase === 'connected' ? 'Connected' : 'Degraded',
-          };
+          // Health endpoint returns { status, checks: { supabase: { status: 'ok' | 'degraded' | 'down' } } }
+          const sbCheck = data.checks?.supabase;
+          if (sbCheck?.status === 'ok') {
+            supabaseStatus = { name: 'Supabase', status: 'online', detail: `${sbCheck.latency_ms || 0}ms` };
+          } else if (sbCheck?.status === 'degraded') {
+            supabaseStatus = { name: 'Supabase', status: 'degraded', detail: sbCheck.message || 'Slow' };
+          } else if (data.status === 'healthy' || data.status === 'partial') {
+            // Fallback: overall healthy means supabase is reachable
+            supabaseStatus = { name: 'Supabase', status: 'online', detail: 'Connected' };
+          } else {
+            supabaseStatus = { name: 'Supabase', status: 'degraded', detail: sbCheck?.message || 'Check response' };
+          }
         } else {
           supabaseStatus = { name: 'Supabase', status: 'degraded', detail: `HTTP ${res.status}` };
         }
@@ -68,24 +70,32 @@ export default function ServiceHealthWidget() {
         supabaseStatus = { name: 'Supabase', status: 'offline', detail: 'Unreachable' };
       }
 
-      // ── Probe 2: AI Engine availability ──
+      // -- Probe 2: AI Engine via /api/setup/check --
       let aiStatus: ServiceStatus = { name: 'AI Engine', status: 'offline', detail: 'No keys' };
       try {
-        const res = await fetch('/api/mode/status', { signal: AbortSignal.timeout(5_000) });
+        const res = await fetch('/api/setup/check', { signal: AbortSignal.timeout(5_000) });
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          const hasAI = data.ai_available || data.nvidia_configured || data.anthropic_configured || data.gemini_configured;
-          aiStatus = {
-            name: 'AI Engine',
-            status: hasAI ? 'online' : 'degraded',
-            detail: hasAI ? (data.primary_provider || 'Configured') : 'Template mode',
-          };
+          // setup/check returns { services: { 'nvidia-nim': { configured, label }, ... } }
+          const svc = data.services || {};
+          const nimEntry = svc['nvidia-nim'];
+          if (nimEntry?.configured) {
+            aiStatus = { name: 'AI Engine', status: 'online', detail: 'NVIDIA NIM' };
+          } else {
+            // Check if any AI provider is configured
+            const geminiEntry = svc['gemini'];
+            if (geminiEntry?.configured) {
+              aiStatus = { name: 'AI Engine', status: 'online', detail: 'Gemini' };
+            } else {
+              aiStatus = { name: 'AI Engine', status: 'degraded', detail: 'Fallback mode' };
+            }
+          }
         }
       } catch {
         aiStatus = { name: 'AI Engine', status: 'degraded', detail: 'Check failed' };
       }
 
-      // ── Probe 3: Audit Chain (always local) ──
+      // -- Probe 3: Audit Chain (always local) --
       const auditStatus: ServiceStatus = {
         name: 'Audit Chain',
         status: 'online',
@@ -98,12 +108,10 @@ export default function ServiceHealthWidget() {
     }
 
     probe();
-    // Re-probe every 60 seconds
     const interval = setInterval(probe, 60_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
-  // Overall status for the container border
   const overallStatus = services.every(s => s.status === 'online')
     ? 'online'
     : services.some(s => s.status === 'offline')
@@ -138,7 +146,7 @@ export default function ServiceHealthWidget() {
               {svc.name}
             </span>
             {svc.detail && (
-              <span className="text-[9px] opacity-60 truncate" style={{ maxWidth: 70 }}>
+              <span className="text-[9px] opacity-60 truncate" style={{ maxWidth: 80 }}>
                 {svc.detail}
               </span>
             )}

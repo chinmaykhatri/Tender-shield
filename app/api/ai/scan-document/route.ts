@@ -1,14 +1,13 @@
 // FILE: app/api/ai/scan-document/route.ts
 // SECURITY: SERVER ONLY
-// API KEYS USED: ANTHROPIC_API_KEY
-// PURPOSE: Receives PDF (base64 or text), sends to Claude Vision, returns structured tender extraction + bias analysis
+// API KEYS USED: NVIDIA NIM (via nimClient)
+// PURPOSE: Receives PDF (base64 or text), sends to NIM, returns structured tender extraction + bias analysis
 
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { TENDERSHIELD_CONSTITUTION } from '@/lib/ai/constitution';
 import { DOCUMENT_SCANNER_PROMPT } from '@/lib/aiPrompts';
-
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+import { callNIMJSON, isNIMAvailable } from '@/lib/ai/nimClient';
 
 const VISION_PROMPT = `You are a senior Indian government procurement auditor with 20 years of experience reviewing tender documents.
 
@@ -103,8 +102,8 @@ const DEMO_RESULT = {
 };
 
 export async function POST(request: NextRequest) {
-  if (!ANTHROPIC_KEY) {
-    logger.info('[TenderShield] scan-document: No API key — returning demo result');
+  if (!isNIMAvailable()) {
+    logger.info('[TenderShield] scan-document: No NIM API key — returning demo result');
     return NextResponse.json(DEMO_RESULT);
   }
 
@@ -112,62 +111,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { document_base64, document_text, pages_base64 } = body;
 
-    // Build message content for Claude
-    type ContentBlock = { type: 'text'; text: string } | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg'; data: string } };
-    const content: ContentBlock[] = [];
-
-    // If we have rendered page images (Feature 4 — Vision)
+    // Build text content for NIM (text-only model — no vision)
+    let analysisText = '';
     if (pages_base64 && Array.isArray(pages_base64)) {
-      for (const pageBase64 of pages_base64.slice(0, 5)) {
-        content.push({
-          type: 'image',
-          source: { type: 'base64', media_type: 'image/jpeg', data: pageBase64 },
-        });
-      }
-      content.push({ type: 'text', text: VISION_PROMPT });
+      // NIM doesn't support vision — use text extraction instead
+      analysisText = document_text || `[${pages_base64.length} page images provided — text extraction required]`;
     } else if (document_text) {
-      content.push({ type: 'text', text: `Analyze this tender document:\n\n${document_text}` });
+      analysisText = document_text;
     } else if (document_base64) {
-      content.push({ type: 'text', text: `Analyze this tender document (text extracted from PDF):\n\n${document_base64.substring(0, 15000)}` });
+      analysisText = document_base64.substring(0, 15000);
     } else {
       return NextResponse.json({ error: 'No document provided' }, { status: 400 });
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content }],
-      }),
+    const result = await callNIMJSON({
+      systemPrompt: SYSTEM_PROMPT + '\n\n' + VISION_PROMPT,
+      userMessage: `Analyze this tender document:\n\n${analysisText.substring(0, 12000)}`,
+      maxTokens: 4096,
+      temperature: 0.2,
     });
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      logger.error('[TenderShield] scan-document API error:', res.status, error);
-      return NextResponse.json(DEMO_RESULT);
+    if (result.success && result.data) {
+      return NextResponse.json(result.data);
     }
 
-    const data = await res.json();
-    const text: string = data.content?.[0]?.text || '{}';
+    // Parse failed — try raw text extraction
+    if (result.raw) {
+      const start = result.raw.indexOf('{');
+      const end = result.raw.lastIndexOf('}');
+      if (start !== -1 && end !== -1) {
+        try {
+          const parsed = JSON.parse(result.raw.slice(start, end + 1));
+          return NextResponse.json(parsed);
+        } catch {}
+      }
+    }
 
-    // Safe JSON extraction
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-    if (start === -1 || end === -1) return NextResponse.json(DEMO_RESULT);
-
-    const parsed = JSON.parse(text.slice(start, end + 1));
-    return NextResponse.json(parsed);
+    return NextResponse.json(DEMO_RESULT);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     logger.error('[TenderShield] scan-document error:', message);
     return NextResponse.json(DEMO_RESULT);
   }
 }
-

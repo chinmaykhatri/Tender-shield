@@ -282,17 +282,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button onClick={() => setSidebarOpen(!sidebarOpen)}
           className="w-10 h-10 flex items-center justify-center rounded-lg"
           style={{ background: 'rgba(99,102,241,0.1)' }}>
-          <span style={{ fontSize: 20 }}>{sidebarOpen ? 'âœ•' : 'â˜°'}</span>
+          <span style={{ fontSize: 20 }}>{sidebarOpen ? '\u2716' : '\u2630'}</span>
         </button>
         <Link href="/dashboard" className="flex items-center gap-2">
           <span className="font-display font-bold text-base bg-clip-text text-transparent"
             style={{ backgroundImage: 'linear-gradient(135deg, #FF9933, #a5b4fc)' }}>
-            ðŸ›¡ï¸ TenderShield
+            {'\ud83d\udee1\ufe0f'} TenderShield
           </span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={dismissAlerts} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8' }}>
-            ðŸ””
+            {'\ud83d\udd14'}
             {alertCount > 0 && (
               <span style={{ position: 'absolute', top: -4, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {alertCount > 9 ? '9+' : alertCount}
@@ -339,7 +339,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
               style={{ background: 'linear-gradient(135deg, #FF9933, #6366f1, #138808)' }}>
-              ðŸ›¡ï¸
+              {'\ud83d\udee1\ufe0f'}
             </div>
             <div>
               <span className="font-display font-bold text-lg bg-clip-text text-transparent"
@@ -382,14 +382,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="mb-2 px-2 py-1.5 rounded-lg text-center"
-            style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
-            <p className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">ðŸ” Sandbox Auth</p>
+            style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
+            <p className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">{'\ud83d\udd12'} Production Auth</p>
             <p className="text-[10px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">
-              Production: Supabase JWT + RLS + Hash Chain
+              Supabase JWT + RLS + HMAC Sessions
             </p>
           </div>
 
-          {/* Language Toggle â€” EN/à¤¹à¤¿à¤‚ */}
+          {/* Language Toggle — EN/हिं */}
           <div className="mb-2 flex justify-center">
             <LanguageToggle />
           </div>

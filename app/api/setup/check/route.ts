@@ -9,13 +9,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const isConfigured = (key: string | undefined): boolean => {
-    return !!key && key !== 'REPLACE_THIS' && key.length > 5;
+    return !!key && key !== 'REPLACE_THIS' && key !== 'bedrock-managed' && key.length > 5;
   };
 
   const services = {
-    anthropic: {
-      configured: isConfigured(process.env.ANTHROPIC_API_KEY),
-      label: 'Claude AI',
+    'nvidia-nim': {
+      configured: isConfigured(process.env.OPENAI_API_KEY) || isConfigured(process.env.NVIDIA_API_KEY),
+      label: 'NVIDIA NIM AI',
       features: ['Document Scanner', 'Fraud Reports', 'Voice Queries', 'Price Predictor', 'Predictive Fraud', 'NL Queries'],
     },
     twilio: {
@@ -38,6 +38,11 @@ export async function GET() {
       label: 'Push Notifications',
       features: ['Browser alerts for fraud'],
     },
+    gemini: {
+      configured: isConfigured(process.env.GEMINI_API_KEY),
+      label: 'Gemini AI (backup)',
+      features: ['Fallback AI provider'],
+    },
   };
 
   const total_configured = Object.values(services).filter(s => s.configured).length;
@@ -53,11 +58,13 @@ export async function GET() {
 
   // Verify no secret key values leaked
   const secretKeys = [
-    process.env.ANTHROPIC_API_KEY,
+    process.env.OPENAI_API_KEY,
+    process.env.NVIDIA_API_KEY,
     process.env.TWILIO_AUTH_TOKEN,
     process.env.RESEND_API_KEY,
     process.env.ONESIGNAL_REST_API_KEY,
     process.env.JWT_SECRET,
+    process.env.GEMINI_API_KEY,
   ].filter(Boolean);
 
   for (const key of secretKeys) {

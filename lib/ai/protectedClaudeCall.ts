@@ -88,31 +88,35 @@ export async function protectedClaudeCall(
   // ─────────────────────────────────────────
   const truncatedMessage = userMessage.slice(0, 8000);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  // ── NVIDIA NIM (OpenAI-compatible) ─────────────────────────
+  const apiKey = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY || '';
+  const baseUrl = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+  if (!apiKey || apiKey.length < 10) {
     // No API key — AI call skipped
     return { success: false, blocked: false };
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
         max_tokens: maxTokens,
-        stream,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: truncatedMessage }],
+        stream: false,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: truncatedMessage },
+        ],
+        temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
-      // Anthropic API error — handled gracefully
+      // NIM API error — handled gracefully
       return { success: false, blocked: false };
     }
 
@@ -121,10 +125,10 @@ export async function protectedClaudeCall(
     }
 
     const data = await response.json();
-    const text = data.content?.[0]?.text ?? '';
+    const text = data.choices?.[0]?.message?.content ?? '';
 
     // ─────────────────────────────────────────
-    // Post-flight: Check if Claude refused
+    // Post-flight: Check if AI refused
     // Log the event if constitution triggered
     // ─────────────────────────────────────────
     const REFUSAL_PHRASE = 'TenderShield AI cannot assist with that request';
@@ -149,7 +153,8 @@ export async function protectedClaudeCall(
 
     return { success: true, text };
   } catch (error) {
-    // protectedClaudeCall error — handled gracefully
+    // protectedNIMCall error — handled gracefully
     return { success: false, blocked: false };
   }
 }
+
