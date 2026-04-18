@@ -22,11 +22,13 @@ import { loginSchema } from '@/lib/validation/schemas';
 // ── HMAC Session Cookie ──────────────────────────────────────────
 // The cookie value is: base64url(HMAC-SHA256(payload, key)).payload
 // Middleware verifies the signature without a network call.
+// MUST match the same fallback used in middleware.ts — on serverless platforms,
+// middleware and API routes run as separate instances and need identical keys.
 const SESSION_KEY = process.env.SESSION_SIGNING_KEY || (() => {
   if (process.env.NODE_ENV === 'production') {
-    console.error('[SECURITY] ⛔ SESSION_SIGNING_KEY not set in production!');
+    console.error('[SECURITY] ⛔ SESSION_SIGNING_KEY not set — using deterministic fallback.');
   }
-  return 'dev-fallback-' + require('crypto').randomBytes(32).toString('hex');
+  return 'ts-demo-signing-key-change-me-in-production-2024';
 })();
 const IS_PROD = process.env.NODE_ENV === 'production';
 

@@ -8,6 +8,7 @@ import { DEMO_MODE } from '@/lib/dataLayer';
 import { supabase } from '@/lib/supabase';
 import GlowStripes from '@/components/GlowStripes';
 import NetworkHero from '@/components/NetworkHero';
+import DemoLoginTransition from '@/components/DemoLoginTransition';
 
 // ═══════════════════════════════════════════════
 // TENDERSHIELD — LOGIN PAGE (Spline-Inspired)
@@ -82,6 +83,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [typingRole, setTypingRole] = useState('');
   const [counters, setCounters] = useState(LIVE_COUNTERS.map(() => 0));
+  const [transitionVisible, setTransitionVisible] = useState(false);
+  const [transitionRole, setTransitionRole] = useState({ name: '', color: '' });
   const emailRef = useRef<HTMLInputElement>(null);
   const passRef = useRef<HTMLInputElement>(null);
 
@@ -115,8 +118,11 @@ export default function LoginPage() {
       if (DEMO_MODE) {
         const r = role === 'MINISTRY_OFFICER' ? 'OFFICER' : role;
         storeLogin('demo-token-' + Date.now(), r, r === 'OFFICER' ? 'MinistryOrg' : r === 'CAG_AUDITOR' ? 'AuditorOrg' : 'BidderOrg', name || email.split('@')[0]);
-        // Server-side validation: prevents role spoofing via DevTools
-        await validateWithServer(email || undefined);
+        // Show transition animation while server sets HMAC cookie
+        setTransitionRole({ name: name || email || 'Dashboard', color: '#6366f1' });
+        setTransitionVisible(true);
+        try { await validateWithServer(email || undefined); } catch {}
+        await new Promise(r => setTimeout(r, 600));
         router.push('/dashboard');
         return;
       }
@@ -147,8 +153,21 @@ export default function LoginPage() {
     if (DEMO_MODE) {
       const r = cred.role === 'MINISTRY_OFFICER' ? 'OFFICER' : cred.role;
       storeLogin('demo-token-' + Date.now(), r, cred.org, cred.name);
-      // Fire-and-forget: set HMAC cookie in background, don't block navigation
-      validateWithServer(cred.email).catch(() => {});
+
+      // Show cinematic transition immediately — user sees animation, not a blank wait
+      setTransitionRole({ name: cred.label, color: cred.color });
+      setTransitionVisible(true);
+
+      // Await server validation (sets HMAC cookie that middleware needs)
+      // The animation keeps users engaged during this ~1s round-trip
+      try {
+        await validateWithServer(cred.email);
+      } catch {
+        // Validation failed — still navigate, client-side auth allows dashboard
+      }
+
+      // Small delay so animation feels complete before navigating
+      await new Promise(r => setTimeout(r, 600));
       router.push('/dashboard');
       return;
     }
@@ -185,6 +204,8 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+    <DemoLoginTransition visible={transitionVisible} roleName={transitionRole.name} roleColor={transitionRole.color} />
     <div className="landing-wrapper" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#080808', fontFamily: "'DM Sans', sans-serif", overflow: 'hidden' }}>
       <style>{`
         @media (min-width: 768px) {
@@ -490,6 +511,7 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+    </>
   );
 }
 

@@ -13,13 +13,13 @@ import type { NextRequest } from 'next/server';
 
 // ── HMAC Session Cookie Verification (Web Crypto API — Edge Runtime) ──
 // SECURITY: In production, SESSION_SIGNING_KEY MUST be set via environment variable.
-// A hardcoded fallback is only used in development with a loud console warning.
+// The deterministic fallback ensures middleware and API routes share the same key
+// on serverless platforms where each runs as a separate instance.
 const SESSION_KEY = process.env.SESSION_SIGNING_KEY || (() => {
   if (process.env.NODE_ENV === 'production') {
-    console.error('[SECURITY] ⛔ SESSION_SIGNING_KEY not set in production! Sessions will not persist across restarts.');
+    console.error('[SECURITY] ⛔ SESSION_SIGNING_KEY not set — using deterministic fallback. Set this env var for production!');
   }
-  // Generate a per-instance random key as fallback (safer than a hardcoded string)
-  return 'dev-' + Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
+  return 'ts-demo-signing-key-change-me-in-production-2024';
 })();
 
 async function verifySessionCookie(cookieValue: string): Promise<{ valid: boolean; role: string }> {
