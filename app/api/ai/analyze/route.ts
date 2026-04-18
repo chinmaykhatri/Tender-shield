@@ -15,6 +15,8 @@ import { z } from 'zod';
 
 const NVIDIA_API_KEY = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY || '';
 const NVIDIA_BASE_URL = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+const IS_OPENAI_ENDPOINT = NVIDIA_BASE_URL.includes('api.openai.com');
+const AI_MODEL = IS_OPENAI_ENDPOINT ? 'gpt-4o-mini' : 'nvidia/llama-3.1-nemotron-ultra-253b-v1';
 
 // ── Zod Input Validation ────────────────────────────────────────────────────
 const BidSchema = z.object({
@@ -150,7 +152,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
             'Authorization': `Bearer ${NVIDIA_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+            model: AI_MODEL,
             messages: [
               { role: 'system', content: STRUCTURE_PROMPT },
               { role: 'user', content: userPrompt },
@@ -166,7 +168,7 @@ Calculate CV across bid amounts. Check GSTIN registration patterns. Analyze subm
           const analysis = safeParseClaudeJSON(rawText);
           analysis.detection_time_seconds = (Date.now() - startTime) / 1000;
           logger.info('[TenderShield] NVIDIA NIM fraud analysis complete:', { tender: tenderData.tender_id, risk_score: analysis.risk_score });
-          return NextResponse.json({ ...analysis, _meta: { model_used: 'NVIDIA NIM (Llama 3.1 Nemotron Ultra 253B)', detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
+          return NextResponse.json({ ...analysis, _meta: { model_used: `${IS_OPENAI_ENDPOINT ? 'OpenAI' : 'NVIDIA NIM'} (${AI_MODEL})`, detection_ms: Date.now() - startTime, timestamp_ist: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), endpoint: '/api/ai/analyze' } });
         }
       } catch (nimErr) {
         logger.warn('[TenderShield] NVIDIA NIM call failed, falling back to protectedCall:', nimErr);

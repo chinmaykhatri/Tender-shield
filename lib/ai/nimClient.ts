@@ -33,6 +33,8 @@ import { logger } from '@/lib/logger';
 // ─── Environment ────────────────────────────────────────────
 const NIM_API_KEY = process.env.OPENAI_API_KEY || process.env.NVIDIA_API_KEY || '';
 const NIM_BASE_URL = process.env.OPENAI_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+const IS_OPENAI = NIM_BASE_URL.includes('api.openai.com');
+const DEFAULT_MODEL = IS_OPENAI ? 'gpt-4o-mini' : 'nvidia/llama-3.1-nemotron-ultra-253b-v1';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -73,7 +75,7 @@ export interface NIMCallResult {
  * Returns true when a valid-looking NVIDIA NIM API key is configured.
  */
 export function isNIMAvailable(): boolean {
-  return NIM_API_KEY.length > 10 && !NIM_API_KEY.startsWith('sk-placeholder');
+  return NIM_API_KEY.length > 10 && !NIM_API_KEY.startsWith('sk-placeholder') && !NIM_API_KEY.includes('your-');
 }
 
 // ─── Core Call ──────────────────────────────────────────────
@@ -85,7 +87,7 @@ export async function callNIM(opts: NIMCallOptions): Promise<NIMCallResult> {
   const {
     systemPrompt,
     userMessage,
-    model = 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+    model = DEFAULT_MODEL,
     maxTokens = 1024,
     temperature = 0.3,
     topP = 0.8,

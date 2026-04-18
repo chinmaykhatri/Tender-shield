@@ -6,17 +6,52 @@ import { extractVerifiedRole } from '@/lib/auth/extractRole';
 // ═══════════════════════════════════════════════════════════
 // RAG Chat API — Multi-Provider AI Engine
 // Natural language querying of the procurement database
-// Priority: NVIDIA NIM → AWS Bedrock (Claude) → Gemini → Template
+// Priority: OpenAI GPT → NVIDIA NIM → AWS Bedrock → Gemini → Rule Engine
 // ═══════════════════════════════════════════════════════════
 
 export const dynamic = 'force-dynamic';
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '';
 const AWS_BEDROCK_ACCESS_KEY = process.env.AWS_BEDROCK_ACCESS_KEY || '';
 const AWS_BEDROCK_SECRET_KEY = process.env.AWS_BEDROCK_SECRET_KEY || '';
 const AWS_BEDROCK_SESSION_KEY = process.env.AWS_BEDROCK_SESSION_KEY || '';
 const AWS_BEDROCK_REGION = process.env.AWS_BEDROCK_REGION || 'eu-north-1';
-// NOTE: GEMINI_API_KEY is read by lib/ai/geminiClient.ts — no need to read it here.
+
+// ── OpenAI GPT (Primary AI Engine) ─────────────────────────
+function isOpenAIAvailable(): boolean {
+  return OPENAI_API_KEY.length > 10 && OPENAI_API_KEY.startsWith('sk-');
+}
+
+async function callOpenAI(systemPrompt: string, userMessage: string): Promise<string> {
+  const res = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 1024,
+      temperature: 0.3,
+      top_p: 0.7,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`OpenAI error: ${res.status} - ${error.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || 'No response generated.';
+}
 
 // ── Supabase Context Fetcher ───────────────────────────────
 async function querySupabaseContext(question: string) {
@@ -305,12 +340,23 @@ RULES:
     let response: string = '';
     let source: string = 'template-engine';
 
-    // Priority: NVIDIA NIM → AWS Bedrock → Gemini → Smart Template
+    // Priority: OpenAI GPT → NVIDIA NIM → AWS Bedrock → Gemini → Smart Rule Engine
     // Each provider wrapped in individual try-catch to prevent cascade failures
 
     let aiSuccess = false;
 
-    // Try NVIDIA NIM
+    // Try OpenAI GPT (primary)
+    if (!aiSuccess && isOpenAIAvailable()) {
+      try {
+        response = await callOpenAI(systemPrompt, message);
+        source = 'openai-gpt-4o-mini';
+        aiSuccess = true;
+      } catch (e: any) {
+        console.warn('[AI Chat] OpenAI failed:', e.message?.slice(0, 100));
+      }
+    }
+
+    // Try NVIDIA NIM (secondary)
     if (!aiSuccess && NVIDIA_API_KEY && !NVIDIA_API_KEY.includes('placeholder')) {
       try {
         response = await callNvidiaNIM(systemPrompt, message);

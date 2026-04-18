@@ -104,7 +104,7 @@ export async function protectedClaudeCall(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
+        model: baseUrl.includes('api.openai.com') ? 'gpt-4o-mini' : 'nvidia/llama-3.1-nemotron-ultra-253b-v1',
         max_tokens: maxTokens,
         stream: false,
         messages: [
