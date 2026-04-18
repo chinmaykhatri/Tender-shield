@@ -118,11 +118,11 @@ export default function LoginPage() {
       if (DEMO_MODE) {
         const r = role === 'MINISTRY_OFFICER' ? 'OFFICER' : role;
         storeLogin('demo-token-' + Date.now(), r, r === 'OFFICER' ? 'MinistryOrg' : r === 'CAG_AUDITOR' ? 'AuditorOrg' : 'BidderOrg', name || email.split('@')[0]);
-        // Show transition animation while server sets HMAC cookie
         setTransitionRole({ name: name || email || 'Dashboard', color: '#6366f1' });
         setTransitionVisible(true);
-        try { await validateWithServer(email || undefined); } catch {}
-        await new Promise(r => setTimeout(r, 600));
+        const timeout = new Promise(r => setTimeout(r, 3000));
+        await Promise.race([validateWithServer(email || undefined).catch(() => {}), timeout]);
+        await new Promise(r => setTimeout(r, 400));
         router.push('/dashboard');
         return;
       }
@@ -158,16 +158,17 @@ export default function LoginPage() {
       setTransitionRole({ name: cred.label, color: cred.color });
       setTransitionVisible(true);
 
-      // Await server validation (sets HMAC cookie that middleware needs)
-      // The animation keeps users engaged during this ~1s round-trip
-      try {
-        await validateWithServer(cred.email);
-      } catch {
-        // Validation failed — still navigate, client-side auth allows dashboard
-      }
+      // Race: server validation (sets HMAC cookie) vs 3s timeout.
+      // If Vercel cold-starts the function, we don't block forever —
+      // middleware allows demo access via client-side auth as fallback.
+      const timeout = new Promise(r => setTimeout(r, 3000));
+      await Promise.race([
+        validateWithServer(cred.email).catch(() => {}),
+        timeout,
+      ]);
 
-      // Small delay so animation feels complete before navigating
-      await new Promise(r => setTimeout(r, 600));
+      // Brief pause so animation transition feels intentional
+      await new Promise(r => setTimeout(r, 400));
       router.push('/dashboard');
       return;
     }

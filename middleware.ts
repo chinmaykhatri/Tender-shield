@@ -257,11 +257,11 @@ export async function middleware(req: NextRequest) {
 
   if (!hasAuth) {
     if (isDemoMode) {
-      // Demo mode: require valid HMAC-signed session cookie
+      // Demo mode: HMAC cookie is ideal but not required for page access.
+      // Cold starts on serverless can delay cookie setup. Let the client-side
+      // auth store (localStorage) handle demo access.
       if (!hasValidSessionCookie) {
-        const loginUrl = new URL('/', req.url);
-        loginUrl.searchParams.set('redirectTo', pathname);
-        return NextResponse.redirect(loginUrl);
+        console.warn('[Middleware] Demo mode: no HMAC cookie, allowing page access via client auth');
       }
     } else {
       const loginUrl = new URL('/', req.url);
